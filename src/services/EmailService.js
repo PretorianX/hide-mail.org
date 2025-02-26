@@ -10,8 +10,11 @@ class EmailService {
       // const response = await axios.get(`${API_URL}/generate-email`);
       // return response.data.email;
       
-      // For demo purposes, return a fake email
-      return `user${Math.floor(Math.random() * 10000)}@tempmail.example.com`;
+      // For demo purposes, return a duck-themed fake email
+      const duckNames = ['quacky', 'ducky', 'mallard', 'feathers', 'waddles', 'bill', 'drake', 'duckling'];
+      const randomDuck = duckNames[Math.floor(Math.random() * duckNames.length)];
+      const randomNum = Math.floor(Math.random() * 10000);
+      return `${randomDuck}${randomNum}@mailduck.io`;
     } catch (error) {
       console.error('Error generating email:', error);
       throw error;
@@ -24,21 +27,28 @@ class EmailService {
       // const response = await axios.get(`${API_URL}/messages?email=${email}`);
       // return response.data.messages;
       
-      // For demo purposes, return fake messages
+      // For demo purposes, return duck-themed fake messages
       return [
         {
           id: 1,
-          from: 'service@example.com',
-          subject: 'Welcome to our service',
-          preview: 'Thank you for signing up to our service...',
+          from: 'welcome@mailduck.io',
+          subject: 'Welcome to Mail Duck!',
+          preview: 'Thank you for using our service! Your temporary duck mail is ready to use...',
           date: new Date().toISOString()
         },
         {
           id: 2,
-          from: 'newsletter@tech.com',
-          subject: 'Weekly Tech Newsletter',
-          preview: 'This week in tech: New releases and updates...',
+          from: 'newsletter@quacktech.com',
+          subject: 'Weekly Tech Quacks',
+          preview: 'This week in tech: New gadgets for ducks, waterproof smartphones, and more...',
           date: new Date(Date.now() - 3600000).toISOString()
+        },
+        {
+          id: 3,
+          from: 'no-reply@pondside.com',
+          subject: 'Your Pondside Account',
+          preview: 'Your account has been created successfully. Please verify your email...',
+          date: new Date(Date.now() - 7200000).toISOString()
         }
       ];
     } catch (error) {
