@@ -131,23 +131,29 @@ const redisService = {
    */
   async storeEmail(recipient, email) {
     try {
-      const key = `${KEY_PREFIXES.EMAIL}${recipient}`;
-      
       // Check if mailbox is active
       if (!(await this.isMailboxActive(recipient))) {
         logger.warn(`Attempted to store email for inactive mailbox: ${recipient}`);
         return false;
       }
       
-      // Store email as a list item
-      await redis.rpush(key, JSON.stringify(email));
+      // Use the same key format as in getEmails
+      const listKey = `emails:${recipient}`;
+      const emailKey = `email:${recipient}:${email.id}`;
+      
+      // Store email ID in the list
+      await redis.rpush(listKey, email.id);
+      
+      // Store the full email object as a separate key
+      await redis.set(emailKey, JSON.stringify(email));
       
       // Set expiration to match mailbox expiration
       const mailboxKey = `${KEY_PREFIXES.ACTIVE_MAILBOX}${recipient}`;
       const ttl = await redis.ttl(mailboxKey);
       
       if (ttl > 0) {
-        await redis.expire(key, ttl);
+        await redis.expire(listKey, ttl);
+        await redis.expire(emailKey, ttl);
       }
       
       logger.info(`Email stored for: ${recipient}`);
@@ -159,18 +165,40 @@ const redisService = {
   },
 
   /**
-   * Get all emails for a recipient
-   * @param {string} email - Email address
-   * @returns {Promise<Array>} - List of emails
+   * Get all emails for a mailbox
+   * @param {string} email - The email address
+   * @returns {Promise<Array>} - Array of email objects
    */
   async getEmails(email) {
     try {
-      const key = `${KEY_PREFIXES.EMAIL}${email}`;
-      const emails = await redis.lrange(key, 0, -1);
+      const key = `emails:${email}`;
+      const emailIds = await redis.lrange(key, 0, -1);
       
-      return emails.map(item => JSON.parse(item));
+      if (!emailIds || emailIds.length === 0) {
+        return [];
+      }
+      
+      const emails = [];
+      for (const id of emailIds) {
+        const emailKey = `email:${email}:${id}`;
+        const emailData = await redis.get(emailKey);
+        
+        if (emailData) {
+          try {
+            const email = JSON.parse(emailData);
+            emails.push(email);
+          } catch (e) {
+            logger.error(`Failed to parse email data: ${e.message}`);
+          }
+        }
+      }
+      
+      // Sort by receivedAt in descending order (newest first)
+      return emails.sort((a, b) => {
+        return new Date(b.receivedAt) - new Date(a.receivedAt);
+      });
     } catch (error) {
-      logger.error('Error fetching emails from Redis:', error);
+      logger.error(`Error getting emails: ${error.message}`);
       throw error;
     }
   },

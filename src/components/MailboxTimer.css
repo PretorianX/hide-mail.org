@@ -1,0 +1,62 @@
+.mailbox-timer {
+  margin: 15px 0;
+  padding: 15px;
+  background-color: var(--duck-gray);
+  border-radius: 8px;
+  border: 1px solid #ddd;
+}
+
+.timer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.timer-label {
+  font-size: 0.9rem;
+  color: var(--duck-black);
+}
+
+.timer-value {
+  font-weight: bold;
+  font-size: 1.1rem;
+  color: var(--duck-orange);
+}
+
+.refresh-button {
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  background-color: var(--duck-orange-light);
+}
+
+.timer-progress-container {
+  height: 8px;
+  background-color: #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.timer-progress-bar {
+  height: 100%;
+  background-color: var(--duck-orange);
+  transition: width 1s ease, background-color 1s ease;
+}
+
+/* Mobile adjustments for timer */
+@media (max-width: 767px) {
+  .timer-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .timer-value {
+    font-size: 1.2rem;
+  }
+  
+  .refresh-button {
+    width: 100%;
+    margin-top: 5px;
+  }
+} 

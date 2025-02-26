@@ -84,7 +84,14 @@ body {
   font-size: 1.8rem;
 }
 
+.email-display-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
 .email-display {
+  flex-grow: 1;
   padding: 18px;
   background-color: var(--duck-gray);
   border: 2px solid var(--duck-orange-light);
@@ -94,6 +101,31 @@ body {
   text-align: center;
   color: var(--duck-black);
   word-break: break-all;
+}
+
+.copy-button {
+  background-color: var(--duck-orange);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 20px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  min-width: 80px;
+}
+
+.copy-button:hover {
+  background-color: var(--duck-orange-light);
+}
+
+.copy-button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+.copy-button.copied {
+  background-color: var(--success-color);
 }
 
 .email-actions {
@@ -191,9 +223,28 @@ button:disabled {
 }
 
 .message-preview {
-  color: #555;
-  font-size: 0.95rem;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  margin: 10px 0;
   line-height: 1.5;
+  white-space: pre-line;
+  overflow-wrap: break-word;
+}
+
+.message-preview::after {
+  display: none;
+}
+
+.message-raw-content pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: monospace;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  padding: 10px;
+  background-color: #f5f5f5;
+  border-radius: 4px;
+  overflow-x: auto;
 }
 
 /* Ad containers */
@@ -351,9 +402,9 @@ button:disabled {
 
 .domain-selector {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 10px;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 15px;
 }
 
 .domain-selector label {
@@ -362,18 +413,12 @@ button:disabled {
 }
 
 .domain-select {
-  padding: 12px;
+  padding: 10px;
   border-radius: 8px;
   border: 2px solid var(--duck-orange-light);
   background-color: var(--duck-white);
   font-size: 1rem;
-  color: var(--duck-black);
-  cursor: pointer;
-  appearance: none;
-  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f7941d' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-  background-repeat: no-repeat;
-  background-position: right 12px center;
-  background-size: 16px;
+  flex-grow: 1;
 }
 
 .domain-select:focus {
@@ -383,10 +428,23 @@ button:disabled {
 }
 
 /* Adjust for mobile */
-@media (max-width: 767px) {
+@media (max-width: 768px) {
+  .domain-selector {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
   .domain-select {
-    padding: 15px;
-    font-size: 1.1rem;
+    width: 100%;
+  }
+  
+  .email-display-row {
+    flex-direction: column;
+  }
+  
+  .copy-button {
+    width: 100%;
+    margin-top: 10px;
   }
 }
 

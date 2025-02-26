@@ -1,78 +1,84 @@
 import React, { useState, useEffect } from 'react';
 import EmailService from '../services/EmailService';
+import './MailboxTimer.css';
 
 const MailboxTimer = ({ email, onExpired }) => {
-  const [remainingTime, setRemainingTime] = useState(0);
+  const [timeLeft, setTimeLeft] = useState('');
+  const [percentLeft, setPercentLeft] = useState(100);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
-    if (!email) return;
+    let interval;
     
-    // Initialize timer
-    setRemainingTime(EmailService.getRemainingTime());
-    
-    // Update timer every second
-    const interval = setInterval(() => {
-      const timeLeft = EmailService.getRemainingTime();
-      setRemainingTime(timeLeft);
+    const updateTimer = () => {
+      if (!email) return;
       
-      // If expired, notify parent component
-      if (timeLeft === 0) {
-        if (onExpired) onExpired();
+      const expirationTime = EmailService.getExpirationTime();
+      if (!expirationTime) return;
+      
+      const now = new Date();
+      const diff = expirationTime - now;
+      
+      if (diff <= 0) {
         clearInterval(interval);
+        setTimeLeft('Expired');
+        setPercentLeft(0);
+        onExpired();
+        return;
       }
-    }, 1000);
+      
+      // Calculate minutes and seconds
+      const minutes = Math.floor(diff / 60000);
+      const seconds = Math.floor((diff % 60000) / 1000);
+      
+      // Format time left
+      setTimeLeft(`${minutes}:${seconds.toString().padStart(2, '0')}`);
+      
+      // Calculate percentage left (assuming 30 min total)
+      const totalTime = 30 * 60 * 1000; // 30 minutes in milliseconds
+      const percentRemaining = (diff / totalTime) * 100;
+      setPercentLeft(Math.min(percentRemaining, 100));
+    };
+    
+    // Update immediately and then every second
+    updateTimer();
+    interval = setInterval(updateTimer, 1000);
     
     return () => clearInterval(interval);
   }, [email, onExpired]);
 
-  const formatTime = (ms) => {
-    if (ms === 0) return 'Expired';
+  const handleRefreshTimer = async () => {
+    if (!email || isRefreshing) return;
     
-    const totalSeconds = Math.floor(ms / 1000);
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-  };
-
-  const handleRefresh = async () => {
     setIsRefreshing(true);
-    
     try {
-      // Refresh expiration time via backend
-      const success = await EmailService.refreshExpirationTime();
-      
+      const success = await EmailService.refreshExpirationTime(email);
       if (success) {
-        setRemainingTime(EmailService.getRemainingTime());
+        // Timer will update automatically in the useEffect
       }
     } catch (error) {
-      console.error('Error refreshing mailbox:', error);
+      console.error('Error refreshing timer:', error);
     } finally {
-      setTimeout(() => {
-        setIsRefreshing(false);
-      }, 500);
+      setIsRefreshing(false);
     }
   };
 
-  // Calculate progress percentage
-  const totalTime = 30 * 60 * 1000; // 30 minutes in milliseconds
-  const progressPercent = Math.min(100, (remainingTime / totalTime) * 100);
-  
-  // Determine color based on remaining time
-  let progressColor = 'var(--duck-orange)';
-  if (progressPercent < 30) progressColor = '#ff4d4d';
-  else if (progressPercent < 60) progressColor = '#ffa64d';
+  // Determine color based on percentage left
+  const getProgressColor = () => {
+    if (percentLeft > 50) return 'var(--duck-orange)';
+    if (percentLeft > 20) return 'var(--warning-color)';
+    return 'var(--danger-color)';
+  };
 
   return (
     <div className="mailbox-timer">
       <div className="timer-header">
         <span className="timer-label">Mailbox expires in:</span>
-        <span className="timer-value">{formatTime(remainingTime)}</span>
+        <span className="timer-value">{timeLeft}</span>
         <button 
           className="refresh-button"
-          onClick={handleRefresh}
-          disabled={isRefreshing || remainingTime === 0}
+          onClick={handleRefreshTimer}
+          disabled={isRefreshing}
         >
           {isRefreshing ? 'Refreshing...' : 'Refresh Timer'}
         </button>
@@ -81,8 +87,8 @@ const MailboxTimer = ({ email, onExpired }) => {
         <div 
           className="timer-progress-bar" 
           style={{ 
-            width: `${progressPercent}%`,
-            backgroundColor: progressColor
+            width: `${percentLeft}%`,
+            backgroundColor: getProgressColor()
           }}
         ></div>
       </div>

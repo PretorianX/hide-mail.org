@@ -2,6 +2,23 @@ import React from 'react';
 import './MessageList.css';
 
 const MessageList = ({ messages, onSelectMessage, selectedMessageId }) => {
+  // Function to format the message preview with proper length
+  const formatPreview = (message) => {
+    let preview = message.preview || '';
+    
+    // If preview is too short and we have text content, use that instead
+    if (preview.length < 100 && message.text) {
+      preview = message.text.substring(0, 200);
+    }
+    
+    // Truncate with ellipsis if needed
+    if (preview.length > 200) {
+      return preview.substring(0, 200) + '...';
+    }
+    
+    return preview;
+  };
+
   if (!messages || messages.length === 0) {
     return (
       <div className="message-list-container">
@@ -30,7 +47,7 @@ const MessageList = ({ messages, onSelectMessage, selectedMessageId }) => {
           >
             <div className="message-sender">{message.from}</div>
             <div className="message-subject">{message.subject}</div>
-            <div className="message-preview">{message.preview}</div>
+            <div className="message-preview">{formatPreview(message)}</div>
             <div className="message-date">
               {new Date(message.date).toLocaleString()}
             </div>

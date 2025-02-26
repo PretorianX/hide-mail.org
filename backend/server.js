@@ -46,6 +46,12 @@ app.use((err, req, res, next) => {
   });
 });
 
+// Add this to your backend server.js file for debugging
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  next();
+});
+
 // Start Express server
 const server = app.listen(PORT, () => {
   logger.info(`API server running on port ${PORT}`);
@@ -106,41 +112,24 @@ const smtpServer = new SMTPServer({
     logger.info(`SMTP: Starting to receive message data`);
     
     let mailData = '';
-    let dataLength = 0;
     
     stream.on('data', (chunk) => {
       mailData += chunk;
-      dataLength += chunk.length;
-      
-      // Log progress for large emails
-      if (dataLength % 10240 === 0) { // Log every 10KB
-        logger.debug(`SMTP: Received ${dataLength} bytes of data`);
-      }
     });
 
     stream.on('end', async () => {
       try {
-        logger.info(`SMTP: Finished receiving message data (${dataLength} bytes)`);
+        logger.info(`SMTP: Finished receiving message data (${mailData.length} bytes)`);
         
         // Parse email
-        logger.debug('SMTP: Parsing email data');
         const parsedMail = await simpleParser(mailData);
-        
-        // Log email details
-        logger.info(`SMTP: Parsed email from: ${parsedMail.from?.text || 'unknown'}`);
-        logger.info(`SMTP: Parsed email subject: ${parsedMail.subject || '(No Subject)'}`);
         
         // Extract recipient from session
         const recipient = session.envelope.rcptTo[0].address;
         logger.info(`SMTP: Processing email for recipient: ${recipient}`);
         
-        // Check if mailbox is active
-        const isActive = await redisService.isMailboxActive(recipient);
-        
-        if (!isActive) {
-          logger.warn(`SMTP: Rejected email for inactive mailbox: ${recipient}`);
-          return callback(new Error('Mailbox not active'));
-        }
+        // Store the full raw email body for debugging
+        const rawBody = mailData;
         
         // Store email
         const email = {
@@ -150,6 +139,7 @@ const smtpServer = new SMTPServer({
           preview: parsedMail.text ? parsedMail.text.substring(0, 100) : '(No content)',
           text: parsedMail.text || '',
           html: parsedMail.html || '',
+          body: rawBody, // Store the full raw email
           attachments: parsedMail.attachments || [],
           receivedAt: new Date().toISOString(),
           read: false
@@ -158,7 +148,10 @@ const smtpServer = new SMTPServer({
         logger.debug(`SMTP: Storing email with ID: ${email.id}`);
         await redisService.storeEmail(recipient, email);
         
-        logger.info(`SMTP: Email successfully processed for: ${recipient}`);
+        // Log success with more details
+        logger.info(`SMTP: Email successfully processed and stored for: ${recipient}`);
+        logger.info(`SMTP: Email ID: ${email.id}, Subject: ${email.subject}`);
+        
         callback();
       } catch (error) {
         logger.error(`SMTP: Error processing email: ${error.message}`, error);

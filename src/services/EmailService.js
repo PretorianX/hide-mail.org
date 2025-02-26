@@ -4,6 +4,8 @@ import { faker } from '@faker-js/faker';
 // Backend API URL
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
 
+console.log('API URL:', API_URL);
+
 // Default mailbox lifetime in minutes
 const DEFAULT_LIFETIME_MINUTES = 30;
 
@@ -259,20 +261,35 @@ class EmailService {
 
   static async getMessages(email) {
     try {
-      // Get messages from the backend API
-      const response = await axios.get(`${API_URL}/emails/${encodeURIComponent(email)}`);
+      const apiUrl = `${API_URL}/messages?email=${encodeURIComponent(email)}`;
+      console.log('Fetching messages from URL:', apiUrl);
       
-      // Map the response to match our frontend format
-      return response.data.data.map(message => ({
-        id: message.id,
-        from: message.from,
-        subject: message.subject,
-        preview: message.preview,
-        date: message.receivedAt
-      }));
+      const response = await fetch(apiUrl);
+      
+      if (!response.ok) {
+        console.error(`Failed to fetch messages: ${response.status} ${response.statusText}`);
+        
+        // If mailbox not found, return empty array instead of throwing
+        if (response.status === 404) {
+          return [];
+        }
+        
+        throw new Error(`Failed to fetch messages: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('Raw message data from API:', data);
+      
+      // Check the structure of the response
+      if (!data || !data.success) {
+        console.warn('API returned error:', data.error || 'Unknown error');
+        return [];
+      }
+      
+      return data.messages || [];
     } catch (error) {
       console.error('Error fetching messages:', error);
-      throw error;
+      return [];
     }
   }
   
