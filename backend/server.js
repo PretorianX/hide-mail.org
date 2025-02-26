@@ -142,6 +142,7 @@ const smtpServer = new SMTPServer({
           body: rawBody, // Store the full raw email
           attachments: parsedMail.attachments || [],
           receivedAt: new Date().toISOString(),
+          date: parsedMail.date ? new Date(parsedMail.date).toISOString() : new Date().toISOString(),
           read: false
         };
         

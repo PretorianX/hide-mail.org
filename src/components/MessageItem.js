@@ -1,5 +1,6 @@
 import React from 'react';
 import './MessageItem.css';
+import { formatDate } from '../utils/dateUtils';
 
 const MessageItem = ({ message, onClick }) => {
   // Get the full preview text without truncation
@@ -12,7 +13,7 @@ const MessageItem = ({ message, onClick }) => {
       <div className="message-header">
         <div className="message-from">{message.from}</div>
         <div className="message-date">
-          {new Date(message.date).toLocaleString()}
+          {formatDate(message.date || message.receivedAt)}
         </div>
       </div>
       <div className="message-subject">{message.subject}</div>

@@ -181,6 +181,7 @@ Content-Transfer-Encoding: 8bit
 --b1_test--`,
       attachments: [],
       receivedAt: new Date().toISOString(),
+      date: new Date().toISOString(),
       read: false
     };
     

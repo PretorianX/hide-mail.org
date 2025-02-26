@@ -3,6 +3,7 @@ import './App.css';
 import EmailService from './services/EmailService';
 import MailboxTimer from './components/MailboxTimer';
 import { parseMultipartMessage } from './utils/messageParser';
+import { formatDate } from './utils/dateUtils';
 
 function App() {
   const [email, setEmail] = useState(null);
@@ -123,19 +124,25 @@ Content-Transfer-Encoding: 8bit
       const processedMessages = fetchedMessages.map(message => {
         console.log('Processing message:', message);
         
-        if (message.body) {
-          const parsedContent = parseMultipartMessage(message.body);
+        // Normalize date fields
+        const normalizedMessage = {
+          ...message,
+          date: message.date || message.receivedAt || new Date().toISOString()
+        };
+        
+        if (normalizedMessage.body) {
+          const parsedContent = parseMultipartMessage(normalizedMessage.body);
           console.log('Parsed content:', parsedContent);
           
           return {
-            ...message,
-            text: parsedContent.text || message.preview || '',
+            ...normalizedMessage,
+            text: parsedContent.text || normalizedMessage.preview || '',
             html: parsedContent.html || '',
-            preview: parsedContent.text || message.preview || ''
+            preview: parsedContent.text || normalizedMessage.preview || ''
           };
         }
         
-        return message;
+        return normalizedMessage;
       });
       
       console.log('Processed messages:', processedMessages);
@@ -359,7 +366,7 @@ Content-Transfer-Encoding: 8bit
                         <div className="message-header">
                           <div className="message-from">{message.from}</div>
                           <div className="message-date">
-                            {new Date(message.date).toLocaleString()}
+                            {formatDate(message.date || message.receivedAt)}
                           </div>
                         </div>
                         <div className="message-subject">{message.subject}</div>
