@@ -260,4 +260,183 @@ button:disabled {
   .sidebar {
     margin-top: 30px;
   }
+  
+  /* Adjust header for mobile */
+  .app-header h1 {
+    font-size: 2rem;
+  }
+  
+  .app-header h1::before {
+    font-size: 2.2rem;
+  }
+  
+  /* Adjust padding for mobile */
+  .app {
+    padding: 15px;
+  }
+  
+  .email-section, 
+  .messages-section {
+    padding: 20px 15px;
+  }
+  
+  /* Make buttons more touch-friendly */
+  .email-actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  button {
+    width: 100%;
+    padding: 15px 20px;
+    font-size: 1.1rem;
+  }
+  
+  /* Adjust ad containers for mobile */
+  .ad-banner {
+    height: 100px;
+    max-width: 100%;
+  }
+  
+  /* Improve message list readability */
+  .message-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+  }
+  
+  .message-date {
+    font-size: 0.8rem;
+  }
+}
+
+/* Add viewport-specific font sizing */
+@media (max-width: 480px) {
+  html {
+    font-size: 14px;
+  }
+  
+  .email-display {
+    font-size: 1rem;
+  }
+}
+
+/* Improve tap targets for mobile */
+@media (hover: none) {
+  button, 
+  .message-item {
+    transition: none;
+  }
+  
+  button:active {
+    background-color: var(--duck-orange-light);
+  }
+  
+  .message-item:active {
+    background-color: #e8e8e8;
+  }
+}
+
+.domain-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.domain-selector label {
+  font-weight: bold;
+  color: var(--duck-black);
+}
+
+.domain-select {
+  padding: 12px;
+  border-radius: 8px;
+  border: 2px solid var(--duck-orange-light);
+  background-color: var(--duck-white);
+  font-size: 1rem;
+  color: var(--duck-black);
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f7941d' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+}
+
+.domain-select:focus {
+  outline: none;
+  border-color: var(--duck-orange);
+  box-shadow: 0 0 0 2px rgba(247, 148, 29, 0.2);
+}
+
+/* Adjust for mobile */
+@media (max-width: 767px) {
+  .domain-select {
+    padding: 15px;
+    font-size: 1.1rem;
+  }
+}
+
+.mailbox-timer {
+  margin: 15px 0;
+  padding: 10px;
+  background-color: var(--duck-gray);
+  border-radius: 8px;
+  border: 1px solid #ddd;
+}
+
+.timer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.timer-label {
+  font-size: 0.9rem;
+  color: var(--duck-black);
+}
+
+.timer-value {
+  font-weight: bold;
+  font-size: 1.1rem;
+  color: var(--duck-orange);
+}
+
+.refresh-button {
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  background-color: var(--duck-orange-light);
+}
+
+.timer-progress-container {
+  height: 8px;
+  background-color: #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.timer-progress-bar {
+  height: 100%;
+  background-color: var(--duck-orange);
+  transition: width 1s ease, background-color 1s ease;
+}
+
+/* Mobile adjustments for timer */
+@media (max-width: 767px) {
+  .timer-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .timer-value {
+    font-size: 1.2rem;
+  }
+  
+  .refresh-button {
+    width: 100%;
+    margin-top: 5px;
+  }
 } 

@@ -1,13 +1,17 @@
 import axios from 'axios';
+import { faker } from '@faker-js/faker';
 
 // Replace with your actual API URL
 const API_URL = process.env.REACT_APP_API_URL || 'https://api.example.com';
 
+// Default mailbox lifetime in minutes
+const DEFAULT_LIFETIME_MINUTES = 30;
+
 class EmailService {
   static domains = [];
-  static firstNames = [];
-  static lastNames = [];
   static initialized = false;
+  static currentEmail = null;
+  static expirationTime = null;
 
   static async initialize() {
     if (this.initialized) return;
@@ -17,20 +21,6 @@ class EmailService {
       const domainsResponse = await fetch('/config/domains.json');
       const domainsData = await domainsResponse.json();
       this.domains = domainsData.domains;
-      
-      // Load names from a public API or use a predefined list
-      this.firstNames = [
-        'james', 'john', 'robert', 'michael', 'william', 'david', 'richard', 'joseph', 'thomas', 'charles',
-        'mary', 'patricia', 'jennifer', 'linda', 'elizabeth', 'barbara', 'susan', 'jessica', 'sarah', 'karen',
-        'alex', 'jordan', 'taylor', 'casey', 'riley', 'jamie', 'jessie', 'peyton', 'quinn', 'reese'
-      ];
-      
-      this.lastNames = [
-        'smith', 'johnson', 'williams', 'brown', 'jones', 'garcia', 'miller', 'davis', 'rodriguez', 'martinez',
-        'hernandez', 'lopez', 'gonzalez', 'wilson', 'anderson', 'thomas', 'taylor', 'moore', 'jackson', 'martin',
-        'lee', 'perez', 'thompson', 'white', 'harris', 'sanchez', 'clark', 'ramirez', 'lewis', 'robinson'
-      ];
-      
       this.initialized = true;
     } catch (error) {
       console.error('Error initializing EmailService:', error);
@@ -45,30 +35,81 @@ class EmailService {
   }
 
   static generateRandomLocalPart() {
-    const firstName = this.getRandomElement(this.firstNames);
-    const lastName = this.getRandomElement(this.lastNames);
-    
-    // Different formats for local part
+    // Use different formats for local part following email best practices
     const formats = [
-      // name.surname
-      () => `${firstName}.${lastName}`,
-      // namesurname (no delimiter)
-      () => `${firstName}${lastName}`,
-      // first letter of first name + surname
-      () => `${firstName.charAt(0)}${lastName}`,
-      // name.surname + 2 digit year
-      () => `${firstName}.${lastName}${Math.floor(Math.random() * 100).toString().padStart(2, '0')}`,
-      // name.surname + 4 digit year
-      () => `${firstName}.${lastName}${Math.floor(Math.random() * (2023 - 1950) + 1950)}`,
-      // name_surname
-      () => `${firstName}_${lastName}`,
-      // surname.name
-      () => `${lastName}.${firstName}`,
-      // name + random number
-      () => `${firstName}${Math.floor(Math.random() * 1000)}`
+      // firstName.lastName (most common format)
+      () => {
+        const firstName = faker.person.firstName().toLowerCase().replace(/[^a-z0-9]/g, '');
+        const lastName = faker.person.lastName().toLowerCase().replace(/[^a-z0-9]/g, '');
+        return `${firstName}.${lastName}`;
+      },
+      // firstNameLastName (no delimiter)
+      () => {
+        const firstName = faker.person.firstName().toLowerCase().replace(/[^a-z0-9]/g, '');
+        const lastName = faker.person.lastName().toLowerCase().replace(/[^a-z0-9]/g, '');
+        return `${firstName}${lastName}`;
+      },
+      // first letter of first name + lastName
+      () => {
+        const firstName = faker.person.firstName().toLowerCase().replace(/[^a-z0-9]/g, '');
+        const lastName = faker.person.lastName().toLowerCase().replace(/[^a-z0-9]/g, '');
+        return `${firstName.charAt(0)}${lastName}`;
+      },
+      // firstName.lastName + 2 digit year
+      () => {
+        const firstName = faker.person.firstName().toLowerCase().replace(/[^a-z0-9]/g, '');
+        const lastName = faker.person.lastName().toLowerCase().replace(/[^a-z0-9]/g, '');
+        const year = Math.floor(Math.random() * 100).toString().padStart(2, '0');
+        return `${firstName}.${lastName}${year}`;
+      },
+      // firstName.lastName + 4 digit year
+      () => {
+        const firstName = faker.person.firstName().toLowerCase().replace(/[^a-z0-9]/g, '');
+        const lastName = faker.person.lastName().toLowerCase().replace(/[^a-z0-9]/g, '');
+        const year = Math.floor(Math.random() * (2023 - 1950) + 1950);
+        return `${firstName}.${lastName}${year}`;
+      },
+      // firstName_lastName (underscore delimiter)
+      () => {
+        const firstName = faker.person.firstName().toLowerCase().replace(/[^a-z0-9]/g, '');
+        const lastName = faker.person.lastName().toLowerCase().replace(/[^a-z0-9]/g, '');
+        return `${firstName}_${lastName}`;
+      },
+      // lastName.firstName
+      () => {
+        const firstName = faker.person.firstName().toLowerCase().replace(/[^a-z0-9]/g, '');
+        const lastName = faker.person.lastName().toLowerCase().replace(/[^a-z0-9]/g, '');
+        return `${lastName}.${firstName}`;
+      },
+      // firstName-lastName (hyphen delimiter)
+      () => {
+        const firstName = faker.person.firstName().toLowerCase().replace(/[^a-z0-9]/g, '');
+        const lastName = faker.person.lastName().toLowerCase().replace(/[^a-z0-9]/g, '');
+        return `${firstName}-${lastName}`;
+      },
+      // firstName + random number
+      () => {
+        const firstName = faker.person.firstName().toLowerCase().replace(/[^a-z0-9]/g, '');
+        const randomNum = Math.floor(Math.random() * 1000);
+        return `${firstName}${randomNum}`;
+      }
     ];
     
-    return this.getRandomElement(formats)();
+    // Generate the local part
+    let localPart = this.getRandomElement(formats)();
+    
+    // Ensure the local part doesn't start or end with a period
+    localPart = localPart.replace(/^\.|\.$/, '');
+    
+    // Ensure there are no consecutive periods
+    localPart = localPart.replace(/\.{2,}/g, '.');
+    
+    // Ensure the local part is not too long (max 64 characters according to RFC)
+    if (localPart.length > 64) {
+      localPart = localPart.substring(0, 64);
+    }
+    
+    return localPart;
   }
 
   static async generateEmail(selectedDomain = null) {
@@ -82,7 +123,13 @@ class EmailService {
       const localPart = this.generateRandomLocalPart();
       const domain = selectedDomain || this.getRandomElement(this.domains);
       
-      return `${localPart}@${domain}`;
+      const email = `${localPart}@${domain}`;
+      
+      // Set expiration time to 30 minutes from now
+      this.currentEmail = email;
+      this.expirationTime = new Date(Date.now() + DEFAULT_LIFETIME_MINUTES * 60 * 1000);
+      
+      return email;
     } catch (error) {
       console.error('Error generating email:', error);
       throw error;
@@ -92,6 +139,28 @@ class EmailService {
   static async getAvailableDomains() {
     await this.initialize();
     return this.domains;
+  }
+
+  static getExpirationTime() {
+    return this.expirationTime;
+  }
+
+  static getRemainingTime() {
+    if (!this.expirationTime) return 0;
+    
+    const now = new Date();
+    const remaining = this.expirationTime - now;
+    
+    // Return remaining time in milliseconds, or 0 if expired
+    return Math.max(0, remaining);
+  }
+
+  static refreshExpirationTime() {
+    if (!this.currentEmail) return false;
+    
+    // Extend expiration time by another 30 minutes from now
+    this.expirationTime = new Date(Date.now() + DEFAULT_LIFETIME_MINUTES * 60 * 1000);
+    return true;
   }
 
   static async getMessages(email) {

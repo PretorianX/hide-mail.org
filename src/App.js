@@ -1,15 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 import EmailService from './services/EmailService';
+import MailboxTimer from './components/MailboxTimer';
 
 function App() {
   const [email, setEmail] = useState('');
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [domains, setDomains] = useState([]);
+  const [selectedDomain, setSelectedDomain] = useState('');
 
   useEffect(() => {
-    generateEmail();
+    const initializeApp = async () => {
+      try {
+        // Load available domains
+        const availableDomains = await EmailService.getAvailableDomains();
+        setDomains(availableDomains);
+        
+        // Generate initial email
+        generateEmail();
+      } catch (err) {
+        setError('Failed to initialize application');
+        console.error(err);
+      }
+    };
+    
+    initializeApp();
     
     // Add Google Adsense script (replace with your actual Adsense ID when you have one)
     const script = document.createElement('script');
@@ -19,14 +36,16 @@ function App() {
     document.head.appendChild(script);
     
     return () => {
-      document.head.removeChild(script);
+      if (document.head.contains(script)) {
+        document.head.removeChild(script);
+      }
     };
   }, []);
 
   const generateEmail = async () => {
     setLoading(true);
     try {
-      const newEmail = await EmailService.generateEmail();
+      const newEmail = await EmailService.generateEmail(selectedDomain);
       setEmail(newEmail);
       setMessages([]);
       setError('');
@@ -36,6 +55,10 @@ function App() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDomainChange = (e) => {
+    setSelectedDomain(e.target.value);
   };
 
   const checkMessages = async () => {
@@ -52,6 +75,12 @@ function App() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleMailboxExpired = () => {
+    // When mailbox expires, we can show a message or automatically generate a new one
+    setError('Your mailbox has expired. Please generate a new email address.');
+    setEmail('');
   };
 
   return (
@@ -74,12 +103,29 @@ function App() {
             <section className="email-section">
               <div className="email-container">
                 <h2>Your Duck Mail Address</h2>
-                <div className="email-display">
-                  {loading ? 'Hatching your email...' : email || 'No email generated'}
+                <div className="domain-selector">
+                  <label htmlFor="domain-select">Choose a domain:</label>
+                  <select 
+                    id="domain-select" 
+                    value={selectedDomain} 
+                    onChange={handleDomainChange}
+                    className="domain-select"
+                  >
+                    <option value="">Random domain</option>
+                    {domains.map((domain, index) => (
+                      <option key={index} value={domain}>{domain}</option>
+                    ))}
+                  </select>
                 </div>
+                <div className="email-display">
+                  {loading ? 'Generating your email...' : email || 'No email generated'}
+                </div>
+                
+                {email && <MailboxTimer email={email} onExpired={handleMailboxExpired} />}
+                
                 <div className="email-actions">
                   <button onClick={generateEmail} disabled={loading}>
-                    {loading ? 'Generating...' : 'Generate New Duck Mail'}
+                    {loading ? 'Generating...' : 'Generate New Email'}
                   </button>
                   <button onClick={checkMessages} disabled={loading || !email}>
                     Check Messages

@@ -7,4 +7,6 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8080:80"
+    volumes:
+      - ./config/domains.json:/app/config/domains.json
     restart: unless-stopped 

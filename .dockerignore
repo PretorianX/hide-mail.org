@@ -4,4 +4,6 @@ build
 .git
 .github
 .gitignore
-README.md 
+README.md
+.vscode
+# Don't exclude config directory 
