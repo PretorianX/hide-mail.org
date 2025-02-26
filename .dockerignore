@@ -7,3 +7,4 @@ build
 README.md
 .vscode
 # Don't exclude config directory 
+.env 

@@ -36,19 +36,23 @@ const MailboxTimer = ({ email, onExpired }) => {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     setIsRefreshing(true);
     
-    // Refresh expiration time
-    const success = EmailService.refreshExpirationTime();
-    
-    if (success) {
-      setRemainingTime(EmailService.getRemainingTime());
+    try {
+      // Refresh expiration time via backend
+      const success = await EmailService.refreshExpirationTime();
+      
+      if (success) {
+        setRemainingTime(EmailService.getRemainingTime());
+      }
+    } catch (error) {
+      console.error('Error refreshing mailbox:', error);
+    } finally {
+      setTimeout(() => {
+        setIsRefreshing(false);
+      }, 500);
     }
-    
-    setTimeout(() => {
-      setIsRefreshing(false);
-    }, 500);
   };
 
   // Calculate progress percentage

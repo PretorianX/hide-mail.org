@@ -1,11 +1,17 @@
 import axios from 'axios';
 import { faker } from '@faker-js/faker';
 
-// Replace with your actual API URL
-const API_URL = process.env.REACT_APP_API_URL || 'https://api.example.com';
+// Backend API URL
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
 
 // Default mailbox lifetime in minutes
 const DEFAULT_LIFETIME_MINUTES = 30;
+
+// Local storage keys
+const STORAGE_KEYS = {
+  CURRENT_EMAIL: 'mailduck_current_email',
+  EXPIRATION_TIME: 'mailduck_expiration_time'
+};
 
 class EmailService {
   static domains = [];
@@ -17,16 +23,67 @@ class EmailService {
     if (this.initialized) return;
     
     try {
-      // Load domains from the mounted JSON file
-      const domainsResponse = await fetch('/config/domains.json');
-      const domainsData = await domainsResponse.json();
-      this.domains = domainsData.domains;
+      // Load domains from the backend API
+      const response = await axios.get(`${API_URL}/domains`);
+      this.domains = response.data.data;
+      
+      // Load saved email from localStorage if available
+      this.loadFromStorage();
+      
       this.initialized = true;
     } catch (error) {
       console.error('Error initializing EmailService:', error);
-      // Fallback domains if file loading fails
+      // Fallback domains if API call fails
       this.domains = ['mailduck.io', 'mail-duck.com', 'duckmail.org'];
+      
+      // Still try to load from storage
+      this.loadFromStorage();
+      
       this.initialized = true;
+    }
+  }
+
+  static loadFromStorage() {
+    try {
+      const savedEmail = localStorage.getItem(STORAGE_KEYS.CURRENT_EMAIL);
+      const savedExpiration = localStorage.getItem(STORAGE_KEYS.EXPIRATION_TIME);
+      
+      if (savedEmail && savedExpiration) {
+        const expirationTime = new Date(savedExpiration);
+        
+        // Only restore if not expired
+        if (expirationTime > new Date()) {
+          this.currentEmail = savedEmail;
+          this.expirationTime = expirationTime;
+          console.log(`Restored email from storage: ${this.currentEmail}`);
+        } else {
+          console.log('Saved email was expired, not restoring');
+          // Clear storage since it's expired
+          this.clearStorage();
+        }
+      }
+    } catch (error) {
+      console.error('Error loading from localStorage:', error);
+    }
+  }
+
+  static saveToStorage() {
+    try {
+      if (this.currentEmail && this.expirationTime) {
+        localStorage.setItem(STORAGE_KEYS.CURRENT_EMAIL, this.currentEmail);
+        localStorage.setItem(STORAGE_KEYS.EXPIRATION_TIME, this.expirationTime.toISOString());
+      }
+    } catch (error) {
+      console.error('Error saving to localStorage:', error);
+    }
+  }
+
+  static clearStorage() {
+    try {
+      localStorage.removeItem(STORAGE_KEYS.CURRENT_EMAIL);
+      localStorage.removeItem(STORAGE_KEYS.EXPIRATION_TIME);
+    } catch (error) {
+      console.error('Error clearing localStorage:', error);
     }
   }
 
@@ -116,23 +173,49 @@ class EmailService {
     await this.initialize();
     
     try {
-      // This is a placeholder. Replace with your actual API endpoint
-      // const response = await axios.get(`${API_URL}/generate-email`);
-      // return response.data.email;
+      // If we already have an active email, deactivate it first
+      if (this.currentEmail) {
+        await this.deactivateCurrentEmail();
+      }
       
       const localPart = this.generateRandomLocalPart();
       const domain = selectedDomain || this.getRandomElement(this.domains);
       
       const email = `${localPart}@${domain}`;
       
+      // Register the mailbox with the backend
+      await axios.post(`${API_URL}/mailbox/register`, { email });
+      
       // Set expiration time to 30 minutes from now
       this.currentEmail = email;
       this.expirationTime = new Date(Date.now() + DEFAULT_LIFETIME_MINUTES * 60 * 1000);
+      
+      // Save to localStorage
+      this.saveToStorage();
       
       return email;
     } catch (error) {
       console.error('Error generating email:', error);
       throw error;
+    }
+  }
+
+  static async deactivateCurrentEmail() {
+    if (!this.currentEmail) return;
+    
+    try {
+      // Call the backend to deactivate the mailbox
+      await axios.post(`${API_URL}/mailbox/deactivate`, { email: this.currentEmail });
+      console.log(`Deactivated email: ${this.currentEmail}`);
+      
+      // Clear storage
+      this.clearStorage();
+      
+      // Reset current email and expiration time
+      this.currentEmail = null;
+      this.expirationTime = null;
+    } catch (error) {
+      console.error('Error deactivating email:', error);
     }
   }
 
@@ -151,50 +234,77 @@ class EmailService {
     const now = new Date();
     const remaining = this.expirationTime - now;
     
-    // Return remaining time in milliseconds, or 0 if expired
-    return Math.max(0, remaining);
+    return remaining > 0 ? remaining : 0;
   }
 
-  static refreshExpirationTime() {
+  static async refreshExpirationTime() {
     if (!this.currentEmail) return false;
     
-    // Extend expiration time by another 30 minutes from now
-    this.expirationTime = new Date(Date.now() + DEFAULT_LIFETIME_MINUTES * 60 * 1000);
-    return true;
+    try {
+      // Call the backend to refresh the mailbox
+      await axios.post(`${API_URL}/mailbox/refresh`, { email: this.currentEmail });
+      
+      // Extend expiration time by another 30 minutes from now
+      this.expirationTime = new Date(Date.now() + DEFAULT_LIFETIME_MINUTES * 60 * 1000);
+      
+      // Update storage
+      this.saveToStorage();
+      
+      return true;
+    } catch (error) {
+      console.error('Error refreshing expiration time:', error);
+      return false;
+    }
   }
 
   static async getMessages(email) {
     try {
-      // This is a placeholder. Replace with your actual API endpoint
-      // const response = await axios.get(`${API_URL}/messages?email=${email}`);
-      // return response.data.messages;
+      // Get messages from the backend API
+      const response = await axios.get(`${API_URL}/emails/${encodeURIComponent(email)}`);
       
-      // For demo purposes, return duck-themed fake messages
-      return [
-        {
-          id: 1,
-          from: 'welcome@mailduck.io',
-          subject: 'Welcome to Mail Duck!',
-          preview: 'Thank you for using our service! Your temporary mail is ready to use...',
-          date: new Date().toISOString()
-        },
-        {
-          id: 2,
-          from: 'newsletter@quacktech.com',
-          subject: 'Weekly Tech Quacks',
-          preview: 'This week in tech: New gadgets for ducks, waterproof smartphones, and more...',
-          date: new Date(Date.now() - 3600000).toISOString()
-        },
-        {
-          id: 3,
-          from: 'no-reply@pondside.com',
-          subject: 'Your Pondside Account',
-          preview: 'Your account has been created successfully. Please verify your email...',
-          date: new Date(Date.now() - 7200000).toISOString()
-        }
-      ];
+      // Map the response to match our frontend format
+      return response.data.data.map(message => ({
+        id: message.id,
+        from: message.from,
+        subject: message.subject,
+        preview: message.preview,
+        date: message.receivedAt
+      }));
     } catch (error) {
       console.error('Error fetching messages:', error);
+      throw error;
+    }
+  }
+  
+  static async getMessageDetails(email, messageId) {
+    try {
+      // Get detailed message from the backend API
+      const response = await axios.get(`${API_URL}/emails/${encodeURIComponent(email)}/${messageId}`);
+      return response.data.data;
+    } catch (error) {
+      console.error('Error fetching message details:', error);
+      throw error;
+    }
+  }
+  
+  static async deleteMessage(email, messageId) {
+    try {
+      // Delete message via the backend API
+      await axios.delete(`${API_URL}/emails/${encodeURIComponent(email)}/${messageId}`);
+      return true;
+    } catch (error) {
+      console.error('Error deleting message:', error);
+      throw error;
+    }
+  }
+  
+  static async deleteAllMessages(email) {
+    try {
+      // Delete all messages for this email via the backend API
+      await axios.delete(`${API_URL}/emails/${encodeURIComponent(email)}`);
+      return true;
+    } catch (error) {
+      console.error('Error deleting all messages:', error);
       throw error;
     }
   }

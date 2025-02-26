@@ -1,40 +1,55 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 import EmailService from './services/EmailService';
-import MailboxTimer from './components/MailboxTimer';
+import Header from './components/Header';
+import EmailDisplay from './components/EmailDisplay';
+import MessageList from './components/MessageList';
+import MessageView from './components/MessageView';
 
 function App() {
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(null);
   const [messages, setMessages] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [selectedMessage, setSelectedMessage] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [domains, setDomains] = useState([]);
-  const [selectedDomain, setSelectedDomain] = useState('');
 
   useEffect(() => {
     const initializeApp = async () => {
       try {
-        // Load available domains
+        await EmailService.initialize();
+        
+        // Get available domains
         const availableDomains = await EmailService.getAvailableDomains();
         setDomains(availableDomains);
         
-        // Generate initial email
-        generateEmail();
+        // Check if we have a saved email
+        if (EmailService.currentEmail) {
+          setEmail(EmailService.currentEmail);
+          // Load messages for the saved email
+          fetchMessages(EmailService.currentEmail);
+        } else {
+          // Generate a new email if none exists
+          const newEmail = await EmailService.generateEmail();
+          setEmail(newEmail);
+        }
       } catch (err) {
-        setError('Failed to initialize application');
-        console.error(err);
+        console.error('Error initializing app:', err);
+        setError('Failed to initialize. Please try again later.');
+      } finally {
+        setLoading(false);
       }
     };
-    
+
     initializeApp();
-    
+     
     // Add Google Adsense script (replace with your actual Adsense ID when you have one)
     const script = document.createElement('script');
     script.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-YOURPUBID';
     script.async = true;
     script.crossOrigin = 'anonymous';
     document.head.appendChild(script);
-    
+     
     return () => {
       if (document.head.contains(script)) {
         document.head.removeChild(script);
@@ -42,53 +57,86 @@ function App() {
     };
   }, []);
 
-  const generateEmail = async () => {
-    setLoading(true);
+  const fetchMessages = async (emailAddress) => {
     try {
-      const newEmail = await EmailService.generateEmail(selectedDomain);
-      setEmail(newEmail);
-      setMessages([]);
-      setError('');
+      setLoading(true);
+      const fetchedMessages = await EmailService.getMessages(emailAddress);
+      setMessages(fetchedMessages);
+      setSelectedMessage(null); // Clear selected message when messages change
     } catch (err) {
-      setError('Failed to generate email address');
-      console.error(err);
+      console.error('Error fetching messages:', err);
+      setError('Failed to fetch messages. Please try again later.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDomainChange = (e) => {
-    setSelectedDomain(e.target.value);
-  };
-
-  const checkMessages = async () => {
-    if (!email) return;
-    
-    setLoading(true);
+  const handleGenerateEmail = async (domain = null) => {
     try {
-      const newMessages = await EmailService.getMessages(email);
-      setMessages(newMessages);
-      setError('');
+      setLoading(true);
+      const newEmail = await EmailService.generateEmail(domain);
+      setEmail(newEmail);
+      setMessages([]);
+      setSelectedMessage(null);
     } catch (err) {
-      setError('Failed to fetch messages');
-      console.error(err);
+      console.error('Error generating email:', err);
+      setError('Failed to generate email. Please try again later.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSelectMessage = async (messageId) => {
+    try {
+      setLoading(true);
+      const message = await EmailService.getMessageDetails(email, messageId);
+      setSelectedMessage(message);
+    } catch (err) {
+      console.error('Error fetching message details:', err);
+      setError('Failed to load message. Please try again later.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteMessage = async (messageId) => {
+    try {
+      setLoading(true);
+      await EmailService.deleteMessage(email, messageId);
+      // Refresh messages after deletion
+      fetchMessages(email);
+    } catch (err) {
+      console.error('Error deleting message:', err);
+      setError('Failed to delete message. Please try again later.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRefreshMessages = () => {
+    if (email) {
+      fetchMessages(email);
     }
   };
 
   const handleMailboxExpired = () => {
-    // When mailbox expires, we can show a message or automatically generate a new one
-    setError('Your mailbox has expired. Please generate a new email address.');
-    setEmail('');
+    // Clear the current email and messages
+    setEmail(null);
+    setMessages([]);
+    setSelectedMessage(null);
+    
+    // Generate a new email
+    handleGenerateEmail();
   };
 
   return (
     <div className="app">
-      <header className="app-header">
-        <h1>Mail Duck</h1>
-        <p>Your friendly temporary email service</p>
-      </header>
+      <Header 
+        email={email} 
+        onGenerateEmail={handleGenerateEmail}
+        onRefreshMessages={handleRefreshMessages}
+        onMailboxExpired={handleMailboxExpired}
+      />
       
       {/* Top banner ad */}
       <div className="ad-container">
@@ -99,62 +147,31 @@ function App() {
       
       <div className="app-layout">
         <div className="main-content">
-          <main className="app-main">
-            <section className="email-section">
-              <div className="email-container">
-                <h2>Your Duck Mail Address</h2>
-                <div className="domain-selector">
-                  <label htmlFor="domain-select">Choose a domain:</label>
-                  <select 
-                    id="domain-select" 
-                    value={selectedDomain} 
-                    onChange={handleDomainChange}
-                    className="domain-select"
-                  >
-                    <option value="">Random domain</option>
-                    {domains.map((domain, index) => (
-                      <option key={index} value={domain}>{domain}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="email-display">
-                  {loading ? 'Generating your email...' : email || 'No email generated'}
-                </div>
-                
-                {email && <MailboxTimer email={email} onExpired={handleMailboxExpired} />}
-                
-                <div className="email-actions">
-                  <button onClick={generateEmail} disabled={loading}>
-                    {loading ? 'Generating...' : 'Generate New Email'}
-                  </button>
-                  <button onClick={checkMessages} disabled={loading || !email}>
-                    Check Messages
-                  </button>
-                </div>
-              </div>
-            </section>
+          <main className="app-content">
+            {loading && <div className="loading">Loading...</div>}
+            {error && <div className="error">{error}</div>}
             
-            {error && <div className="error-message">{error}</div>}
-            
-            <section className="messages-section">
-              <h2>Duck Mail Inbox</h2>
-              {messages.length === 0 ? (
-                <p>Your inbox is empty. Messages will appear here when you receive them.</p>
-              ) : (
-                <ul className="message-list">
-                  {messages.map((message, index) => (
-                    <li key={index} className="message-item">
-                      <div className="message-header">
-                        <span className="message-from">{message.from}</span>
-                        <span className="message-date">{new Date(message.date).toLocaleString()}</span>
-                      </div>
-                      <div className="message-subject">{message.subject}</div>
-                      <div className="message-preview">{message.preview}</div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
+            {email && (
+              <>
+                <EmailDisplay email={email} />
+                
+                <div className="message-container">
+                  <MessageList 
+                    messages={messages} 
+                    onSelectMessage={handleSelectMessage}
+                    selectedMessageId={selectedMessage?.id}
+                  />
+                  
+                  {selectedMessage && (
+                    <MessageView 
+                      message={selectedMessage} 
+                      onDelete={() => handleDeleteMessage(selectedMessage.id)}
+                      onBack={() => setSelectedMessage(null)}
+                    />
+                  )}
+                </div>
+              </>
+            )}
           </main>
         </div>
         

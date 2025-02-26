@@ -1,0 +1,141 @@
+.message-view-container {
+  background-color: var(--card-bg);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.message-view-header {
+  padding: 15px 20px;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+}
+
+.back-button, .delete-button {
+  background: none;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.back-button {
+  color: var(--primary-color);
+}
+
+.back-button:hover {
+  background-color: rgba(74, 144, 226, 0.1);
+}
+
+.delete-button {
+  color: var(--danger-color);
+}
+
+.delete-button:hover {
+  background-color: rgba(220, 53, 69, 0.1);
+}
+
+.message-view-details {
+  padding: 20px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.message-view-subject {
+  font-size: 1.4rem;
+  font-weight: 500;
+  margin-bottom: 15px;
+  color: var(--text-color);
+}
+
+.message-view-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  color: var(--text-secondary);
+}
+
+.meta-label {
+  font-weight: 500;
+  color: var(--text-color);
+  margin-right: 5px;
+}
+
+.message-view-content {
+  padding: 20px;
+  flex-grow: 1;
+  overflow-y: auto;
+  line-height: 1.6;
+}
+
+.message-text-content p {
+  margin: 0 0 10px 0;
+}
+
+.message-html-content {
+  max-width: 100%;
+}
+
+.message-html-content img {
+  max-width: 100%;
+  height: auto;
+}
+
+.message-attachments {
+  padding: 20px;
+  border-top: 1px solid var(--border-color);
+}
+
+.message-attachments h3 {
+  margin: 0 0 15px 0;
+  font-size: 1.1rem;
+  color: var(--text-color);
+}
+
+.attachment-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.attachment-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px;
+  background-color: rgba(0, 0, 0, 0.02);
+  border-radius: 4px;
+}
+
+.attachment-name {
+  font-weight: 500;
+}
+
+.attachment-size {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.message-view-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-secondary);
+  padding: 20px;
+  text-align: center;
+}
+
+@media (max-width: 768px) {
+  .message-view-meta {
+    flex-direction: column;
+  }
+  
+  .message-view-subject {
+    font-size: 1.2rem;
+  }
+} 

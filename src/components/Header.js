@@ -1,50 +1,99 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
-import styled from 'styled-components';
+import React, { useState, useEffect } from 'react';
+import MailboxTimer from './MailboxTimer';
+import EmailService from '../services/EmailService';
+import './Header.css';
 
-const HeaderContainer = styled.header`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px 0;
-  margin-bottom: 30px;
-  border-bottom: 1px solid var(--border-color);
-`;
+const Header = ({ email, onGenerateEmail, onRefreshMessages, onMailboxExpired }) => {
+  const [domains, setDomains] = useState([]);
+  const [showDomainDropdown, setShowDomainDropdown] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
-const Logo = styled.div`
-  font-size: 24px;
-  font-weight: bold;
-  color: var(--primary-color);
-`;
+  useEffect(() => {
+    const loadDomains = async () => {
+      const availableDomains = await EmailService.getAvailableDomains();
+      setDomains(availableDomains);
+    };
+    
+    loadDomains();
+  }, []);
 
-const Nav = styled.nav`
-  display: flex;
-  gap: 20px;
-`;
+  const handleGenerateClick = () => {
+    onGenerateEmail();
+  };
 
-const NavLink = styled(Link)`
-  text-decoration: none;
-  color: var(--text-color);
-  font-weight: 500;
-  padding: 5px 10px;
-  border-radius: 4px;
-  transition: background-color 0.3s;
+  const handleDomainSelect = (domain) => {
+    onGenerateEmail(domain);
+    setShowDomainDropdown(false);
+  };
 
-  &:hover {
-    background-color: rgba(74, 144, 226, 0.1);
-  }
-`;
+  const handleRefreshClick = async () => {
+    setRefreshing(true);
+    await onRefreshMessages();
+    setTimeout(() => setRefreshing(false), 500);
+  };
 
-function Header() {
   return (
-    <HeaderContainer>
-      <Logo>TempMail</Logo>
-      <Nav>
-        <NavLink to="/">Generate Email</NavLink>
-        <NavLink to="/inbox">Inbox</NavLink>
-      </Nav>
-    </HeaderContainer>
+    <header className="app-header">
+      <div className="header-content">
+        <div className="logo">
+          <img src="/logo.svg" alt="Mail Duck Logo" />
+          <h1>Mail Duck</h1>
+        </div>
+        
+        <div className="header-actions">
+          {email && (
+            <>
+              <button 
+                className="refresh-button"
+                onClick={handleRefreshClick}
+                disabled={refreshing}
+              >
+                {refreshing ? 'Refreshing...' : 'Refresh Inbox'}
+              </button>
+              
+              <div className="domain-dropdown-container">
+                <button 
+                  className="generate-button"
+                  onClick={handleGenerateClick}
+                >
+                  Generate New Email
+                </button>
+                
+                <button 
+                  className="domain-dropdown-toggle"
+                  onClick={() => setShowDomainDropdown(!showDomainDropdown)}
+                >
+                  ▼
+                </button>
+                
+                {showDomainDropdown && (
+                  <div className="domain-dropdown">
+                    <div className="domain-dropdown-header">Select Domain</div>
+                    {domains.map(domain => (
+                      <div 
+                        key={domain} 
+                        className="domain-option"
+                        onClick={() => handleDomainSelect(domain)}
+                      >
+                        @{domain}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+      
+      {email && (
+        <MailboxTimer 
+          email={email} 
+          onExpired={onMailboxExpired}
+        />
+      )}
+    </header>
   );
-}
+};
 
 export default Header; 

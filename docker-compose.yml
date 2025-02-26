@@ -1,12 +1,57 @@
 version: '3.8'
 
 services:
-  temp-mail-app:
+  frontend:
     build:
       context: .
       dockerfile: Dockerfile
     ports:
       - "8080:80"
+    depends_on:
+      - backend
+    environment:
+      - REACT_APP_API_URL=http://backend:3001/api
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"  # API port
+      - "2525:2525"  # SMTP port
+    environment:
+      - NODE_ENV=development  # Change to development for more verbose logging
+      - PORT=3001
+      - SMTP_PORT=2525
+      - REDIS_URL=redis://redis:6379
+      - EMAIL_EXPIRATION=30
+      - VALID_DOMAINS=mailduck.io,mail-duck.com,duckmail.org,quackbox.net,duckpost.com,mailpond.com,quackmail.net,duckbox.email
+      - LOG_LEVEL=debug  # Set to debug for more detailed logs
+    depends_on:
+      - redis
+    restart: unless-stopped
     volumes:
-      - ./config/domains.json:/app/config/domains.json
-    restart: unless-stopped 
+      - ./backend/logs:/app/logs  # Mount logs directory for persistence
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    restart: unless-stopped
+
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+volumes:
+  redis-data: 
