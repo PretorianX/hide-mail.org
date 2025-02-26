@@ -4,21 +4,94 @@ import axios from 'axios';
 const API_URL = process.env.REACT_APP_API_URL || 'https://api.example.com';
 
 class EmailService {
-  static async generateEmail() {
+  static domains = [];
+  static firstNames = [];
+  static lastNames = [];
+  static initialized = false;
+
+  static async initialize() {
+    if (this.initialized) return;
+    
+    try {
+      // Load domains from the mounted JSON file
+      const domainsResponse = await fetch('/config/domains.json');
+      const domainsData = await domainsResponse.json();
+      this.domains = domainsData.domains;
+      
+      // Load names from a public API or use a predefined list
+      this.firstNames = [
+        'james', 'john', 'robert', 'michael', 'william', 'david', 'richard', 'joseph', 'thomas', 'charles',
+        'mary', 'patricia', 'jennifer', 'linda', 'elizabeth', 'barbara', 'susan', 'jessica', 'sarah', 'karen',
+        'alex', 'jordan', 'taylor', 'casey', 'riley', 'jamie', 'jessie', 'peyton', 'quinn', 'reese'
+      ];
+      
+      this.lastNames = [
+        'smith', 'johnson', 'williams', 'brown', 'jones', 'garcia', 'miller', 'davis', 'rodriguez', 'martinez',
+        'hernandez', 'lopez', 'gonzalez', 'wilson', 'anderson', 'thomas', 'taylor', 'moore', 'jackson', 'martin',
+        'lee', 'perez', 'thompson', 'white', 'harris', 'sanchez', 'clark', 'ramirez', 'lewis', 'robinson'
+      ];
+      
+      this.initialized = true;
+    } catch (error) {
+      console.error('Error initializing EmailService:', error);
+      // Fallback domains if file loading fails
+      this.domains = ['mailduck.io', 'mail-duck.com', 'duckmail.org'];
+      this.initialized = true;
+    }
+  }
+
+  static getRandomElement(array) {
+    return array[Math.floor(Math.random() * array.length)];
+  }
+
+  static generateRandomLocalPart() {
+    const firstName = this.getRandomElement(this.firstNames);
+    const lastName = this.getRandomElement(this.lastNames);
+    
+    // Different formats for local part
+    const formats = [
+      // name.surname
+      () => `${firstName}.${lastName}`,
+      // namesurname (no delimiter)
+      () => `${firstName}${lastName}`,
+      // first letter of first name + surname
+      () => `${firstName.charAt(0)}${lastName}`,
+      // name.surname + 2 digit year
+      () => `${firstName}.${lastName}${Math.floor(Math.random() * 100).toString().padStart(2, '0')}`,
+      // name.surname + 4 digit year
+      () => `${firstName}.${lastName}${Math.floor(Math.random() * (2023 - 1950) + 1950)}`,
+      // name_surname
+      () => `${firstName}_${lastName}`,
+      // surname.name
+      () => `${lastName}.${firstName}`,
+      // name + random number
+      () => `${firstName}${Math.floor(Math.random() * 1000)}`
+    ];
+    
+    return this.getRandomElement(formats)();
+  }
+
+  static async generateEmail(selectedDomain = null) {
+    await this.initialize();
+    
     try {
       // This is a placeholder. Replace with your actual API endpoint
       // const response = await axios.get(`${API_URL}/generate-email`);
       // return response.data.email;
       
-      // For demo purposes, return a duck-themed fake email
-      const duckNames = ['quacky', 'ducky', 'mallard', 'feathers', 'waddles', 'bill', 'drake', 'duckling'];
-      const randomDuck = duckNames[Math.floor(Math.random() * duckNames.length)];
-      const randomNum = Math.floor(Math.random() * 10000);
-      return `${randomDuck}${randomNum}@mailduck.io`;
+      const localPart = this.generateRandomLocalPart();
+      const domain = selectedDomain || this.getRandomElement(this.domains);
+      
+      return `${localPart}@${domain}`;
     } catch (error) {
       console.error('Error generating email:', error);
       throw error;
     }
+  }
+
+  static async getAvailableDomains() {
+    await this.initialize();
+    return this.domains;
   }
 
   static async getMessages(email) {
@@ -33,7 +106,7 @@ class EmailService {
           id: 1,
           from: 'welcome@mailduck.io',
           subject: 'Welcome to Mail Duck!',
-          preview: 'Thank you for using our service! Your temporary duck mail is ready to use...',
+          preview: 'Thank you for using our service! Your temporary mail is ready to use...',
           date: new Date().toISOString()
         },
         {
