@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './App.css';
 import EmailService from './services/EmailService';
 import MailboxTimer from './components/MailboxTimer';
@@ -10,18 +10,15 @@ function App() {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [domains, setDomains] = useState([]);
-  const [selectedDomain, setSelectedDomain] = useState('');
   const [copied, setCopied] = useState(false);
+  const [autoRefresh, setAutoRefresh] = useState(true);
+  const autoRefreshIntervalRef = useRef(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     const initializeApp = async () => {
       try {
         await EmailService.initialize();
-        
-        // Get available domains
-        const availableDomains = await EmailService.getAvailableDomains();
-        setDomains(availableDomains);
         
         // Check if we have a saved email
         if (EmailService.currentEmail) {
@@ -54,12 +51,49 @@ function App() {
       if (document.head.contains(script)) {
         document.head.removeChild(script);
       }
+      
+      // Clear auto-refresh interval on unmount
+      if (autoRefreshIntervalRef.current) {
+        clearInterval(autoRefreshIntervalRef.current);
+      }
     };
   }, []);
 
+  // Set up auto-refresh when email changes or autoRefresh setting changes
+  useEffect(() => {
+    // Clear any existing interval
+    if (autoRefreshIntervalRef.current) {
+      clearInterval(autoRefreshIntervalRef.current);
+      autoRefreshIntervalRef.current = null;
+    }
+    
+    // Set up new interval if autoRefresh is enabled and we have an email
+    if (autoRefresh && email) {
+      console.log('Setting up auto-refresh interval for', email);
+      autoRefreshIntervalRef.current = setInterval(() => {
+        console.log('Auto-refreshing messages...');
+        fetchMessages(email);
+      }, 3000); // Refresh every 3 seconds
+    }
+    
+    // Clean up on unmount or when dependencies change
+    return () => {
+      if (autoRefreshIntervalRef.current) {
+        clearInterval(autoRefreshIntervalRef.current);
+      }
+    };
+  }, [email, autoRefresh]);
+
   const fetchMessages = async (emailAddress) => {
     try {
-      setLoading(true);
+      // Don't show loading indicator for auto-refresh to avoid UI flicker
+      if (!autoRefreshIntervalRef.current) {
+        setLoading(true);
+      } else {
+        // Show a subtle indicator for auto-refresh
+        setRefreshing(true);
+      }
+      
       console.log('Fetching messages for email:', emailAddress);
       
       const fetchedMessages = await EmailService.getMessages(emailAddress);
@@ -152,16 +186,16 @@ Content-Transfer-Encoding: 8bit
       setError('Failed to fetch messages. Please try again later.');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
-  const handleGenerateEmail = async (domain = null) => {
+  const handleGenerateEmail = async () => {
     try {
       setLoading(true);
-      const newEmail = await EmailService.generateEmail(domain);
+      const newEmail = await EmailService.generateEmail();
       setEmail(newEmail);
       setMessages([]);
-      setSelectedDomain('');
     } catch (err) {
       console.error('Error generating email:', err);
       setError('Failed to generate email. Please try again later.');
@@ -170,73 +204,34 @@ Content-Transfer-Encoding: 8bit
     }
   };
 
-  const handleDomainChange = (e) => {
-    setSelectedDomain(e.target.value);
-  };
-
-  const handleGenerateWithDomain = () => {
-    handleGenerateEmail(selectedDomain);
-  };
-
   const handleRefreshMessages = () => {
     if (email) {
       fetchMessages(email);
     }
   };
 
+  const handleCopyClick = () => {
+    if (email) {
+      navigator.clipboard.writeText(email)
+        .then(() => {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        })
+        .catch(err => {
+          console.error('Failed to copy email:', err);
+          setError('Failed to copy email to clipboard');
+        });
+    }
+  };
+
   const handleMailboxExpired = () => {
-    // Clear the current email and messages
+    setError('Your mailbox has expired. Please generate a new email address.');
     setEmail(null);
     setMessages([]);
-    
-    // Generate a new email
-    handleGenerateEmail();
   };
 
-  const handleCopyClick = () => {
-    if (!email) return;
-    
-    // Copy to clipboard
-    navigator.clipboard.writeText(email)
-      .then(() => {
-        // Show copied message
-        setCopied(true);
-        
-        // Reset after 2 seconds
-        setTimeout(() => {
-          setCopied(false);
-        }, 2000);
-      })
-      .catch(err => {
-        console.error('Failed to copy email: ', err);
-      });
-  };
-
-  const testApi = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      // Test the API endpoint directly
-      const apiUrl = `${process.env.REACT_APP_API_URL || 'http://localhost:3001/api'}/messages?email=${encodeURIComponent(email)}`;
-      console.log('Testing API URL:', apiUrl);
-      
-      const response = await fetch(apiUrl);
-      const data = await response.json();
-      
-      console.log('API test response:', data);
-      
-      if (!response.ok) {
-        setError(`API test failed: ${response.status} ${response.statusText}`);
-      } else {
-        setError(`API test successful. Messages: ${data.messages ? data.messages.length : 0}`);
-      }
-    } catch (err) {
-      console.error('API test error:', err);
-      setError(`API test error: ${err.message}`);
-    } finally {
-      setLoading(false);
-    }
+  const toggleAutoRefresh = () => {
+    setAutoRefresh(!autoRefresh);
   };
 
   const sendTestEmail = async () => {
@@ -299,23 +294,6 @@ Content-Transfer-Encoding: 8bit
               <div className="email-container">
                 <h2>Your Duck Mail Address</h2>
                 
-                <div className="domain-selector">
-                  <label htmlFor="domain-select">Choose a domain:</label>
-                  <select 
-                    id="domain-select" 
-                    className="domain-select"
-                    value={selectedDomain}
-                    onChange={handleDomainChange}
-                  >
-                    <option value="">Random domain</option>
-                    {domains.map(domain => (
-                      <option key={domain} value={domain}>
-                        {domain}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                
                 <div className="email-display-row">
                   <div className="email-display">
                     {email || 'Loading...'}
@@ -337,24 +315,30 @@ Content-Transfer-Encoding: 8bit
                 )}
                 
                 <div className="email-actions">
-                  <button onClick={handleGenerateWithDomain}>
+                  <button onClick={handleGenerateEmail}>
                     Generate New Email
                   </button>
                   <button onClick={handleRefreshMessages}>
                     Check Messages
                   </button>
-                  <button onClick={testApi} className="test-api-button">
-                    Test API
-                  </button>
                   <button onClick={sendTestEmail} className="test-email-button">
                     Send Test Email
+                  </button>
+                  <button 
+                    onClick={toggleAutoRefresh} 
+                    className={`auto-refresh-button ${autoRefresh ? 'active' : ''}`}
+                  >
+                    {autoRefresh ? 'Auto-Refresh: ON' : 'Auto-Refresh: OFF'}
                   </button>
                 </div>
               </div>
             </section>
             
             <section className="messages-section">
-              <h2>Duck Mail Inbox</h2>
+              <div className="messages-header">
+                <h2>Duck Mail Inbox</h2>
+                {refreshing && <span className="refreshing-indicator">Refreshing...</span>}
+              </div>
               {messages.length > 0 ? (
                 <div className="message-list">
                   {messages.map(message => {

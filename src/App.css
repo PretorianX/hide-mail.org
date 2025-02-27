@@ -400,53 +400,22 @@ button:disabled {
   }
 }
 
+/* Remove or comment out the domain selector styles */
+/*
 .domain-selector {
-  display: flex;
-  align-items: center;
-  gap: 10px;
   margin-bottom: 15px;
 }
 
-.domain-selector label {
-  font-weight: bold;
-  color: var(--duck-black);
-}
-
 .domain-select {
+  width: 100%;
   padding: 10px;
-  border-radius: 8px;
-  border: 2px solid var(--duck-orange-light);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
   background-color: var(--duck-white);
   font-size: 1rem;
-  flex-grow: 1;
+  color: var(--text-color);
 }
-
-.domain-select:focus {
-  outline: none;
-  border-color: var(--duck-orange);
-  box-shadow: 0 0 0 2px rgba(247, 148, 29, 0.2);
-}
-
-/* Adjust for mobile */
-@media (max-width: 768px) {
-  .domain-selector {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  
-  .domain-select {
-    width: 100%;
-  }
-  
-  .email-display-row {
-    flex-direction: column;
-  }
-  
-  .copy-button {
-    width: 100%;
-    margin-top: 10px;
-  }
-}
+*/
 
 .mailbox-timer {
   margin: 15px 0;
@@ -626,4 +595,40 @@ button:disabled {
     width: 100%;
     max-width: 728px;
   }
+}
+
+.auto-refresh-button {
+  background-color: var(--duck-gray);
+  color: var(--duck-black);
+  border: 2px solid var(--duck-orange-light);
+}
+
+.auto-refresh-button.active {
+  background-color: var(--success-color);
+  color: white;
+  border: 2px solid var(--success-color);
+}
+
+.auto-refresh-button:hover {
+  background-color: var(--duck-orange-light);
+  color: white;
+}
+
+.messages-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.refreshing-indicator {
+  font-size: 0.9rem;
+  color: var(--duck-orange);
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 0.6; }
+  50% { opacity: 1; }
+  100% { opacity: 0.6; }
 } 

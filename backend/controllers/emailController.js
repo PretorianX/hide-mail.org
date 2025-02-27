@@ -136,15 +136,22 @@ const emailController = {
    */
   async getDomains(req, res, next) {
     try {
-      const domains = await redisService.getDomains();
+      // Get domains from Redis
+      const domains = await redisService.getValidDomains();
       
-      res.status(200).json({
+      // Only return count instead of full list
+      return res.json({
         success: true,
-        data: domains
+        count: domains.length,
+        // Don't return the actual domains
+        // domains: domains
       });
     } catch (error) {
-      logger.error('Error in getDomains controller:', error);
-      next(error);
+      logger.error('Error fetching domains:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to fetch domains'
+      });
     }
   },
   

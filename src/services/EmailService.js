@@ -171,31 +171,36 @@ class EmailService {
     return localPart;
   }
 
-  static async generateEmail(selectedDomain = null) {
-    await this.initialize();
-    
+  static async generateEmail(domain = null) {
     try {
-      // If we already have an active email, deactivate it first
+      // If we already have an email, deactivate it first
       if (this.currentEmail) {
-        await this.deactivateCurrentEmail();
+        try {
+          await this.deactivateEmail(this.currentEmail);
+        } catch (error) {
+          console.warn('Failed to deactivate previous email:', error);
+        }
       }
       
+      // Generate a new email address
       const localPart = this.generateRandomLocalPart();
-      const domain = selectedDomain || this.getRandomElement(this.domains);
       
-      const email = `${localPart}@${domain}`;
+      // Use a random domain from our list (ignore the domain parameter)
+      const randomDomain = this.getRandomElement(this.domains);
       
-      // Register the mailbox with the backend
-      await axios.post(`${API_URL}/mailbox/register`, { email });
+      const newEmail = `${localPart}@${randomDomain}`;
       
-      // Set expiration time to 30 minutes from now
-      this.currentEmail = email;
+      // Register the new email with the backend
+      await axios.post(`${API_URL}/mailbox/register`, { email: newEmail });
+      
+      // Set expiration time (30 minutes from now)
       this.expirationTime = new Date(Date.now() + DEFAULT_LIFETIME_MINUTES * 60 * 1000);
       
-      // Save to localStorage
+      // Save the new email
+      this.currentEmail = newEmail;
       this.saveToStorage();
       
-      return email;
+      return newEmail;
     } catch (error) {
       console.error('Error generating email:', error);
       throw error;
