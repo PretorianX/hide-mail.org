@@ -8,6 +8,14 @@ const GlobalStyle = createGlobalStyle`
     --text-color: #333;
     --light-text: #666;
     --border-color: #ddd;
+    
+    /* Duck theme colors */
+    --duck-orange: #f7941d;
+    --duck-orange-light: #ffa940;
+    --duck-black: #222222;
+    --duck-gray: #f0f0f0;
+    --duck-white: #ffffff;
+    --duck-yellow: #ffde59;
   }
 
   * {
@@ -17,24 +25,21 @@ const GlobalStyle = createGlobalStyle`
   }
 
   body {
-    background-color: var(--secondary-color);
-    color: var(--text-color);
+    font-family: 'Nunito', 'Arial', sans-serif;
     line-height: 1.6;
+    margin: 0;
+    padding: 0;
+    background-color: var(--duck-gray);
   }
 
+  /* Basic button styling - App.css will override these for specific buttons */
   button {
     cursor: pointer;
     border: none;
-    border-radius: 4px;
-    padding: 10px 15px;
-    background-color: var(--primary-color);
-    color: white;
-    font-weight: 500;
-    transition: background-color 0.3s;
-
-    &:hover {
-      background-color: #3a7bc8;
-    }
+    border-radius: 8px;
+    padding: 12px 20px;
+    font-weight: bold;
+    transition: all 0.2s ease;
   }
 `;
 

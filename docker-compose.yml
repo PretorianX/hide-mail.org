@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   frontend:
     build:
@@ -8,7 +10,12 @@ services:
     depends_on:
       - backend
     environment:
-      - REACT_APP_API_URL=http://api.hide-mail.org/api
+      - EMAIL_DOMAINS=${EMAIL_DOMAINS}
+      - CONFIG_EMAIL_EXPIRATIONTIME=1800
+      - CONFIG_EMAIL_EXTENSIONTIME=900
+      - CONFIG_API_URL=/api
+      - CONFIG_API_TIMEOUT=5000
+      - NODE_ENV=production
     restart: unless-stopped
 
   backend:
@@ -23,20 +30,24 @@ services:
       - PORT=3001
       - SMTP_PORT=2525
       - REDIS_URL=redis://redis:6379
+      - EMAIL_DOMAINS=${EMAIL_DOMAINS}
       - EMAIL_EXPIRATION=30
-      - VALID_DOMAINS=mailduck.io,mail-duck.com,duckmail.org,quackbox.net,duckpost.com,mailpond.com,quackmail.net,duckbox.email
+      - EMAIL_EXTENSION_TIME=30
       - LOG_LEVEL=info
     depends_on:
       - redis
     restart: unless-stopped
     volumes:
       - ./backend/logs:/app/logs
+    networks:
+      - internal
+      - default
 
   redis:
     image: redis:alpine
     volumes:
       - redis-data:/data
-    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-strongpassword}
+    command: redis-server --appendonly yes
     restart: unless-stopped
     networks:
       - internal
@@ -44,7 +55,7 @@ services:
   redis-commander:
     image: rediscommander/redis-commander:latest
     environment:
-      - REDIS_HOSTS=local:redis:6379:0:${REDIS_PASSWORD:-strongpassword}
+      - REDIS_HOSTS=local:redis:6379
     ports:
       - "127.0.0.1:8081:8081"
     depends_on:

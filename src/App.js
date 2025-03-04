@@ -4,6 +4,20 @@ import EmailService from './services/EmailService';
 import MailboxTimer from './components/MailboxTimer';
 import { parseMultipartMessage } from './utils/messageParser';
 import { formatDate } from './utils/dateUtils';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import styled from 'styled-components';
+import Header from './components/Header';
+import EmailGenerator from './components/EmailGenerator';
+import EmailViewer from './components/EmailViewer';
+import ConfigProvider from './components/ConfigProvider';
+import GlobalStyle from './styles/GlobalStyle';
+
+const AppContainer = styled.div`
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  font-family: 'Roboto', sans-serif;
+`;
 
 function App() {
   const [email, setEmail] = useState(null);
@@ -14,11 +28,17 @@ function App() {
   const [autoRefresh, setAutoRefresh] = useState(true);
   const autoRefreshIntervalRef = useRef(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [domains, setDomains] = useState([]);
+  const [selectedDomain, setSelectedDomain] = useState('');
 
   useEffect(() => {
     const initializeApp = async () => {
       try {
         await EmailService.initialize();
+        
+        // Get available domains
+        const availableDomains = await EmailService.getAvailableDomains();
+        setDomains(availableDomains);
         
         // Check if we have a saved email
         if (EmailService.currentEmail) {
@@ -32,7 +52,8 @@ function App() {
         }
       } catch (err) {
         console.error('Error initializing app:', err);
-        setError('Failed to initialize. Please try again later.');
+        setError(`Failed to initialize: ${err.message}`);
+        setLoading(false);
       } finally {
         setLoading(false);
       }
@@ -271,134 +292,113 @@ Content-Transfer-Encoding: 8bit
   };
 
   return (
-    <div className="app">
-      <header className="app-header">
-        <h1>Mail Duck</h1>
-        <p>Your friendly temporary email service</p>
-      </header>
-      
-      {/* Top banner ad */}
-      <div className="ad-container">
-        <div className="ad-banner">
-          Google Ad Banner (728x90)
+    <>
+      <GlobalStyle />
+      <div className="app">
+        <header className="app-header">
+          <h1>Mail Duck</h1>
+          <p>Your friendly temporary email service</p>
+        </header>
+        
+        <div className="ad-container">
+          <div className="ad-banner">Google Ad Banner (728x90)</div>
         </div>
-      </div>
-      
-      <div className="app-layout">
-        <div className="main-content">
-          <main className="app-main">
-            {loading && <div className="loading">Loading...</div>}
-            {error && <div className="error">{error}</div>}
-            
-            <section className="email-section">
-              <div className="email-container">
-                <h2>Your Duck Mail Address</h2>
-                
-                <div className="email-display-row">
+        
+        <div className="app-layout">
+          <div className="main-content">
+            <main className="app-main">
+              <section className="email-section">
+                <div className="email-container">
+                  <h2>Your Duck Mail Address</h2>
+                  
+                  <div className="domain-selector">
+                    <label htmlFor="domain-select">Choose a domain:</label>
+                    <select 
+                      id="domain-select" 
+                      className="domain-select"
+                      value={selectedDomain}
+                      onChange={(e) => setSelectedDomain(e.target.value)}
+                    >
+                      <option value="">Random domain</option>
+                      {domains.map(domain => (
+                        <option key={domain} value={domain}>{domain}</option>
+                      ))}
+                    </select>
+                  </div>
+                  
                   <div className="email-display">
                     {email || 'Loading...'}
                   </div>
-                  <button 
-                    className={`copy-button ${copied ? 'copied' : ''}`}
-                    onClick={handleCopyClick}
-                    disabled={!email}
-                  >
-                    {copied ? 'Copied!' : 'Copy'}
-                  </button>
+                  
+                  {email && (
+                    <MailboxTimer 
+                      email={email} 
+                      onExpired={handleMailboxExpired} 
+                    />
+                  )}
+                  
+                  <div className="email-actions">
+                    <button onClick={handleGenerateEmail}>Generate New Email</button>
+                    <button onClick={handleRefreshMessages}>Check Messages</button>
+                  </div>
                 </div>
-                
-                {email && (
-                  <MailboxTimer 
-                    email={email} 
-                    onExpired={handleMailboxExpired}
-                  />
-                )}
-                
-                <div className="email-actions">
-                  <button onClick={handleGenerateEmail}>
-                    Generate New Email
-                  </button>
-                  <button onClick={handleRefreshMessages}>
-                    Check Messages
-                  </button>
-                  <button onClick={sendTestEmail} className="test-email-button">
-                    Send Test Email
-                  </button>
-                  <button 
-                    onClick={toggleAutoRefresh} 
-                    className={`auto-refresh-button ${autoRefresh ? 'active' : ''}`}
-                  >
-                    {autoRefresh ? 'Auto-Refresh: ON' : 'Auto-Refresh: OFF'}
-                  </button>
-                </div>
-              </div>
-            </section>
-            
-            <section className="messages-section">
-              <div className="messages-header">
+              </section>
+              
+              <section className="messages-section">
                 <h2>Duck Mail Inbox</h2>
-                {refreshing && <span className="refreshing-indicator">Refreshing...</span>}
-              </div>
-              {messages.length > 0 ? (
-                <div className="message-list">
-                  {messages.map(message => {
-                    // Use the full text content without truncation
-                    const previewText = message.text || message.preview || '';
-                    
-                    return (
-                      <div key={message.id} className="message-item">
+                
+                {loading ? (
+                  <p>Loading messages...</p>
+                ) : error ? (
+                  <div className="error-message">{error}</div>
+                ) : messages.length === 0 ? (
+                  <p>Your inbox is empty. Messages will appear here when you receive them.</p>
+                ) : (
+                  <ul className="message-list">
+                    {messages.map(message => (
+                      <li key={message.id} className="message-item">
                         <div className="message-header">
-                          <div className="message-from">{message.from}</div>
-                          <div className="message-date">
-                            {formatDate(message.date || message.receivedAt)}
-                          </div>
+                          <span>{message.from}</span>
+                          <span>{formatDate(message.date)}</span>
                         </div>
                         <div className="message-subject">{message.subject}</div>
-                        <div className="message-preview">{previewText}</div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <p>Your inbox is empty. Messages will appear here when you receive them.</p>
-              )}
-            </section>
-          </main>
-        </div>
-        
-        <div className="sidebar">
-          {/* Sidebar ad */}
-          <div className="ad-container">
-            <div className="ad-sidebar">
-              Google Ad (300x250)
-            </div>
+                        <div className="message-preview">{message.preview}</div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+            </main>
           </div>
           
-          <div className="email-section">
-            <h2>Why Use Mail Duck?</h2>
-            <ul>
-              <li>🦆 100% Free temporary email</li>
-              <li>🦆 No registration required</li>
-              <li>🦆 Protect your privacy</li>
-              <li>🦆 Avoid spam in your personal inbox</li>
-              <li>🦆 Perfect for one-time signups</li>
-            </ul>
+          <div className="sidebar">
+            <div className="ad-container">
+              <div className="ad-sidebar">Google Ad (300x250)</div>
+            </div>
+            
+            <div className="email-section">
+              <h2>Why Use Mail Duck?</h2>
+              <ul>
+                <li>🦆 100% Free temporary email</li>
+                <li>🦆 No registration required</li>
+                <li>🦆 Protect your privacy</li>
+                <li>🦆 Avoid spam in your personal inbox</li>
+                <li>🦆 Perfect for one-time signups</li>
+              </ul>
+            </div>
           </div>
         </div>
-      </div>
-      
-      {/* Bottom banner ad */}
-      <div className="ad-container">
-        <div className="ad-banner">
-          Google Ad Banner (728x90)
+        
+        <div className="ad-container">
+          <div className="ad-banner">Google Ad Banner (728x90)</div>
         </div>
+        
+        <footer className="footer">
+          <p>© 2025 Mail Duck - The friendly temporary email service</p>
+          <p>We value your privacy. Mail Duck does not store or share your personal information.</p>
+        </footer>
       </div>
-      
-      <footer className="footer">
-        <p>© {new Date().getFullYear()} Mail Duck - The friendly temporary email service</p>
-        <p>We value your privacy. Mail Duck does not store or share your personal information.</p>
-      </footer>
-    </div>
+    </>
   );
 }
 

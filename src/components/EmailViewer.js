@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { fetchEmails } from '../services/emailService';
+import EmailService from '../services/EmailService';
 
 const ViewerContainer = styled.div`
   display: flex;
@@ -102,7 +102,7 @@ function EmailViewer() {
       if (!email) return;
       
       // In a real app, this would call your backend API
-      const fetchedEmails = await fetchEmails(email);
+      const fetchedEmails = await EmailService.getMessages(email);
       setEmails(fetchedEmails);
       
       // Select the first email if available and none is selected

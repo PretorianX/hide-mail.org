@@ -1,0 +1,10 @@
+{
+  "email": {
+    "expirationTime": 1800,
+    "extensionTime": 1800
+  },
+  "api": {
+    "url": "http://localhost:3001",
+    "timeout": 5000
+  }
+} 

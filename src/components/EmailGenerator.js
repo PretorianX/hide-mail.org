@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
-import { generateEmail, extendEmailLifetime } from '../services/emailService';
+import EmailService from '../services/EmailService';
+import { getConfig } from '../utils/configLoader';
 
 const GeneratorContainer = styled.div`
   background-color: white;
@@ -68,10 +69,10 @@ const ButtonContainer = styled.div`
 `;
 
 function EmailGenerator() {
-  const [domains, setDomains] = useState(['tempmail.com', 'quickmail.org', 'disposable.net']);
+  const [domains] = useState(getConfig('email.domains'));
   const [selectedDomain, setSelectedDomain] = useState(domains[0]);
   const [email, setEmail] = useState('');
-  const [timeRemaining, setTimeRemaining] = useState(30 * 60); // 30 minutes in seconds
+  const [timeRemaining, setTimeRemaining] = useState(getConfig('email.expirationTime'));
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -93,13 +94,13 @@ function EmailGenerator() {
   const handleGenerateEmail = async () => {
     try {
       // In a real app, this would call your backend API
-      const generatedEmail = await generateEmail(selectedDomain);
+      const generatedEmail = await EmailService.generateEmail(selectedDomain);
       setEmail(generatedEmail);
-      setTimeRemaining(30 * 60); // Reset timer to 30 minutes
+      setTimeRemaining(getConfig('email.expirationTime')); // Reset timer to configured expiration time
       
       // Save to localStorage for persistence
       localStorage.setItem('tempEmail', generatedEmail);
-      localStorage.setItem('expiryTime', Date.now() + (30 * 60 * 1000));
+      localStorage.setItem('expiryTime', Date.now() + (timeRemaining * 1000));
     } catch (error) {
       console.error('Failed to generate email:', error);
     }
@@ -108,11 +109,12 @@ function EmailGenerator() {
   const handleExtendTime = async () => {
     try {
       // In a real app, this would call your backend API
-      await extendEmailLifetime(email);
-      setTimeRemaining(prev => prev + 30 * 60); // Add 30 more minutes
+      await EmailService.refreshExpirationTime();
+      const extensionTime = getConfig('email.extensionTime');
+      setTimeRemaining(prev => prev + extensionTime);
       
       // Update localStorage
-      localStorage.setItem('expiryTime', Date.now() + (timeRemaining * 1000) + (30 * 60 * 1000));
+      localStorage.setItem('expiryTime', Date.now() + (timeRemaining * 1000) + (extensionTime * 1000));
     } catch (error) {
       console.error('Failed to extend email lifetime:', error);
     }
@@ -161,7 +163,7 @@ function EmailGenerator() {
               </Timer>
               <ButtonContainer>
                 <button onClick={handleExtendTime}>
-                  Extend (+30 min)
+                  Extend (+{getConfig('email.extensionTime') / 60} min)
                 </button>
                 <button onClick={handleViewInbox}>
                   View Inbox

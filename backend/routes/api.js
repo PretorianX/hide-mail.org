@@ -13,20 +13,7 @@ router.delete('/emails/:email/:id', emailController.deleteEmail);
 router.delete('/emails/:email', emailController.deleteAllEmails);
 
 // Domain routes
-router.get('/domains', (req, res) => {
-  // Check for a secret key
-  const apiKey = req.headers['x-api-key'];
-  
-  if (!apiKey || apiKey !== process.env.API_SECRET_KEY) {
-    return res.status(403).json({
-      success: false,
-      error: 'Unauthorized access'
-    });
-  }
-  
-  // If authenticated, proceed with the original handler
-  return emailController.getDomains(req, res);
-});
+router.get('/domains', emailController.getDomains);
 
 // Mailbox routes
 router.post('/mailbox/register', emailController.registerMailbox);

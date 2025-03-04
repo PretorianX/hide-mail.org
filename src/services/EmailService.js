@@ -2,7 +2,7 @@ import axios from 'axios';
 import { faker } from '@faker-js/faker';
 
 // Backend API URL
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
+const API_URL = process.env.REACT_APP_API_URL || '/api';
 
 console.log('API URL:', API_URL);
 
@@ -26,7 +26,12 @@ class EmailService {
     
     try {
       // Load domains from the backend API
-      const response = await axios.get(`${API_URL}/domains`);
+      const response = await axios.get(`${API_URL}/domains`, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      });
       this.domains = response.data.data;
       
       // Load saved email from localStorage if available
@@ -35,13 +40,8 @@ class EmailService {
       this.initialized = true;
     } catch (error) {
       console.error('Error initializing EmailService:', error);
-      // Fallback domains if API call fails
-      this.domains = ['mailduck.io', 'mail-duck.com', 'duckmail.org'];
-      
-      // Still try to load from storage
-      this.loadFromStorage();
-      
-      this.initialized = true;
+      // Don't use fallback domains, throw the error
+      throw new Error('Failed to load email domains. Please try again later.');
     }
   }
 
@@ -176,7 +176,7 @@ class EmailService {
       // If we already have an email, deactivate it first
       if (this.currentEmail) {
         try {
-          await this.deactivateEmail(this.currentEmail);
+          await this.deactivateCurrentEmail();
         } catch (error) {
           console.warn('Failed to deactivate previous email:', error);
         }
@@ -191,7 +191,15 @@ class EmailService {
       const newEmail = `${localPart}@${randomDomain}`;
       
       // Register the new email with the backend
-      await axios.post(`${API_URL}/mailbox/register`, { email: newEmail });
+      await axios.post(`${API_URL}/mailbox/register`, 
+        { email: newEmail },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          }
+        }
+      );
       
       // Set expiration time (30 minutes from now)
       this.expirationTime = new Date(Date.now() + DEFAULT_LIFETIME_MINUTES * 60 * 1000);
@@ -212,7 +220,15 @@ class EmailService {
     
     try {
       // Call the backend to deactivate the mailbox
-      await axios.post(`${API_URL}/mailbox/deactivate`, { email: this.currentEmail });
+      await axios.post(`${API_URL}/mailbox/deactivate`, 
+        { email: this.currentEmail },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          }
+        }
+      );
       console.log(`Deactivated email: ${this.currentEmail}`);
       
       // Clear storage
@@ -249,15 +265,24 @@ class EmailService {
     
     try {
       // Call the backend to refresh the mailbox
-      await axios.post(`${API_URL}/mailbox/refresh`, { email: this.currentEmail });
+      const response = await axios.post(`${API_URL}/mailbox/refresh`, 
+        { email: this.currentEmail },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          }
+        }
+      );
       
-      // Extend expiration time by another 30 minutes from now
-      this.expirationTime = new Date(Date.now() + DEFAULT_LIFETIME_MINUTES * 60 * 1000);
+      if (response.data.success) {
+        // Update expiration time (30 minutes from now)
+        this.expirationTime = new Date(Date.now() + DEFAULT_LIFETIME_MINUTES * 60 * 1000);
+        this.saveToStorage();
+        return true;
+      }
       
-      // Update storage
-      this.saveToStorage();
-      
-      return true;
+      return false;
     } catch (error) {
       console.error('Error refreshing expiration time:', error);
       return false;
@@ -266,32 +291,18 @@ class EmailService {
 
   static async getMessages(email) {
     try {
-      const apiUrl = `${API_URL}/messages?email=${encodeURIComponent(email)}`;
-      console.log('Fetching messages from URL:', apiUrl);
-      
-      const response = await fetch(apiUrl);
-      
-      if (!response.ok) {
-        console.error(`Failed to fetch messages: ${response.status} ${response.statusText}`);
-        
-        // If mailbox not found, return empty array instead of throwing
-        if (response.status === 404) {
-          return [];
+      const response = await axios.get(`${API_URL}/emails/${email}`, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
         }
-        
-        throw new Error(`Failed to fetch messages: ${response.status}`);
+      });
+      
+      if (response.data.success) {
+        return response.data.data;
       }
       
-      const data = await response.json();
-      console.log('Raw message data from API:', data);
-      
-      // Check the structure of the response
-      if (!data || !data.success) {
-        console.warn('API returned error:', data.error || 'Unknown error');
-        return [];
-      }
-      
-      return data.messages || [];
+      return [];
     } catch (error) {
       console.error('Error fetching messages:', error);
       return [];
