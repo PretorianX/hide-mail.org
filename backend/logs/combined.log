@@ -1781,3 +1781,5 @@
 {"level":"info","message":"Mailbox registered: jmoore@disposable.net","service":"mailduck-backend","timestamp":"2025-03-04 09:33:08"}
 {"level":"info","message":"Mailbox deactivated: jmoore@disposable.net","service":"mailduck-backend","timestamp":"2025-03-04 09:33:11"}
 {"level":"info","message":"Mailbox registered: amiller@quackbox.net","service":"mailduck-backend","timestamp":"2025-03-04 09:33:11"}
+{"level":"info","message":"Mailbox deactivated: amiller@quackbox.net","service":"mailduck-backend","timestamp":"2025-03-04 09:39:58"}
+{"level":"info","message":"Mailbox registered: mable.streich2017@mail-duck.com","service":"mailduck-backend","timestamp":"2025-03-04 09:39:58"}
