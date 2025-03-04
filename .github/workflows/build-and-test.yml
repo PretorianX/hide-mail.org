@@ -30,7 +30,12 @@ jobs:
       run: |
         echo "module.exports = {
           transformIgnorePatterns: ['node_modules/(?!(axios|@faker-js)/)'],
-          testEnvironment: 'jsdom'
+          testEnvironment: 'jsdom',
+          testEnvironmentOptions: {
+            html: '<!DOCTYPE html><html><head></head><body></body></html>',
+            url: 'http://localhost',
+            pretendToBeVisual: true
+          }
         };" > jest.config.cjs
     
     - name: Run tests
