@@ -7,6 +7,8 @@ export default {
   ],
   testEnvironment: 'jsdom',
   testEnvironmentOptions: {
+    resources: 'usable',
+    runScripts: 'dangerously',
     html: '<!DOCTYPE html><html><head></head><body></body></html>',
     url: 'http://localhost',
     pretendToBeVisual: true

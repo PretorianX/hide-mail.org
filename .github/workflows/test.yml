@@ -28,15 +28,45 @@ jobs:
     
     - name: Create test config
       run: |
-        echo "module.exports = {
-          transformIgnorePatterns: ['node_modules/(?!(axios|@faker-js)/)'],
-          testEnvironment: 'jsdom',
+        cat > jest.config.cjs << 'EOL'
+        /** @type {import('jest').Config} */
+        const config = {
+          verbose: true,
+          testEnvironment: "jsdom",
           testEnvironmentOptions: {
-            html: '<!DOCTYPE html><html><head></head><body></body></html>',
-            url: 'http://localhost',
+            resources: 'usable',
+            runScripts: 'dangerously',
+            html: "<!DOCTYPE html><html><head></head><body></body></html>",
+            url: "http://localhost",
             pretendToBeVisual: true
+          },
+          transformIgnorePatterns: [
+            "node_modules/(?!(axios|@faker-js)/)"
+          ],
+          transform: {
+            "^.+\\.(js|jsx|ts|tsx)$": "babel-jest"
+          },
+          moduleNameMapper: {
+            "\\.(css|less|scss|sass)$": "<rootDir>/src/__mocks__/styleMock.js",
+            "\\.(gif|ttf|eot|svg|png)$": "<rootDir>/src/__mocks__/fileMock.js"
           }
-        };" > jest.config.cjs
+        };
+
+        module.exports = config;
+        EOL
+        
+        mkdir -p src/__mocks__
+        echo "module.exports = {};" > src/__mocks__/styleMock.js
+        echo "module.exports = 'test-file-stub';" > src/__mocks__/fileMock.js
+        
+        cat > babel.config.js << 'EOL'
+        module.exports = {
+          presets: [
+            '@babel/preset-env',
+            ['@babel/preset-react', {runtime: 'automatic'}]
+          ]
+        };
+        EOL
     
     - name: Run tests
       run: NODE_OPTIONS=--experimental-vm-modules npx jest --config=jest.config.cjs 
