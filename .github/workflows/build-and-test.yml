@@ -21,11 +21,20 @@ jobs:
     - name: Install dependencies
       run: npm install
       
-    - name: Install Babel dependencies
-      run: npm install --save-dev @babel/preset-env @babel/preset-react babel-jest
+    - name: Install test dependencies
+      run: |
+        npm install --save-dev @babel/preset-env @babel/preset-react babel-jest
+        npm install --save-dev jest jest-environment-jsdom
+    
+    - name: Create test config
+      run: |
+        echo "module.exports = {
+          transformIgnorePatterns: ['node_modules/(?!(axios|@faker-js)/)'],
+          testEnvironment: 'jsdom'
+        };" > jest.config.cjs
     
     - name: Run tests
-      run: npm test -- --watchAll=false
+      run: NODE_OPTIONS=--experimental-vm-modules npx jest --config=jest.config.cjs
     
     - name: Build frontend
       run: npm run build

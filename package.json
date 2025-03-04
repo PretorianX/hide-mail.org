@@ -2,6 +2,7 @@
   "name": "temp-mail-service",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "dependencies": {
     "@faker-js/faker": "^8.0.2",
     "@testing-library/jest-dom": "^5.16.5",
@@ -18,7 +19,7 @@
   "scripts": {
     "start": "NODE_ENV=development react-scripts start",
     "build": "NODE_ENV=production react-scripts build",
-    "test": "react-scripts test",
+    "test": "NODE_ENV=test react-scripts test",
     "eject": "react-scripts eject",
     "cleanup": "bash cleanup.sh"
   },
@@ -39,5 +40,14 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "jest": {
+    "transformIgnorePatterns": [
+      "node_modules/(?!axios|@faker-js)/"
+    ],
+    "moduleNameMapper": {
+      "\\.(css|less|scss|sass)$": "<rootDir>/src/__mocks__/styleMock.js",
+      "\\.(gif|ttf|eot|svg|png)$": "<rootDir>/src/__mocks__/fileMock.js"
+    }
   }
 } 

@@ -20,12 +20,18 @@ jobs:
     
     - name: Install dependencies
       run: npm install
+      
+    - name: Install test dependencies
+      run: |
+        npm install --save-dev @babel/preset-env @babel/preset-react babel-jest
+        npm install --save-dev jest jest-environment-jsdom
     
-    - name: Install Babel dependencies
-      run: npm install --save-dev @babel/preset-env @babel/preset-react babel-jest
+    - name: Create test config
+      run: |
+        echo "module.exports = {
+          transformIgnorePatterns: ['node_modules/(?!(axios|@faker-js)/)'],
+          testEnvironment: 'jsdom'
+        };" > jest.config.cjs
     
     - name: Run tests
-      run: npm test -- --watchAll=false
-      
-    - name: Run specific domain selection tests
-      run: npm test -- --watchAll=false --testPathPattern=DomainSelection.test.js 
+      run: NODE_OPTIONS=--experimental-vm-modules npx jest --config=jest.config.cjs 

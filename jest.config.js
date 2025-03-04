@@ -1,9 +1,9 @@
-module.exports = {
+export default {
   transform: {
     '^.+\\.(js|jsx)$': 'babel-jest',
   },
   transformIgnorePatterns: [
-    '/node_modules/(?!axios).+\\.js$'
+    '/node_modules/(?!(axios|@faker-js)/).+\\.js$'
   ],
   moduleNameMapper: {
     '\\.(css|less|scss|sass)$': '<rootDir>/src/__mocks__/styleMock.js',
