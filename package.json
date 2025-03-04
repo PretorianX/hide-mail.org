@@ -19,7 +19,7 @@
   "scripts": {
     "start": "NODE_ENV=development react-scripts start",
     "build": "NODE_ENV=production react-scripts build",
-    "test": "NODE_ENV=test jest --config=jest.config.cjs",
+    "test": "NODE_ENV=test npx jest --config=jest.config.cjs",
     "eject": "react-scripts eject",
     "cleanup": "bash cleanup.sh"
   },
