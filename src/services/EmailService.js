@@ -185,10 +185,12 @@ class EmailService {
       // Generate a new email address
       const localPart = this.generateRandomLocalPart();
       
-      // Use a random domain from our list (ignore the domain parameter)
-      const randomDomain = this.getRandomElement(this.domains);
+      // Use the provided domain if specified, otherwise use a random domain
+      const emailDomain = domain && this.domains.includes(domain) 
+        ? domain 
+        : this.getRandomElement(this.domains);
       
-      const newEmail = `${localPart}@${randomDomain}`;
+      const newEmail = `${localPart}@${emailDomain}`;
       
       // Register the new email with the backend
       await axios.post(`${API_URL}/mailbox/register`, 

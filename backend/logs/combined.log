@@ -1732,3 +1732,52 @@
 {"level":"info","message":"Mailbox registered: brayan.zieme1983@mailpond.com","service":"mailduck-backend","timestamp":"2025-03-04 09:12:05"}
 {"level":"info","message":"Mailbox deactivated: brayan.zieme1983@mailpond.com","service":"mailduck-backend","timestamp":"2025-03-04 09:12:39"}
 {"level":"info","message":"Mailbox registered: davis.laurianne@quackbox.net","service":"mailduck-backend","timestamp":"2025-03-04 09:12:39"}
+{"level":"info","message":"SIGTERM received, shutting down gracefully","service":"mailduck-backend","timestamp":"2025-03-04 09:14:55"}
+{"level":"info","message":"API server running on port 3001","service":"mailduck-backend","timestamp":"2025-03-04 09:14:57"}
+{"level":"info","message":"SMTP server running on port 2525","service":"mailduck-backend","timestamp":"2025-03-04 09:14:57"}
+{"level":"info","message":"Connected to Redis","service":"mailduck-backend","timestamp":"2025-03-04 09:14:57"}
+{"level":"info","message":"Domains initialized in Redis","service":"mailduck-backend","timestamp":"2025-03-04 09:14:57"}
+{"level":"info","message":"Redis initialized with domains","service":"mailduck-backend","timestamp":"2025-03-04 09:14:57"}
+{"level":"info","message":"Mailbox deactivated: davis.laurianne@quackbox.net","service":"mailduck-backend","timestamp":"2025-03-04 09:15:22"}
+{"level":"info","message":"Mailbox registered: zack_reichert@duckmail.org","service":"mailduck-backend","timestamp":"2025-03-04 09:15:22"}
+{"level":"info","message":"SIGTERM received, shutting down gracefully","service":"mailduck-backend","timestamp":"2025-03-04 09:24:20"}
+{"level":"info","message":"API server running on port 3001","service":"mailduck-backend","timestamp":"2025-03-04 09:24:23"}
+{"level":"info","message":"SMTP server running on port 2525","service":"mailduck-backend","timestamp":"2025-03-04 09:24:23"}
+{"level":"info","message":"Connected to Redis","service":"mailduck-backend","timestamp":"2025-03-04 09:24:23"}
+{"level":"info","message":"Domains initialized in Redis","service":"mailduck-backend","timestamp":"2025-03-04 09:24:23"}
+{"level":"info","message":"Redis initialized with domains","service":"mailduck-backend","timestamp":"2025-03-04 09:24:23"}
+{"level":"info","message":"Mailbox deactivated: zack_reichert@duckmail.org","service":"mailduck-backend","timestamp":"2025-03-04 09:24:32"}
+{"level":"info","message":"Mailbox registered: alberta.gislason@disposable.net","service":"mailduck-backend","timestamp":"2025-03-04 09:24:32"}
+{"level":"info","message":"Mailbox deactivated: alberta.gislason@disposable.net","service":"mailduck-backend","timestamp":"2025-03-04 09:24:35"}
+{"level":"info","message":"Mailbox registered: kristy.gutkowski@disposable.net","service":"mailduck-backend","timestamp":"2025-03-04 09:24:35"}
+{"level":"info","message":"Mailbox deactivated: kristy.gutkowski@disposable.net","service":"mailduck-backend","timestamp":"2025-03-04 09:24:36"}
+{"level":"info","message":"Mailbox registered: ebernhard@disposable.net","service":"mailduck-backend","timestamp":"2025-03-04 09:24:36"}
+{"level":"info","message":"Mailbox deactivated: ebernhard@disposable.net","service":"mailduck-backend","timestamp":"2025-03-04 09:24:37"}
+{"level":"info","message":"Mailbox registered: lrohan@duckbox.email","service":"mailduck-backend","timestamp":"2025-03-04 09:24:37"}
+{"level":"info","message":"Mailbox deactivated: lrohan@duckbox.email","service":"mailduck-backend","timestamp":"2025-03-04 09:24:37"}
+{"level":"info","message":"Mailbox registered: alexandro.ledner@quickmail.org","service":"mailduck-backend","timestamp":"2025-03-04 09:24:37"}
+{"level":"info","message":"Mailbox deactivated: alexandro.ledner@quickmail.org","service":"mailduck-backend","timestamp":"2025-03-04 09:24:38"}
+{"level":"info","message":"Mailbox registered: grimes.laila@duckmail.org","service":"mailduck-backend","timestamp":"2025-03-04 09:24:38"}
+{"level":"info","message":"SIGTERM received, shutting down gracefully","service":"mailduck-backend","timestamp":"2025-03-04 09:25:56"}
+{"level":"info","message":"API server running on port 3001","service":"mailduck-backend","timestamp":"2025-03-04 09:25:59"}
+{"level":"info","message":"SMTP server running on port 2525","service":"mailduck-backend","timestamp":"2025-03-04 09:25:59"}
+{"level":"info","message":"Connected to Redis","service":"mailduck-backend","timestamp":"2025-03-04 09:25:59"}
+{"level":"info","message":"Domains initialized in Redis","service":"mailduck-backend","timestamp":"2025-03-04 09:25:59"}
+{"level":"info","message":"Redis initialized with domains","service":"mailduck-backend","timestamp":"2025-03-04 09:25:59"}
+{"level":"info","message":"Mailbox deactivated: grimes.laila@duckmail.org","service":"mailduck-backend","timestamp":"2025-03-04 09:26:13"}
+{"level":"info","message":"Mailbox registered: larry.hilll81@disposable.net","service":"mailduck-backend","timestamp":"2025-03-04 09:26:13"}
+{"level":"info","message":"Mailbox deactivated: larry.hilll81@disposable.net","service":"mailduck-backend","timestamp":"2025-03-04 09:26:16"}
+{"level":"info","message":"Mailbox registered: lkunde@quickmail.org","service":"mailduck-backend","timestamp":"2025-03-04 09:26:16"}
+{"level":"info","message":"Mailbox refreshed: lkunde@quickmail.org","service":"mailduck-backend","timestamp":"2025-03-04 09:27:34"}
+{"level":"info","message":"Mailbox deactivated: lkunde@quickmail.org","service":"mailduck-backend","timestamp":"2025-03-04 09:27:37"}
+{"level":"info","message":"Mailbox registered: aliawyman@mailduck.io","service":"mailduck-backend","timestamp":"2025-03-04 09:27:37"}
+{"level":"info","message":"SIGTERM received, shutting down gracefully","service":"mailduck-backend","timestamp":"2025-03-04 09:32:58"}
+{"level":"info","message":"API server running on port 3001","service":"mailduck-backend","timestamp":"2025-03-04 09:33:01"}
+{"level":"info","message":"SMTP server running on port 2525","service":"mailduck-backend","timestamp":"2025-03-04 09:33:01"}
+{"level":"info","message":"Connected to Redis","service":"mailduck-backend","timestamp":"2025-03-04 09:33:01"}
+{"level":"info","message":"Domains initialized in Redis","service":"mailduck-backend","timestamp":"2025-03-04 09:33:01"}
+{"level":"info","message":"Redis initialized with domains","service":"mailduck-backend","timestamp":"2025-03-04 09:33:01"}
+{"level":"info","message":"Mailbox deactivated: aliawyman@mailduck.io","service":"mailduck-backend","timestamp":"2025-03-04 09:33:08"}
+{"level":"info","message":"Mailbox registered: jmoore@disposable.net","service":"mailduck-backend","timestamp":"2025-03-04 09:33:08"}
+{"level":"info","message":"Mailbox deactivated: jmoore@disposable.net","service":"mailduck-backend","timestamp":"2025-03-04 09:33:11"}
+{"level":"info","message":"Mailbox registered: amiller@quackbox.net","service":"mailduck-backend","timestamp":"2025-03-04 09:33:11"}

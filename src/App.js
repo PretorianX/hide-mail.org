@@ -211,10 +211,12 @@ Content-Transfer-Encoding: 8bit
     }
   };
 
-  const handleGenerateEmail = async () => {
+  const handleGenerateEmail = async (domainOverride = null) => {
     try {
       setLoading(true);
-      const newEmail = await EmailService.generateEmail();
+      // Use the provided domain override if available, otherwise use the selectedDomain state
+      const domainToUse = domainOverride !== null ? domainOverride : selectedDomain;
+      const newEmail = await EmailService.generateEmail(domainToUse);
       setEmail(newEmail);
       setMessages([]);
     } catch (err) {
@@ -317,7 +319,14 @@ Content-Transfer-Encoding: 8bit
                       id="domain-select" 
                       className="domain-select"
                       value={selectedDomain}
-                      onChange={(e) => setSelectedDomain(e.target.value)}
+                      onChange={(e) => {
+                        const newDomain = e.target.value;
+                        setSelectedDomain(newDomain);
+                        // Generate a new email when a domain is selected
+                        if (newDomain) {
+                          handleGenerateEmail(newDomain);
+                        }
+                      }}
                     >
                       <option value="">Random domain</option>
                       {domains.map(domain => (
