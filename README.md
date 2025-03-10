@@ -17,8 +17,10 @@ This project uses GitHub Container Registry (GHCR) to store and distribute conta
 
 ### Available Images
 
-- Frontend: `ghcr.io/mail-duck/hide-mail.org/frontend:latest`
-- Backend: `ghcr.io/mail-duck/hide-mail.org/backend:latest`
+- Frontend: `ghcr.io/pretorianx/hide-mail.org/frontend:latest`
+- Backend: `ghcr.io/pretorianx/hide-mail.org/backend:latest`
+
+Both images are built for the `linux/amd64` platform.
 
 ### Pulling Images
 
@@ -26,15 +28,15 @@ To pull the images:
 
 ```bash
 # Pull the frontend image
-docker pull ghcr.io/mail-duck/hide-mail.org/frontend:latest
+docker pull ghcr.io/pretorianx/hide-mail.org/frontend:latest --platform linux/amd64
 
 # Pull the backend image
-docker pull ghcr.io/mail-duck/hide-mail.org/backend:latest
+docker pull ghcr.io/pretorianx/hide-mail.org/backend:latest --platform linux/amd64
 ```
 
 You can also use version tags:
 ```bash
-docker pull ghcr.io/mail-duck/hide-mail.org/frontend:v1.0.0
+docker pull ghcr.io/pretorianx/hide-mail.org/frontend:v1.0.0 --platform linux/amd64
 ```
 
 ### Using Docker Compose with GHCR Images
@@ -53,7 +55,7 @@ We've provided a Docker Compose configuration that uses the pre-built images fro
 
    This script will:
    - Load environment variables from your `.env` file
-   - Pull the latest images from GitHub Container Registry
+   - Pull the latest images from GitHub Container Registry (linux/amd64 platform)
    - Start all services with Docker Compose
    - Verify that services are running correctly
 

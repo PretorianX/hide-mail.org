@@ -20,7 +20,7 @@ if ! docker info > /dev/null 2>&1; then
 fi
 
 # Check if user is logged in to GitHub Container Registry
-if ! docker pull ghcr.io/mail-duck/hide-mail.org/frontend:latest > /dev/null 2>&1; then
+if ! docker pull ghcr.io/pretorianx/hide-mail.org/frontend:latest > /dev/null 2>&1; then
   echo "Error: Failed to pull Docker image. You may need to authenticate with GitHub Container Registry."
   echo "Run: echo \$GITHUB_TOKEN | docker login ghcr.io -u USERNAME --password-stdin"
   exit 1
@@ -28,8 +28,8 @@ fi
 
 # Pull the latest images
 echo "Pulling latest Docker images from GitHub Container Registry..."
-docker pull ghcr.io/mail-duck/hide-mail.org/frontend:latest
-docker pull ghcr.io/mail-duck/hide-mail.org/backend:latest
+docker pull ghcr.io/pretorianx/hide-mail.org/frontend:latest --platform linux/amd64
+docker pull ghcr.io/pretorianx/hide-mail.org/backend:latest --platform linux/amd64
 
 # Run Docker Compose
 echo "Starting services with Docker Compose..."

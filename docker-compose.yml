@@ -2,7 +2,8 @@ version: '3.8'
 
 services:
   frontend:
-    image: ghcr.io/mail-duck/hide-mail.org/frontend:latest
+    image: ghcr.io/pretorianx/hide-mail.org/frontend:latest
+    platform: linux/amd64
     ports:
       - "3001:80"
     depends_on:
@@ -18,7 +19,8 @@ services:
     restart: unless-stopped
 
   backend:
-    image: ghcr.io/mail-duck/hide-mail.org/backend:latest
+    image: ghcr.io/pretorianx/hide-mail.org/backend:latest
+    platform: linux/amd64
     ports:
       - "3002:3001"
       - "25:2525"
