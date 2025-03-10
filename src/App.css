@@ -36,25 +36,14 @@ body {
   text-align: center;
   margin-bottom: 30px;
   padding: 20px 0;
-  background-color: var(--duck-orange);
-  border-radius: 12px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  color: var(--duck-white);
+  color: var(--duck-black);
   position: relative;
 }
 
 .app-header h1 {
   margin: 0;
   font-size: 2.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.app-header h1::before {
-  content: "🦆";
-  margin-right: 15px;
-  font-size: 2.8rem;
+  color: var(--duck-orange);
 }
 
 .app-header p {
@@ -64,8 +53,8 @@ body {
 
 .app-layout {
   display: flex;
-  gap: 30px;
-  margin-bottom: 30px;
+  gap: 20px;
+  margin-bottom: 20px;
 }
 
 .main-content {
@@ -77,125 +66,99 @@ body {
 }
 
 .app-main {
-  display: flex;
-  flex-direction: column;
-  gap: 30px;
+  background-color: var(--card-bg);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
 }
 
 .email-section {
-  background-color: var(--duck-white);
-  padding: 25px;
+  padding: 20px;
+  background-color: var(--card-bg);
   border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  border-top: 5px solid var(--duck-orange);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
 }
 
 .email-container {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+  padding: 20px;
 }
 
 .email-container h2 {
+  margin-top: 0;
+  margin-bottom: 20px;
   color: var(--duck-orange);
-  margin: 0;
+  font-size: 1.5rem;
   text-align: center;
-  font-size: 1.8rem;
 }
 
 .domain-selector {
-  margin-bottom: 15px;
+  margin-bottom: 20px;
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  align-items: center;
+  gap: 10px;
 }
 
 .domain-selector label {
-  font-weight: 500;
-  color: var(--duck-black);
+  font-weight: bold;
+  margin-right: 10px;
 }
 
 .domain-select {
-  width: 100%;
-  padding: 12px;
-  border: 2px solid var(--border-color);
-  border-radius: 8px;
+  padding: 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
   background-color: var(--duck-white);
   font-size: 1rem;
-  color: var(--text-color);
+  flex: 1;
+  outline: none;
   transition: border-color 0.3s;
 }
 
 .domain-select:focus {
-  outline: none;
   border-color: var(--duck-orange);
+  box-shadow: 0 0 0 2px rgba(247, 148, 29, 0.2);
 }
 
 .domain-select option {
-  padding: 8px;
+  padding: 10px;
 }
 
 .email-display {
-  flex-grow: 1;
-  padding: 18px;
-  background-color: var(--duck-gray);
-  border: 2px solid var(--duck-orange-light);
+  background-color: var(--duck-yellow);
+  padding: 15px;
   border-radius: 8px;
   font-size: 1.2rem;
   font-weight: bold;
   text-align: center;
-  color: var(--duck-black);
+  margin-bottom: 20px;
   word-break: break-all;
-}
-
-.copy-button {
-  background-color: var(--duck-orange);
-  color: white;
-  border: none;
-  border-radius: 8px;
-  padding: 12px 20px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.3s;
-  min-width: 80px;
-}
-
-.copy-button:hover {
-  background-color: var(--duck-orange-light);
-}
-
-.copy-button:disabled {
-  background-color: #cccccc;
-  cursor: not-allowed;
-}
-
-.copy-button.copied {
-  background-color: var(--success-color);
+  border: 2px dashed var(--duck-orange);
 }
 
 .email-actions {
   display: flex;
-  gap: 15px;
+  gap: 10px;
   justify-content: center;
+  margin-top: 20px;
 }
 
 button {
-  padding: 12px 20px;
   background-color: var(--duck-orange);
-  color: var(--duck-white);
+  color: white;
   border: none;
-  border-radius: 8px;
+  padding: 10px 15px;
+  border-radius: 6px;
   cursor: pointer;
-  font-size: 1rem;
   font-weight: bold;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: background-color 0.3s;
+  font-size: 1rem;
 }
 
 button:hover {
   background-color: var(--duck-orange-light);
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 button:disabled {
@@ -206,27 +169,27 @@ button:disabled {
 }
 
 .error-message {
-  color: #d32f2f;
-  background-color: #ffebee;
-  padding: 12px;
-  border-radius: 8px;
+  background-color: var(--danger-color);
+  color: white;
+  padding: 10px;
+  border-radius: 6px;
+  margin-bottom: 20px;
   text-align: center;
-  margin: 15px 0;
 }
 
 .messages-section {
-  background-color: var(--duck-white);
-  padding: 25px;
+  padding: 20px;
+  background-color: var(--card-bg);
   border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  border-top: 5px solid var(--duck-orange);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .messages-section h2 {
+  margin-top: 0;
+  margin-bottom: 20px;
   color: var(--duck-orange);
-  margin: 0 0 20px 0;
+  font-size: 1.5rem;
   text-align: center;
-  font-size: 1.8rem;
 }
 
 .message-list {
@@ -235,123 +198,123 @@ button:disabled {
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 10px;
 }
 
 .message-item {
-  background-color: var(--duck-gray);
-  padding: 18px;
+  padding: 15px;
   border-radius: 8px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-  border-left: 4px solid var(--duck-orange);
-  transition: transform 0.2s ease;
+  background-color: var(--duck-gray);
+  cursor: pointer;
+  transition: transform 0.3s, box-shadow 0.3s;
 }
 
 .message-item:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .message-header {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
   font-size: 0.9rem;
-  color: #666;
+  color: var(--text-secondary);
 }
 
 .message-subject {
   font-weight: bold;
-  margin-bottom: 10px;
-  color: var(--duck-black);
+  margin-bottom: 5px;
   font-size: 1.1rem;
+  color: var(--duck-black);
 }
 
 .message-preview {
   color: var(--text-secondary);
   font-size: 0.9rem;
-  margin: 10px 0;
-  line-height: 1.5;
-  white-space: pre-line;
-  overflow-wrap: break-word;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 .message-preview::after {
-  display: none;
+  content: "...";
 }
 
 .message-raw-content pre {
-  white-space: pre-wrap;
-  word-break: break-word;
+  background-color: #f5f5f5;
+  padding: 15px;
+  border-radius: 6px;
+  overflow-x: auto;
   font-family: monospace;
   font-size: 0.9rem;
-  line-height: 1.5;
-  padding: 10px;
-  background-color: #f5f5f5;
-  border-radius: 4px;
-  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
 }
 
-/* Ad containers */
 .ad-container {
-  margin: 20px 0;
-  display: flex;
-  justify-content: center;
+  margin-bottom: 20px;
+  text-align: center;
 }
 
 .ad-banner {
-  width: 728px;
-  height: 90px;
   background-color: #f0f0f0;
   border: 1px dashed #ccc;
+  padding: 30px 0;
+  border-radius: 8px;
+  font-size: 1.2rem;
+  color: #666;
   display: flex;
-  align-items: center;
   justify-content: center;
-  color: #999;
-  font-size: 14px;
+  align-items: center;
+  width: 100%;
+  max-width: 728px;
+  height: 90px;
+  margin: 0 auto;
 }
 
 .ad-sidebar {
-  width: 300px;
-  height: 250px;
   background-color: #f0f0f0;
   border: 1px dashed #ccc;
+  padding: 30px 0;
+  border-radius: 8px;
+  font-size: 1.2rem;
+  color: #666;
   display: flex;
-  align-items: center;
   justify-content: center;
-  color: #999;
-  font-size: 14px;
+  align-items: center;
+  width: 100%;
+  height: 250px;
   margin-bottom: 20px;
 }
 
-/* Sidebar styles */
 .sidebar .email-section {
   margin-bottom: 0;
 }
 
 .sidebar .email-section h2 {
-  font-size: 1.5rem;
-  margin-bottom: 15px;
+  font-size: 1.3rem;
 }
 
 .sidebar .email-section ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
+  padding-left: 20px;
+  margin-bottom: 0;
 }
 
 .sidebar .email-section li {
-  margin-bottom: 12px;
-  font-size: 1rem;
+  margin-bottom: 10px;
   line-height: 1.4;
 }
 
-/* Timer styles */
 .mailbox-timer {
-  background-color: var(--duck-gray);
+  background-color: var(--duck-white);
   border-radius: 8px;
   padding: 15px;
-  margin-top: 10px;
+  margin-top: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e0e0e0;
 }
 
 .timer-header {
@@ -359,51 +322,56 @@ button:disabled {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 10px;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .timer-label {
   font-weight: bold;
+  color: var(--text-color);
 }
 
 .timer-value {
   font-weight: bold;
   color: var(--duck-orange);
+  font-size: 1.1rem;
+  min-width: 60px;
+  text-align: center;
 }
 
 .refresh-button {
-  padding: 8px 12px;
+  padding: 5px 10px;
   font-size: 0.9rem;
+  background-color: var(--duck-orange-light);
 }
 
 .timer-progress-container {
-  width: 100%;
   height: 8px;
   background-color: #e0e0e0;
   border-radius: 4px;
   overflow: hidden;
+  margin-top: 5px;
 }
 
 .timer-progress-bar {
   height: 100%;
-  background-color: var(--duck-orange);
   transition: width 1s linear;
+  background-color: var(--duck-orange);
 }
 
-/* Footer styles */
 .footer {
-  text-align: center;
+  margin-top: 40px;
   padding: 20px 0;
-  margin-top: 30px;
+  text-align: center;
   border-top: 1px solid var(--border-color);
-  color: var(--text-secondary);
 }
 
 .footer p {
-  margin: 5px 0;
+  margin: 10px 0;
+  color: var(--text-secondary);
   font-size: 0.9rem;
 }
 
-/* Responsive styles */
 @media (max-width: 1024px) {
   .app {
     padding: 15px;
@@ -418,18 +386,13 @@ button:disabled {
   }
   
   .ad-banner {
-    width: 100%;
-    max-width: 728px;
+    max-width: 100%;
   }
 }
 
 @media (max-width: 768px) {
   .app-header h1 {
     font-size: 2rem;
-  }
-  
-  .app-header h1::before {
-    font-size: 2.2rem;
   }
   
   .email-actions {
@@ -442,7 +405,6 @@ button:disabled {
   }
 }
 
-/* Add viewport-specific font sizing */
 @media (max-width: 480px) {
   html {
     font-size: 14px;
@@ -450,10 +412,10 @@ button:disabled {
   
   .email-display {
     font-size: 1rem;
+    padding: 10px;
   }
 }
 
-/* Improve tap targets for mobile */
 @media (hover: none) {
   button, 
   .message-item {
@@ -465,239 +427,6 @@ button:disabled {
   }
   
   .message-item:active {
-    background-color: #e8e8e8;
+    background-color: #e5e5e5;
   }
-}
-
-/* Remove or comment out the domain selector styles */
-/*
-.domain-selector {
-  margin-bottom: 15px;
-}
-
-.domain-select {
-  width: 100%;
-  padding: 10px;
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  background-color: var(--duck-white);
-  font-size: 1rem;
-  color: var(--text-color);
-}
-*/
-
-.mailbox-timer {
-  margin: 15px 0;
-  padding: 10px;
-  background-color: var(--duck-gray);
-  border-radius: 8px;
-  border: 1px solid #ddd;
-}
-
-.timer-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
-}
-
-.timer-label {
-  font-size: 0.9rem;
-  color: var(--duck-black);
-}
-
-.timer-value {
-  font-weight: bold;
-  font-size: 1.1rem;
-  color: var(--duck-orange);
-}
-
-.refresh-button {
-  padding: 6px 12px;
-  font-size: 0.85rem;
-  background-color: var(--duck-orange-light);
-}
-
-.timer-progress-container {
-  height: 8px;
-  background-color: #e0e0e0;
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.timer-progress-bar {
-  height: 100%;
-  background-color: var(--duck-orange);
-  transition: width 1s ease, background-color 1s ease;
-}
-
-/* Mobile adjustments for timer */
-@media (max-width: 767px) {
-  .timer-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-  
-  .timer-value {
-    font-size: 1.2rem;
-  }
-  
-  .refresh-button {
-    width: 100%;
-    margin-top: 5px;
-  }
-}
-
-.app-content {
-  margin-top: 20px;
-}
-
-.loading {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 200px;
-  font-size: 1.2rem;
-  color: var(--text-secondary);
-}
-
-.error {
-  background-color: #ffebee;
-  color: var(--danger-color);
-  padding: 15px;
-  border-radius: 4px;
-  margin-bottom: 20px;
-  border-left: 4px solid var(--danger-color);
-}
-
-.message-container {
-  display: grid;
-  grid-template-columns: 1fr 2fr;
-  gap: 20px;
-  margin-top: 20px;
-}
-
-@media (max-width: 768px) {
-  .message-container {
-    grid-template-columns: 1fr;
-  }
-}
-
-.app-layout {
-  display: grid;
-  grid-template-columns: 1fr 300px;
-  gap: 20px;
-  margin: 20px 0;
-}
-
-.main-content {
-  width: 100%;
-}
-
-.sidebar {
-  width: 300px;
-}
-
-.ad-container {
-  margin: 20px 0;
-  text-align: center;
-}
-
-.ad-banner {
-  width: 728px;
-  height: 90px;
-  background-color: #f0f0f0;
-  margin: 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px dashed #ccc;
-  color: #666;
-}
-
-.ad-sidebar {
-  width: 300px;
-  height: 250px;
-  background-color: #f0f0f0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px dashed #ccc;
-  color: #666;
-  margin-bottom: 20px;
-}
-
-.email-section {
-  background-color: var(--duck-white);
-  border-radius: 12px;
-  padding: 20px;
-  margin-bottom: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.email-section h2 {
-  color: var(--duck-orange);
-  margin-top: 0;
-  margin-bottom: 15px;
-}
-
-.email-section ul {
-  padding-left: 20px;
-  margin: 0;
-}
-
-.email-section li {
-  margin-bottom: 10px;
-}
-
-@media (max-width: 1024px) {
-  .app-layout {
-    grid-template-columns: 1fr;
-  }
-  
-  .sidebar {
-    width: 100%;
-  }
-  
-  .ad-banner {
-    width: 100%;
-    max-width: 728px;
-  }
-}
-
-.auto-refresh-button {
-  background-color: var(--duck-gray);
-  color: var(--duck-black);
-  border: 2px solid var(--duck-orange-light);
-}
-
-.auto-refresh-button.active {
-  background-color: var(--success-color);
-  color: white;
-  border: 2px solid var(--success-color);
-}
-
-.auto-refresh-button:hover {
-  background-color: var(--duck-orange-light);
-  color: white;
-}
-
-.messages-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 15px;
-}
-
-.refreshing-indicator {
-  font-size: 0.9rem;
-  color: var(--duck-orange);
-  animation: pulse 1.5s infinite;
-}
-
-@keyframes pulse {
-  0% { opacity: 0.6; }
-  50% { opacity: 1; }
-  100% { opacity: 0.6; }
 } 

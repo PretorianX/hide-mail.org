@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import EmailService from '../services/EmailService.js';
 import './MailboxTimer.css';
 
-const MailboxTimer = ({ email, onExpired }) => {
-  const [timeLeft, setTimeLeft] = useState('');
+const MailboxTimer = ({ onExpire, onExtend }) => {
+  const [timeLeft, setTimeLeft] = useState('30:00');
   const [percentLeft, setPercentLeft] = useState(100);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -11,10 +11,12 @@ const MailboxTimer = ({ email, onExpired }) => {
     let interval;
     
     const updateTimer = () => {
-      if (!email) return;
-      
       const expirationTime = EmailService.getExpirationTime();
-      if (!expirationTime) return;
+      if (!expirationTime) {
+        // If no expiration time is set, set a default of 30 minutes
+        EmailService.setExpirationTime(30);
+        return;
+      }
       
       const now = new Date();
       const diff = expirationTime - now;
@@ -23,7 +25,7 @@ const MailboxTimer = ({ email, onExpired }) => {
         clearInterval(interval);
         setTimeLeft('Expired');
         setPercentLeft(0);
-        onExpired();
+        if (onExpire) onExpire();
         return;
       }
       
@@ -45,17 +47,14 @@ const MailboxTimer = ({ email, onExpired }) => {
     interval = setInterval(updateTimer, 1000);
     
     return () => clearInterval(interval);
-  }, [email, onExpired]);
+  }, [onExpire]);
 
-  const handleRefreshTimer = async () => {
-    if (!email || isRefreshing) return;
-    
+  const handleRefreshTimer = () => {
     setIsRefreshing(true);
     try {
-      const success = await EmailService.refreshExpirationTime(email);
-      if (success) {
-        // Timer will update automatically in the useEffect
-      }
+      EmailService.refreshExpirationTime();
+      if (onExtend) onExtend();
+      // Timer will update automatically in the useEffect
     } catch (error) {
       console.error('Error refreshing timer:', error);
     } finally {

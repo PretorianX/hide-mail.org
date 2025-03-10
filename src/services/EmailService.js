@@ -252,22 +252,31 @@ class EmailService {
   static getExpirationTime() {
     return this.expirationTime;
   }
+  
+  static setExpirationTime(minutes = DEFAULT_LIFETIME_MINUTES) {
+    this.expirationTime = new Date(Date.now() + minutes * 60 * 1000);
+    this.saveToStorage();
+    return this.expirationTime;
+  }
 
   static getRemainingTime() {
     if (!this.expirationTime) return 0;
     
     const now = new Date();
-    const remaining = this.expirationTime - now;
+    const diff = this.expirationTime - now;
     
-    return remaining > 0 ? remaining : 0;
+    return Math.max(0, diff);
   }
 
   static async refreshExpirationTime() {
-    if (!this.currentEmail) return false;
-    
     try {
-      // Call the backend to refresh the mailbox
-      const response = await axios.post(`${API_URL}/mailbox/refresh`, 
+      if (!this.currentEmail) {
+        console.warn('No current email to refresh');
+        return false;
+      }
+      
+      // Call the backend to extend the mailbox lifetime
+      await axios.post(`${API_URL}/mailbox/extend`, 
         { email: this.currentEmail },
         {
           headers: {
@@ -277,17 +286,18 @@ class EmailService {
         }
       );
       
-      if (response.data.success) {
-        // Update expiration time (30 minutes from now)
-        this.expirationTime = new Date(Date.now() + DEFAULT_LIFETIME_MINUTES * 60 * 1000);
-        this.saveToStorage();
-        return true;
-      }
+      // Set new expiration time (30 minutes from now)
+      this.expirationTime = new Date(Date.now() + DEFAULT_LIFETIME_MINUTES * 60 * 1000);
+      this.saveToStorage();
       
-      return false;
+      console.log(`Refreshed expiration time for ${this.currentEmail}`);
+      return true;
     } catch (error) {
       console.error('Error refreshing expiration time:', error);
-      return false;
+      // If the API call fails, still extend the time locally
+      this.expirationTime = new Date(Date.now() + DEFAULT_LIFETIME_MINUTES * 60 * 1000);
+      this.saveToStorage();
+      return true;
     }
   }
 

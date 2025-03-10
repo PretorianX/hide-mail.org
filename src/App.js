@@ -330,70 +330,60 @@ Content-Transfer-Encoding: 8bit
         <Routes>
           <Route path="/" element={
             <>
-              <main className="content">
-                <div className="main-container">
-                  <div className="email-container">
+              <div className="ad-container">
+                <div className="ad-banner">Google Ad Banner (728x90)</div>
+              </div>
+              
+              <div className="app-layout">
+                <div className="main-content">
+                  <main className="app-main">
                     <section className="email-section">
-                      <h2>Your Temporary Email Address</h2>
-                      
-                      {loading ? (
-                        <p>Generating email address...</p>
-                      ) : error ? (
-                        <div className="error-message">{error}</div>
-                      ) : (
-                        <div className="email-display">
-                          <div className="email-address">
-                            <span className="email-text">{email}</span>
-                            <button 
-                              className="copy-button" 
-                              onClick={handleCopyClick}
-                              title="Copy to clipboard"
-                            >
-                              {copied ? 'Copied!' : 'Copy'}
-                            </button>
-                          </div>
-                          
-                          <div className="email-controls">
+                      <div className="email-container">
+                        <h2>Your Hide Mail Address</h2>
+                        
+                        <div className="domain-selector">
+                          <label htmlFor="domain-select">Choose a domain:</label>
+                          <select 
+                            id="domain-select"
+                            className="domain-select"
+                            value={selectedDomain}
+                            onChange={(e) => setSelectedDomain(e.target.value)}
+                          >
+                            <option value="">Random domain</option>
+                            {domains.map(domain => (
+                              <option key={domain} value={domain}>
+                                {domain}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        
+                        {loading ? (
+                          <p>Generating email address...</p>
+                        ) : error ? (
+                          <div className="error-message">{error}</div>
+                        ) : (
+                          <>
+                            <div className="email-display">
+                              {email}
+                            </div>
+                            
                             <MailboxTimer 
                               onExpire={handleMailboxExpired} 
                               onExtend={handleRefreshMessages}
                             />
-                            <div className="auto-refresh">
-                              <label>
-                                <input 
-                                  type="checkbox" 
-                                  checked={autoRefresh} 
-                                  onChange={toggleAutoRefresh} 
-                                />
-                                Auto-refresh
-                              </label>
-                              {refreshing && <span className="refreshing-indicator">Refreshing...</span>}
+                            
+                            <div className="email-actions">
+                              <button onClick={() => handleGenerateEmail(selectedDomain)}>Generate New Email</button>
+                              <button onClick={handleRefreshMessages}>Check Messages</button>
                             </div>
-                          </div>
-                          
-                          <div className="domain-selection">
-                            <label htmlFor="domain-select">Select Domain:</label>
-                            <select 
-                              id="domain-select"
-                              value={selectedDomain}
-                              onChange={(e) => setSelectedDomain(e.target.value)}
-                            >
-                              <option value="">Random</option>
-                              {domains.map(domain => (
-                                <option key={domain} value={domain}>
-                                  @{domain}
-                                </option>
-                              ))}
-                            </select>
-                            <button onClick={handleGenerateEmail}>Generate New Email</button>
-                            <button onClick={handleRefreshMessages}>Check Messages</button>
-                          </div>
-                        </div>
-                      )}
+                          </>
+                        )}
+                      </div>
                     </section>
                     
                     <section className="messages-section">
-                      <h2>Duck Mail Inbox</h2>
+                      <h2>Hide Mail Inbox</h2>
                       
                       {loading ? (
                         <p>Loading messages...</p>
@@ -416,7 +406,7 @@ Content-Transfer-Encoding: 8bit
                         </ul>
                       )}
                     </section>
-                  </div>
+                  </main>
                 </div>
                 
                 <div className="sidebar">
@@ -425,7 +415,7 @@ Content-Transfer-Encoding: 8bit
                   </div>
                   
                   <div className="email-section">
-                    <h2>Why Use Mail Duck?</h2>
+                    <h2>Why Use Hide Mail?</h2>
                     <ul>
                       <li>🦆 100% Free temporary email</li>
                       <li>🦆 No registration required</li>
@@ -435,7 +425,7 @@ Content-Transfer-Encoding: 8bit
                     </ul>
                   </div>
                 </div>
-              </main>
+              </div>
               
               <div className="ad-container">
                 <div className="ad-banner">Google Ad Banner (728x90)</div>
@@ -449,7 +439,7 @@ Content-Transfer-Encoding: 8bit
           <Route path="/contact" element={<ContactUs />} />
         </Routes>
         
-        <FooterContainer>
+        <FooterContainer className="footer">
           <FooterLinks>
             <FooterLink to="/privacy">Privacy Policy</FooterLink>
             <FooterLink to="/terms">Terms of Service</FooterLink>
@@ -458,7 +448,6 @@ Content-Transfer-Encoding: 8bit
           </FooterLinks>
           <p>© 2025 Hide Mail - The friendly temporary email service</p>
           <p>We value your privacy. Hide Mail does not store or share your personal information.</p>
-          <p>Hide Mail is a service of <a href="https://mail-duck.com" target="_blank" rel="noopener noreferrer" style={{ color: '#4285f4', textDecoration: 'none' }}>mail-duck.com</a></p>
         </FooterContainer>
       </div>
     </Router>

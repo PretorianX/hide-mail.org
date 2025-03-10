@@ -3,56 +3,58 @@ import { Link } from 'react-router-dom';
 import styled from 'styled-components';
 
 const HeaderContainer = styled.header`
-  background-color: #ffffff;
+  background-color: var(--duck-orange);
   padding: 20px 0;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  margin-bottom: 20px;
+  margin-bottom: 30px;
+  text-align: center;
+  border-radius: 12px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  color: var(--duck-white);
 `;
 
 const HeaderContent = styled.div`
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
 `;
 
 const Logo = styled(Link)`
   text-decoration: none;
-  color: #333;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-direction: column;
-  align-items: flex-start;
+  color: white;
+  display: block;
+  text-align: center;
   
   h1 {
     margin: 0;
-    font-size: 24px;
+    font-size: 2.5rem;
     font-weight: 700;
+    color: white;
   }
   
   span {
-    font-size: 14px;
-    color: #666;
+    font-size: 16px;
+    color: white;
+    display: block;
+    margin-top: 5px;
   }
 `;
 
 const Nav = styled.nav`
   display: flex;
+  justify-content: center;
   gap: 20px;
+  margin-top: 15px;
 `;
 
 const NavLink = styled(Link)`
-  color: #333;
+  color: white;
   text-decoration: none;
   padding: 5px 10px;
   border-radius: 4px;
   transition: background-color 0.3s;
   
   &:hover {
-    background-color: #f5f5f5;
+    background-color: rgba(255, 255, 255, 0.2);
   }
 `;
 
@@ -60,6 +62,8 @@ const ParentSite = styled.a`
   font-size: 12px;
   color: #888;
   text-decoration: none;
+  display: block;
+  margin-top: 5px;
   
   &:hover {
     text-decoration: underline;
@@ -68,14 +72,11 @@ const ParentSite = styled.a`
 
 const Header = () => {
   return (
-    <HeaderContainer>
+    <HeaderContainer className="app-header">
       <HeaderContent>
         <Logo to="/">
           <h1>Hide Mail</h1>
           <span>Your friendly temporary email service</span>
-          <ParentSite href="https://mail-duck.com" target="_blank" rel="noopener noreferrer">
-            A mail-duck.com service
-          </ParentSite>
         </Logo>
         
         <Nav>
