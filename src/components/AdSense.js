@@ -18,16 +18,12 @@ const AdSense = ({ slot, format = 'auto', responsive = true, style = {}, autoAd 
     // Only add the script if we're in production and have a client ID
     if (process.env.NODE_ENV === 'production' && client) {
       try {
-        // Initialize auto ads if enabled
-        if (autoAd) {
-          (window.adsbygoogle = window.adsbygoogle || []).push({
-            google_ad_client: client,
-            enable_page_level_ads: true
-          });
-        } else {
-          // Wait for adsense script to load and push the ad
+        // For manual ads, push the ad
+        if (!autoAd) {
           (window.adsbygoogle = window.adsbygoogle || []).push({});
         }
+        // Note: For auto ads, we don't need to do anything here as the script
+        // with the client parameter will automatically enable auto ads
       } catch (error) {
         console.error('AdSense error:', error);
       }

@@ -97,7 +97,22 @@ This project includes Google AdSense integration with environment variable confi
 2. The repository includes:
    - `ads.txt` file in the public directory
    - Meta tag verification in the HTML head
-   - AdSense script loading in production mode only
+   - AdSense script loading with client parameter in production mode only
+
+### Integration Methods
+
+1. **JavaScript Code Integration**:
+   - Script tag with client parameter in HTML head
+   - Manual ad placement with the AdSense component
+   - Auto ads support (enabled automatically by the script tag)
+
+2. **Ads.txt File**:
+   - Located in the public directory
+   - Follows the required format: `google.com, pub-XXXXXXXXXXXXXXXX, DIRECT, f08c47fec0942fa0`
+
+3. **Meta Tag Verification**:
+   - Added to the HTML head
+   - Helps Google verify site ownership
 
 ### Usage
 

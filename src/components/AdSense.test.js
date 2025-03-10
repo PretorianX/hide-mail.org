@@ -68,9 +68,7 @@ describe('AdSense Component', () => {
     const { container } = render(<AdSense autoAd={true} />);
     
     expect(container.firstChild).toBeNull();
-    expect(window.adsbygoogle.push).toHaveBeenCalledWith({
-      google_ad_client: 'ca-pub-9729692981183751',
-      enable_page_level_ads: true
-    });
+    // Auto ads are now handled by the script tag with client parameter
+    expect(window.adsbygoogle.push).not.toHaveBeenCalled();
   });
 }); 

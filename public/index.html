@@ -18,7 +18,7 @@
     
     <!-- Google AdSense - Only included in production -->
     <% if (process.env.NODE_ENV === 'production' && process.env.REACT_APP_ADSENSE_CLIENT) { %>
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=<%= process.env.REACT_APP_ADSENSE_CLIENT %>"></script>
     <% } %>
   </head>
   <body>
