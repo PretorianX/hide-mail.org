@@ -3,40 +3,48 @@ import App from './App.js';
 import EmailService from './services/EmailService.js';
 
 // Mock the EmailService
-jest.mock('./services/EmailService.js', () => ({
-  initialize: jest.fn().mockResolvedValue(undefined),
-  getAvailableDomains: jest.fn().mockResolvedValue(['tempmail.com', 'duckmail.org', 'mailduck.io']),
-  generateEmail: jest.fn().mockImplementation((domain) => {
-    const localPart = 'testuser';
-    const emailDomain = domain || 'tempmail.com';
-    return Promise.resolve(`${localPart}@${emailDomain}`);
-  }),
-  currentEmail: null,
-  domains: ['tempmail.com', 'duckmail.org', 'mailduck.io'],
-  getMessages: jest.fn().mockResolvedValue([]),
-  refreshExpirationTime: jest.fn().mockResolvedValue(true),
-  deactivateCurrentEmail: jest.fn().mockResolvedValue(undefined),
-}));
+jest.mock('./services/EmailService.js');
 
 describe('Domain Selection Tests', () => {
+  const mockDomains = ['tempmail.com', 'duckmail.org', 'mailduck.io'];
+  
   beforeEach(() => {
     jest.clearAllMocks();
+    
+    // Setup EmailService mock implementation
+    EmailService.domains = mockDomains;
+    EmailService.initialize = jest.fn().mockResolvedValue(undefined);
+    EmailService.getAvailableDomains = jest.fn().mockResolvedValue(mockDomains);
+    EmailService.generateEmail = jest.fn().mockImplementation((domain) => {
+      const localPart = 'testuser';
+      const emailDomain = domain || 'tempmail.com';
+      return Promise.resolve(`${localPart}@${emailDomain}`);
+    });
+    EmailService.currentEmail = null;
+    EmailService.getMessages = jest.fn().mockResolvedValue([]);
+    EmailService.refreshExpirationTime = jest.fn().mockResolvedValue(true);
+    EmailService.deactivateCurrentEmail = jest.fn().mockResolvedValue(undefined);
+    EmailService.getExpirationTime = jest.fn().mockReturnValue(new Date(Date.now() + 30 * 60 * 1000));
+    EmailService.getRemainingTime = jest.fn().mockReturnValue(30 * 60 * 1000);
   });
 
   test('selecting a domain generates a new email with that domain', async () => {
     render(<App />);
     
-    // Wait for the app to initialize
+    // Wait for the app to initialize and domains to be loaded
     await waitFor(() => {
       expect(EmailService.initialize).toHaveBeenCalled();
     });
     
     // Find the domain select dropdown
-    const domainSelect = screen.getByLabelText(/Choose a domain/i);
-    expect(domainSelect).toBeInTheDocument();
+    const domainSelect = await screen.findByTestId('domain-select');
     
     // Select a specific domain
     fireEvent.change(domainSelect, { target: { value: 'duckmail.org' } });
+    
+    // Find and click the Generate New Email button
+    const generateButton = await screen.findByText('Generate New Email');
+    fireEvent.click(generateButton);
     
     // Verify that generateEmail was called with the selected domain
     await waitFor(() => {
@@ -53,7 +61,7 @@ describe('Domain Selection Tests', () => {
     });
     
     // Find the domain select dropdown
-    const domainSelect = screen.getByLabelText(/Choose a domain/i);
+    const domainSelect = await screen.findByTestId('domain-select');
     
     // Clear any previous calls
     EmailService.generateEmail.mockClear();

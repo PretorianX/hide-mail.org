@@ -88,6 +88,29 @@ EMAIL_DOMAINS=example.com,mail.example.com
 REACT_APP_ADSENSE_CLIENT=your-adsense-client-id
 ```
 
+## Dependency Management
+
+This project uses CRACO (Create React App Configuration Override) to customize the webpack configuration without ejecting. This allows us to:
+
+1. Replace deprecated packages with their newer alternatives
+2. Update Babel plugins to use the latest versions
+3. Customize the build process as needed
+
+### Updated Dependencies
+
+We've updated several dependencies to address deprecation warnings:
+
+- Replaced deprecated Babel plugins with their newer transform equivalents
+- Added `@jridgewell/sourcemap-codec` to replace `sourcemap-codec`
+- Added `@rollup/plugin-terser` to replace `rollup-plugin-terser`
+- Updated testing libraries to the latest versions
+
+To update dependencies in the future, run:
+
+```bash
+npm update
+```
+
 ## CI/CD with GitHub Actions
 
 This project uses GitHub Actions for continuous integration and deployment:

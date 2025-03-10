@@ -11,17 +11,9 @@ const MailboxTimer = ({ onExpire, onExtend }) => {
     let interval;
     
     const updateTimer = () => {
-      const expirationTime = EmailService.getExpirationTime();
-      if (!expirationTime) {
-        // If no expiration time is set, set a default of 30 minutes
-        EmailService.setExpirationTime(30);
-        return;
-      }
+      const remainingTime = EmailService.getRemainingTime();
       
-      const now = new Date();
-      const diff = expirationTime - now;
-      
-      if (diff <= 0) {
+      if (remainingTime <= 0) {
         clearInterval(interval);
         setTimeLeft('Expired');
         setPercentLeft(0);
@@ -30,15 +22,15 @@ const MailboxTimer = ({ onExpire, onExtend }) => {
       }
       
       // Calculate minutes and seconds
-      const minutes = Math.floor(diff / 60000);
-      const seconds = Math.floor((diff % 60000) / 1000);
+      const minutes = Math.floor(remainingTime / 60000);
+      const seconds = Math.floor((remainingTime % 60000) / 1000);
       
       // Format time left
       setTimeLeft(`${minutes}:${seconds.toString().padStart(2, '0')}`);
       
       // Calculate percentage left (assuming 30 min total)
       const totalTime = 30 * 60 * 1000; // 30 minutes in milliseconds
-      const percentRemaining = (diff / totalTime) * 100;
+      const percentRemaining = (remainingTime / totalTime) * 100;
       setPercentLeft(Math.min(percentRemaining, 100));
     };
     

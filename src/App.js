@@ -343,14 +343,16 @@ Content-Transfer-Encoding: 8bit
                         
                         <div className="domain-selector">
                           <label htmlFor="domain-select">Choose a domain:</label>
-                          <select 
+                          <select
                             id="domain-select"
+                            data-testid="domain-select"
                             className="domain-select"
+                            aria-label="Choose a domain"
                             value={selectedDomain}
                             onChange={(e) => setSelectedDomain(e.target.value)}
                           >
                             <option value="">Random domain</option>
-                            {domains.map(domain => (
+                            {domains && domains.length > 0 && domains.map(domain => (
                               <option key={domain} value={domain}>
                                 {domain}
                               </option>

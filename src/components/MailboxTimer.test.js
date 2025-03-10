@@ -13,6 +13,8 @@ jest.mock('../services/EmailService.js', () => ({
 describe('MailboxTimer', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // Set default mock implementation for getRemainingTime
+    EmailService.getRemainingTime.mockReturnValue(15 * 60 * 1000);
   });
 
   test('renders timer with correct format', () => {
@@ -44,7 +46,7 @@ describe('MailboxTimer', () => {
     
     jest.useFakeTimers();
     
-    render(<MailboxTimer email="test@example.com" onExpired={mockOnExpired} />);
+    render(<MailboxTimer email="test@example.com" onExpire={mockOnExpired} />);
     
     // Fast-forward time
     act(() => {
@@ -60,10 +62,13 @@ describe('MailboxTimer', () => {
     EmailService.getRemainingTime.mockReturnValue(10 * 60 * 1000);
     EmailService.refreshExpirationTime.mockReturnValue(true);
     
-    render(<MailboxTimer email="test@example.com" />);
+    const mockOnExtend = jest.fn();
+    
+    render(<MailboxTimer email="test@example.com" onExtend={mockOnExtend} />);
     
     fireEvent.click(screen.getByText('Refresh Timer'));
     
     expect(EmailService.refreshExpirationTime).toHaveBeenCalled();
+    expect(mockOnExtend).toHaveBeenCalled();
   });
 }); 

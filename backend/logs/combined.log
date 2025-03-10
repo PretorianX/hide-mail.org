@@ -1852,3 +1852,142 @@
 {"level":"info","message":"Connected to Redis","service":"mailduck-backend","timestamp":"2025-03-04 13:53:33"}
 {"level":"info","message":"Domains initialized in Redis","service":"mailduck-backend","timestamp":"2025-03-04 13:53:33"}
 {"level":"info","message":"Redis initialized with domains","service":"mailduck-backend","timestamp":"2025-03-04 13:53:33"}
+{"level":"info","message":"API server running on port 3001","service":"mailduck-backend","timestamp":"2025-03-10 08:51:38"}
+{"level":"info","message":"SMTP server running on port 2525","service":"mailduck-backend","timestamp":"2025-03-10 08:51:38"}
+{"level":"info","message":"Connected to Redis","service":"mailduck-backend","timestamp":"2025-03-10 08:51:38"}
+{"level":"info","message":"Domains initialized in Redis","service":"mailduck-backend","timestamp":"2025-03-10 08:51:38"}
+{"level":"info","message":"Redis initialized with domains","service":"mailduck-backend","timestamp":"2025-03-10 08:51:38"}
+{"level":"info","message":"SIGTERM received, shutting down gracefully","service":"mailduck-backend","timestamp":"2025-03-10 08:52:37"}
+{"level":"info","message":"API server running on port 3001","service":"mailduck-backend","timestamp":"2025-03-10 08:52:40"}
+{"level":"info","message":"SMTP server running on port 2525","service":"mailduck-backend","timestamp":"2025-03-10 08:52:40"}
+{"level":"info","message":"Connected to Redis","service":"mailduck-backend","timestamp":"2025-03-10 08:52:40"}
+{"level":"info","message":"Domains initialized in Redis","service":"mailduck-backend","timestamp":"2025-03-10 08:52:40"}
+{"level":"info","message":"Redis initialized with domains","service":"mailduck-backend","timestamp":"2025-03-10 08:52:40"}
+{"level":"info","message":"Mailbox registered: kassulke.gabe@undisclosed-recipients.net","service":"mailduck-backend","timestamp":"2025-03-10 08:52:42"}
+{"level":"info","message":"Mailbox deactivated: kassulke.gabe@undisclosed-recipients.net","service":"mailduck-backend","timestamp":"2025-03-10 08:52:44"}
+{"level":"info","message":"Mailbox registered: alda.ruecker1992@hide-mail.org","service":"mailduck-backend","timestamp":"2025-03-10 08:52:44"}
+{"level":"info","message":"Mailbox deactivated: alda.ruecker1992@hide-mail.org","service":"mailduck-backend","timestamp":"2025-03-10 08:52:47"}
+{"level":"info","message":"Mailbox registered: elsiebeier@undisclosed-recipients.net","service":"mailduck-backend","timestamp":"2025-03-10 08:52:47"}
+{"level":"info","message":"Mailbox deactivated: elsiebeier@undisclosed-recipients.net","service":"mailduck-backend","timestamp":"2025-03-10 08:52:49"}
+{"level":"info","message":"Mailbox registered: dolores853@undisclosed-recipients.net","service":"mailduck-backend","timestamp":"2025-03-10 08:52:49"}
+{"level":"info","message":"Mailbox deactivated: dolores853@undisclosed-recipients.net","service":"mailduck-backend","timestamp":"2025-03-10 08:52:50"}
+{"level":"info","message":"Mailbox registered: hoeger.theresia@hide-mail.org","service":"mailduck-backend","timestamp":"2025-03-10 08:52:50"}
+{"level":"info","message":"Mailbox refreshed: hoeger.theresia@hide-mail.org","service":"mailduck-backend","timestamp":"2025-03-10 08:52:52"}
+{"level":"info","message":"Mailbox refreshed: hoeger.theresia@hide-mail.org","service":"mailduck-backend","timestamp":"2025-03-10 08:52:53"}
+{"level":"info","message":"Mailbox refreshed: hoeger.theresia@hide-mail.org","service":"mailduck-backend","timestamp":"2025-03-10 08:52:53"}
+{"level":"info","message":"Mailbox deactivated: hoeger.theresia@hide-mail.org","service":"mailduck-backend","timestamp":"2025-03-10 08:53:04"}
+{"level":"info","message":"Mailbox registered: angelina_nolan@undisclosed-recipients.net","service":"mailduck-backend","timestamp":"2025-03-10 08:53:04"}
+{"level":"info","message":"Mailbox deactivated: angelina_nolan@undisclosed-recipients.net","service":"mailduck-backend","timestamp":"2025-03-10 08:53:04"}
+{"level":"info","message":"Mailbox registered: wpredovic@hide-mail.org","service":"mailduck-backend","timestamp":"2025-03-10 08:53:04"}
+{"level":"info","message":"Mailbox deactivated: wpredovic@hide-mail.org","service":"mailduck-backend","timestamp":"2025-03-10 08:53:05"}
+{"level":"info","message":"Mailbox registered: dallas49@undisclosed-recipients.net","service":"mailduck-backend","timestamp":"2025-03-10 08:53:05"}
+{"level":"info","message":"Mailbox deactivated: dallas49@undisclosed-recipients.net","service":"mailduck-backend","timestamp":"2025-03-10 08:53:05"}
+{"level":"info","message":"Mailbox registered: tavares.schmitt1952@hide-mail.org","service":"mailduck-backend","timestamp":"2025-03-10 08:53:05"}
+{"level":"info","message":"Mailbox deactivated: tavares.schmitt1952@hide-mail.org","service":"mailduck-backend","timestamp":"2025-03-10 08:53:05"}
+{"level":"info","message":"Mailbox registered: aylin_berge@hide-mail.org","service":"mailduck-backend","timestamp":"2025-03-10 08:53:05"}
+{"level":"info","message":"Mailbox deactivated: aylin_berge@hide-mail.org","service":"mailduck-backend","timestamp":"2025-03-10 08:53:06"}
+{"level":"info","message":"Mailbox registered: rustyferry@undisclosed-recipients.net","service":"mailduck-backend","timestamp":"2025-03-10 08:53:06"}
+{"level":"info","message":"Mailbox deactivated: rustyferry@undisclosed-recipients.net","service":"mailduck-backend","timestamp":"2025-03-10 08:53:06"}
+{"level":"info","message":"Mailbox registered: elmoreratke@undisclosed-recipients.net","service":"mailduck-backend","timestamp":"2025-03-10 08:53:06"}
+{"level":"info","message":"Mailbox deactivated: elmoreratke@undisclosed-recipients.net","service":"mailduck-backend","timestamp":"2025-03-10 08:53:07"}
+{"level":"info","message":"Mailbox registered: leuschke.loraine@undisclosed-recipients.net","service":"mailduck-backend","timestamp":"2025-03-10 08:53:07"}
+{"level":"info","message":"Mailbox deactivated: leuschke.loraine@undisclosed-recipients.net","service":"mailduck-backend","timestamp":"2025-03-10 08:53:07"}
+{"level":"info","message":"Mailbox registered: will.jakob@undisclosed-recipients.net","service":"mailduck-backend","timestamp":"2025-03-10 08:53:07"}
+{"level":"info","message":"Mailbox deactivated: will.jakob@undisclosed-recipients.net","service":"mailduck-backend","timestamp":"2025-03-10 08:53:07"}
+{"level":"info","message":"Mailbox registered: hmarquardt@undisclosed-recipients.net","service":"mailduck-backend","timestamp":"2025-03-10 08:53:07"}
+{"level":"info","message":"Mailbox deactivated: hmarquardt@undisclosed-recipients.net","service":"mailduck-backend","timestamp":"2025-03-10 08:53:07"}
+{"level":"info","message":"Mailbox registered: isenger@hide-mail.org","service":"mailduck-backend","timestamp":"2025-03-10 08:53:07"}
+{"level":"info","message":"Mailbox deactivated: isenger@hide-mail.org","service":"mailduck-backend","timestamp":"2025-03-10 08:53:08"}
+{"level":"info","message":"Mailbox registered: marvin.cassin@hide-mail.org","service":"mailduck-backend","timestamp":"2025-03-10 08:53:08"}
+{"level":"info","message":"Mailbox deactivated: marvin.cassin@hide-mail.org","service":"mailduck-backend","timestamp":"2025-03-10 08:53:08"}
+{"level":"info","message":"Mailbox registered: saige.deckow87@undisclosed-recipients.net","service":"mailduck-backend","timestamp":"2025-03-10 08:53:08"}
+{"level":"info","message":"Mailbox deactivated: saige.deckow87@undisclosed-recipients.net","service":"mailduck-backend","timestamp":"2025-03-10 08:53:08"}
+{"level":"info","message":"Mailbox registered: vhalvorson@hide-mail.org","service":"mailduck-backend","timestamp":"2025-03-10 08:53:08"}
+{"level":"info","message":"Mailbox deactivated: vhalvorson@hide-mail.org","service":"mailduck-backend","timestamp":"2025-03-10 08:53:08"}
+{"level":"info","message":"Mailbox registered: merle.daniel59@hide-mail.org","service":"mailduck-backend","timestamp":"2025-03-10 08:53:08"}
+{"level":"info","message":"Mailbox deactivated: merle.daniel59@hide-mail.org","service":"mailduck-backend","timestamp":"2025-03-10 08:53:10"}
+{"level":"info","message":"Mailbox registered: padberg.rico@undisclosed-recipients.net","service":"mailduck-backend","timestamp":"2025-03-10 08:53:10"}
+{"level":"info","message":"Mailbox deactivated: padberg.rico@undisclosed-recipients.net","service":"mailduck-backend","timestamp":"2025-03-10 08:53:10"}
+{"level":"info","message":"Mailbox registered: stracke.albin@undisclosed-recipients.net","service":"mailduck-backend","timestamp":"2025-03-10 08:53:10"}
+{"level":"info","message":"Mailbox deactivated: stracke.albin@undisclosed-recipients.net","service":"mailduck-backend","timestamp":"2025-03-10 08:53:10"}
+{"level":"info","message":"Mailbox registered: timmy.harber@hide-mail.org","service":"mailduck-backend","timestamp":"2025-03-10 08:53:10"}
+{"level":"info","message":"Mailbox deactivated: timmy.harber@hide-mail.org","service":"mailduck-backend","timestamp":"2025-03-10 08:53:10"}
+{"level":"info","message":"Mailbox registered: jazmyn306@hide-mail.org","service":"mailduck-backend","timestamp":"2025-03-10 08:53:10"}
+{"level":"info","message":"Mailbox deactivated: jazmyn306@hide-mail.org","service":"mailduck-backend","timestamp":"2025-03-10 08:53:11"}
+{"level":"info","message":"Mailbox registered: cooper_roberts@hide-mail.org","service":"mailduck-backend","timestamp":"2025-03-10 08:53:11"}
+{"level":"info","message":"Mailbox deactivated: cooper_roberts@hide-mail.org","service":"mailduck-backend","timestamp":"2025-03-10 08:53:11"}
+{"level":"info","message":"Mailbox registered: angelina.murray96@undisclosed-recipients.net","service":"mailduck-backend","timestamp":"2025-03-10 08:53:11"}
+{"level":"info","message":"Mailbox deactivated: angelina.murray96@undisclosed-recipients.net","service":"mailduck-backend","timestamp":"2025-03-10 08:53:11"}
+{"level":"info","message":"Mailbox registered: rubie_bins@undisclosed-recipients.net","service":"mailduck-backend","timestamp":"2025-03-10 08:53:11"}
+{"level":"info","message":"Mailbox deactivated: rubie_bins@undisclosed-recipients.net","service":"mailduck-backend","timestamp":"2025-03-10 08:53:11"}
+{"level":"info","message":"Mailbox registered: thurman-bins@undisclosed-recipients.net","service":"mailduck-backend","timestamp":"2025-03-10 08:53:11"}
+{"level":"info","message":"Mailbox deactivated: thurman-bins@undisclosed-recipients.net","service":"mailduck-backend","timestamp":"2025-03-10 08:53:12"}
+{"level":"info","message":"Mailbox registered: kim.hagenes24@undisclosed-recipients.net","service":"mailduck-backend","timestamp":"2025-03-10 08:53:12"}
+{"level":"info","message":"Mailbox deactivated: kim.hagenes24@undisclosed-recipients.net","service":"mailduck-backend","timestamp":"2025-03-10 08:53:12"}
+{"level":"info","message":"Mailbox registered: lottie.koelpin1993@undisclosed-recipients.net","service":"mailduck-backend","timestamp":"2025-03-10 08:53:12"}
+{"level":"info","message":"Mailbox deactivated: lottie.koelpin1993@undisclosed-recipients.net","service":"mailduck-backend","timestamp":"2025-03-10 08:53:12"}
+{"level":"info","message":"Mailbox registered: glenda.damore2006@hide-mail.org","service":"mailduck-backend","timestamp":"2025-03-10 08:53:12"}
+{"level":"info","message":"Mailbox deactivated: glenda.damore2006@hide-mail.org","service":"mailduck-backend","timestamp":"2025-03-10 08:53:12"}
+{"level":"info","message":"Mailbox registered: aliza230@undisclosed-recipients.net","service":"mailduck-backend","timestamp":"2025-03-10 08:53:12"}
+{"level":"info","message":"Mailbox deactivated: aliza230@undisclosed-recipients.net","service":"mailduck-backend","timestamp":"2025-03-10 08:53:12"}
+{"level":"info","message":"Mailbox registered: leif_gorczany@undisclosed-recipients.net","service":"mailduck-backend","timestamp":"2025-03-10 08:53:12"}
+{"level":"info","message":"Mailbox deactivated: leif_gorczany@undisclosed-recipients.net","service":"mailduck-backend","timestamp":"2025-03-10 08:53:41"}
+{"level":"info","message":"Mailbox registered: elisabeth.turner37@hide-mail.org","service":"mailduck-backend","timestamp":"2025-03-10 08:53:42"}
+{"level":"info","message":"Mailbox registered: javon.sanford@hide-mail.org","service":"mailduck-backend","timestamp":"2025-03-10 10:52:18"}
+{"level":"info","message":"SIGTERM received, shutting down gracefully","service":"mailduck-backend","timestamp":"2025-03-10 10:52:24"}
+{"level":"info","message":"API server running on port 3001","service":"mailduck-backend","timestamp":"2025-03-10 10:52:27"}
+{"level":"info","message":"SMTP server running on port 2525","service":"mailduck-backend","timestamp":"2025-03-10 10:52:27"}
+{"level":"info","message":"Connected to Redis","service":"mailduck-backend","timestamp":"2025-03-10 10:52:27"}
+{"level":"info","message":"Domains initialized in Redis","service":"mailduck-backend","timestamp":"2025-03-10 10:52:27"}
+{"level":"info","message":"Redis initialized with domains","service":"mailduck-backend","timestamp":"2025-03-10 10:52:27"}
+{"level":"info","message":"Mailbox deactivated: javon.sanford@hide-mail.org","service":"mailduck-backend","timestamp":"2025-03-10 10:52:40"}
+{"level":"info","message":"Mailbox registered: dolly346@undisclosed-recipients.net","service":"mailduck-backend","timestamp":"2025-03-10 10:52:40"}
+{"level":"info","message":"Mailbox deactivated: dolly346@undisclosed-recipients.net","service":"mailduck-backend","timestamp":"2025-03-10 10:52:41"}
+{"level":"info","message":"Mailbox registered: moseslynch@hide-mail.org","service":"mailduck-backend","timestamp":"2025-03-10 10:52:41"}
+{"level":"info","message":"Mailbox deactivated: moseslynch@hide-mail.org","service":"mailduck-backend","timestamp":"2025-03-10 10:52:42"}
+{"level":"info","message":"Mailbox registered: wmohr@hide-mail.org","service":"mailduck-backend","timestamp":"2025-03-10 10:52:42"}
+{"level":"info","message":"Mailbox deactivated: wmohr@hide-mail.org","service":"mailduck-backend","timestamp":"2025-03-10 10:53:07"}
+{"level":"info","message":"Mailbox registered: beulah.kreiger@undisclosed-recipients.net","service":"mailduck-backend","timestamp":"2025-03-10 10:53:07"}
+{"level":"info","message":"SIGTERM received, shutting down gracefully","service":"mailduck-backend","timestamp":"2025-03-10 10:55:57"}
+{"level":"info","message":"API server running on port 3001","service":"mailduck-backend","timestamp":"2025-03-10 10:56:00"}
+{"level":"info","message":"SMTP server running on port 2525","service":"mailduck-backend","timestamp":"2025-03-10 10:56:00"}
+{"level":"info","message":"Connected to Redis","service":"mailduck-backend","timestamp":"2025-03-10 10:56:00"}
+{"level":"info","message":"Domains initialized in Redis","service":"mailduck-backend","timestamp":"2025-03-10 10:56:00"}
+{"level":"info","message":"Redis initialized with domains","service":"mailduck-backend","timestamp":"2025-03-10 10:56:00"}
+{"level":"info","message":"Mailbox deactivated: beulah.kreiger@undisclosed-recipients.net","service":"mailduck-backend","timestamp":"2025-03-10 11:00:58"}
+{"level":"info","message":"Mailbox registered: dora93@hide-mail.org","service":"mailduck-backend","timestamp":"2025-03-10 11:00:58"}
+{"level":"info","message":"SIGTERM received, shutting down gracefully","service":"mailduck-backend","timestamp":"2025-03-10 11:01:16"}
+{"level":"info","message":"API server running on port 3001","service":"mailduck-backend","timestamp":"2025-03-10 11:01:19"}
+{"level":"info","message":"SMTP server running on port 2525","service":"mailduck-backend","timestamp":"2025-03-10 11:01:19"}
+{"level":"info","message":"Connected to Redis","service":"mailduck-backend","timestamp":"2025-03-10 11:01:19"}
+{"level":"info","message":"Domains initialized in Redis","service":"mailduck-backend","timestamp":"2025-03-10 11:01:19"}
+{"level":"info","message":"Redis initialized with domains","service":"mailduck-backend","timestamp":"2025-03-10 11:01:19"}
+{"level":"info","message":"SIGTERM received, shutting down gracefully","service":"mailduck-backend","timestamp":"2025-03-10 11:03:06"}
+{"level":"info","message":"API server running on port 3001","service":"mailduck-backend","timestamp":"2025-03-10 11:03:08"}
+{"level":"info","message":"SMTP server running on port 2525","service":"mailduck-backend","timestamp":"2025-03-10 11:03:08"}
+{"level":"info","message":"Connected to Redis","service":"mailduck-backend","timestamp":"2025-03-10 11:03:08"}
+{"level":"info","message":"Domains initialized in Redis","service":"mailduck-backend","timestamp":"2025-03-10 11:03:08"}
+{"level":"info","message":"Redis initialized with domains","service":"mailduck-backend","timestamp":"2025-03-10 11:03:08"}
+{"level":"info","message":"Mailbox refreshed: dora93@hide-mail.org","service":"mailduck-backend","timestamp":"2025-03-10 11:03:14"}
+{"level":"info","message":"Mailbox refreshed: dora93@hide-mail.org","service":"mailduck-backend","timestamp":"2025-03-10 11:03:15"}
+{"level":"info","message":"Mailbox refreshed: dora93@hide-mail.org","service":"mailduck-backend","timestamp":"2025-03-10 11:04:32"}
+{"level":"info","message":"Mailbox deactivated: dora93@hide-mail.org","service":"mailduck-backend","timestamp":"2025-03-10 11:04:33"}
+{"level":"info","message":"Mailbox registered: marvin.weber@undisclosed-recipients.net","service":"mailduck-backend","timestamp":"2025-03-10 11:04:33"}
+{"level":"info","message":"Mailbox deactivated: marvin.weber@undisclosed-recipients.net","service":"mailduck-backend","timestamp":"2025-03-10 11:04:41"}
+{"level":"info","message":"Mailbox registered: deion677@hide-mail.org","service":"mailduck-backend","timestamp":"2025-03-10 11:04:41"}
+{"level":"info","message":"Mailbox deactivated: deion677@hide-mail.org","service":"mailduck-backend","timestamp":"2025-03-10 11:04:43"}
+{"level":"info","message":"Mailbox registered: curt_toy@undisclosed-recipients.net","service":"mailduck-backend","timestamp":"2025-03-10 11:04:43"}
+{"level":"info","message":"Mailbox deactivated: curt_toy@undisclosed-recipients.net","service":"mailduck-backend","timestamp":"2025-03-10 11:04:45"}
+{"level":"info","message":"Mailbox registered: marvinheidenreich@undisclosed-recipients.net","service":"mailduck-backend","timestamp":"2025-03-10 11:04:45"}
+{"level":"info","message":"SIGTERM received, shutting down gracefully","service":"mailduck-backend","timestamp":"2025-03-10 11:10:10"}
+{"level":"info","message":"API server running on port 3001","service":"mailduck-backend","timestamp":"2025-03-10 11:10:13"}
+{"level":"info","message":"SMTP server running on port 2525","service":"mailduck-backend","timestamp":"2025-03-10 11:10:13"}
+{"level":"info","message":"Connected to Redis","service":"mailduck-backend","timestamp":"2025-03-10 11:10:13"}
+{"level":"info","message":"Domains initialized in Redis","service":"mailduck-backend","timestamp":"2025-03-10 11:10:13"}
+{"level":"info","message":"Redis initialized with domains","service":"mailduck-backend","timestamp":"2025-03-10 11:10:13"}
+{"level":"info","message":"Mailbox deactivated: marvinheidenreich@undisclosed-recipients.net","service":"mailduck-backend","timestamp":"2025-03-10 11:10:45"}
+{"level":"info","message":"Mailbox registered: kunde.dayana@hide-mail.org","service":"mailduck-backend","timestamp":"2025-03-10 11:10:45"}
+{"level":"info","message":"Mailbox refreshed: kunde.dayana@hide-mail.org","service":"mailduck-backend","timestamp":"2025-03-10 11:12:11"}
+{"level":"info","message":"Mailbox deactivated: kunde.dayana@hide-mail.org","service":"mailduck-backend","timestamp":"2025-03-10 11:12:11"}
+{"level":"info","message":"Mailbox registered: ludie_rennerleffler@undisclosed-recipients.net","service":"mailduck-backend","timestamp":"2025-03-10 11:12:11"}
+{"level":"info","message":"SIGTERM received, shutting down gracefully","service":"mailduck-backend","timestamp":"2025-03-10 11:25:22"}
