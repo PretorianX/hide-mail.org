@@ -130,6 +130,29 @@ import AdSense from './components/AdSense';
 />
 ```
 
+#### Using the AdContainer Component (Recommended)
+
+The AdContainer component provides proper sizing and styling for ads:
+
+```jsx
+import AdContainer from './components/AdContainer';
+
+// In your component
+<AdContainer 
+  slot="1234567890" 
+  width={300} 
+  height={250} 
+  position="sidebar" 
+/>
+```
+
+Common ad sizes:
+- 300x250 - Medium Rectangle
+- 336x280 - Large Rectangle
+- 728x90 - Leaderboard
+- 300x600 - Half Page
+- 320x100 - Large Mobile Banner
+
 #### Auto Ads
 
 ```jsx
@@ -141,4 +164,4 @@ import AdSense from './components/AdSense';
 
 ### Testing
 
-The AdSense component shows a placeholder in development mode and only loads actual ads in production.
+The AdSense and AdContainer components show placeholders in development mode and only load actual ads in production.
