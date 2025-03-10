@@ -275,8 +275,8 @@ class EmailService {
         return false;
       }
       
-      // Call the backend to extend the mailbox lifetime
-      await axios.post(`${API_URL}/mailbox/extend`, 
+      // Call the backend to refresh the mailbox lifetime
+      await axios.post(`${API_URL}/mailbox/refresh`, 
         { email: this.currentEmail },
         {
           headers: {
