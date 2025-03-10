@@ -1,81 +1,32 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import Header from './Header.js';
-import EmailService from '../services/EmailService.js';
-
-// Mock the EmailService
-jest.mock('../services/EmailService.js', () => ({
-  getAvailableDomains: jest.fn().mockResolvedValue(['tempmail.com', 'duckmail.org', 'mailduck.io']),
-}));
+import { render, screen } from '@testing-library/react';
+import { BrowserRouter } from 'react-router-dom';
+import Header from './Header';
 
 describe('Header Component', () => {
-  const mockOnGenerateEmail = jest.fn();
-  const mockOnRefreshMessages = jest.fn().mockResolvedValue(undefined);
-  const mockOnMailboxExpired = jest.fn();
-  
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-  
-  test('should call onGenerateEmail with selected domain when Generate New Email button is clicked', async () => {
-    // Render the Header component with a mock email
+  test('renders header with logo and navigation links', () => {
     render(
-      <Header 
-        email="test@tempmail.com"
-        onGenerateEmail={mockOnGenerateEmail}
-        onRefreshMessages={mockOnRefreshMessages}
-        onMailboxExpired={mockOnMailboxExpired}
-      />
+      <BrowserRouter>
+        <Header />
+      </BrowserRouter>
     );
     
-    // Wait for domains to load
-    await waitFor(() => {
-      expect(EmailService.getAvailableDomains).toHaveBeenCalled();
-    });
+    // Check for logo text
+    expect(screen.getByText('Hide Mail')).toBeInTheDocument();
+    expect(screen.getByText('Your friendly temporary email service')).toBeInTheDocument();
+    expect(screen.getByText('A mail-duck.com service')).toBeInTheDocument();
     
-    // Open the domain dropdown
-    const dropdownToggle = screen.getByText('▼');
-    fireEvent.click(dropdownToggle);
+    // Check for navigation links
+    expect(screen.getByText('Home')).toBeInTheDocument();
+    expect(screen.getByText('About')).toBeInTheDocument();
+    expect(screen.getByText('Contact')).toBeInTheDocument();
     
-    // Select a domain
-    const domainOption = screen.getByText('@duckmail.org');
-    fireEvent.click(domainOption);
+    // Check that links have correct hrefs
+    expect(screen.getByText('Home').closest('a')).toHaveAttribute('href', '/');
+    expect(screen.getByText('About').closest('a')).toHaveAttribute('href', '/about');
+    expect(screen.getByText('Contact').closest('a')).toHaveAttribute('href', '/contact');
     
-    // Verify that onGenerateEmail was called with the selected domain
-    expect(mockOnGenerateEmail).toHaveBeenCalledWith('duckmail.org');
-    
-    // Reset the mock
-    mockOnGenerateEmail.mockClear();
-    
-    // Click the Generate New Email button
-    const generateButton = screen.getByText('Generate New Email');
-    fireEvent.click(generateButton);
-    
-    // Verify that onGenerateEmail was called with the selected domain
-    expect(mockOnGenerateEmail).toHaveBeenCalledWith('duckmail.org');
-  });
-  
-  test('should call onGenerateEmail with null when no domain is selected', async () => {
-    // Render the Header component with a mock email
-    render(
-      <Header 
-        email="test@tempmail.com"
-        onGenerateEmail={mockOnGenerateEmail}
-        onRefreshMessages={mockOnRefreshMessages}
-        onMailboxExpired={mockOnMailboxExpired}
-      />
-    );
-    
-    // Wait for domains to load
-    await waitFor(() => {
-      expect(EmailService.getAvailableDomains).toHaveBeenCalled();
-    });
-    
-    // Click the Generate New Email button without selecting a domain
-    const generateButton = screen.getByText('Generate New Email');
-    fireEvent.click(generateButton);
-    
-    // Verify that onGenerateEmail was called with null
-    expect(mockOnGenerateEmail).toHaveBeenCalledWith(null);
+    // Check that mail-duck.com link exists and has correct href
+    expect(screen.getByText('A mail-duck.com service').closest('a')).toHaveAttribute('href', 'https://mail-duck.com');
   });
 }); 

@@ -1,100 +1,90 @@
-import React, { useState, useEffect } from 'react';
-import MailboxTimer from './MailboxTimer.js';
-import EmailService from '../services/EmailService.js';
-import './Header.css';
+import React from 'react';
+import { Link } from 'react-router-dom';
+import styled from 'styled-components';
 
-const Header = ({ email, onGenerateEmail, onRefreshMessages, onMailboxExpired }) => {
-  const [domains, setDomains] = useState([]);
-  const [showDomainDropdown, setShowDomainDropdown] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [selectedDomain, setSelectedDomain] = useState('');
+const HeaderContainer = styled.header`
+  background-color: #ffffff;
+  padding: 20px 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+`;
 
-  useEffect(() => {
-    const loadDomains = async () => {
-      const availableDomains = await EmailService.getAvailableDomains();
-      setDomains(availableDomains);
-    };
-    
-    loadDomains();
-  }, []);
+const HeaderContent = styled.div`
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+`;
 
-  const handleGenerateClick = () => {
-    onGenerateEmail(selectedDomain || null);
-  };
+const Logo = styled(Link)`
+  text-decoration: none;
+  color: #333;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-direction: column;
+  align-items: flex-start;
+  
+  h1 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 700;
+  }
+  
+  span {
+    font-size: 14px;
+    color: #666;
+  }
+`;
 
-  const handleDomainSelect = (domain) => {
-    setSelectedDomain(domain);
-    onGenerateEmail(domain);
-    setShowDomainDropdown(false);
-  };
+const Nav = styled.nav`
+  display: flex;
+  gap: 20px;
+`;
 
-  const handleRefreshClick = async () => {
-    setRefreshing(true);
-    await onRefreshMessages();
-    setTimeout(() => setRefreshing(false), 500);
-  };
+const NavLink = styled(Link)`
+  color: #333;
+  text-decoration: none;
+  padding: 5px 10px;
+  border-radius: 4px;
+  transition: background-color 0.3s;
+  
+  &:hover {
+    background-color: #f5f5f5;
+  }
+`;
 
+const ParentSite = styled.a`
+  font-size: 12px;
+  color: #888;
+  text-decoration: none;
+  
+  &:hover {
+    text-decoration: underline;
+  }
+`;
+
+const Header = () => {
   return (
-    <header className="app-header">
-      <div className="header-content">
-        <div className="logo">
-          <img src="/logo.svg" alt="Mail Duck Logo" />
-          <h1>Mail Duck</h1>
-        </div>
+    <HeaderContainer>
+      <HeaderContent>
+        <Logo to="/">
+          <h1>Hide Mail</h1>
+          <span>Your friendly temporary email service</span>
+          <ParentSite href="https://mail-duck.com" target="_blank" rel="noopener noreferrer">
+            A mail-duck.com service
+          </ParentSite>
+        </Logo>
         
-        <div className="header-actions">
-          {email && (
-            <>
-              <button 
-                className="refresh-button"
-                onClick={handleRefreshClick}
-                disabled={refreshing}
-              >
-                {refreshing ? 'Refreshing...' : 'Refresh Inbox'}
-              </button>
-              
-              <div className="domain-dropdown-container">
-                <button 
-                  className="generate-button"
-                  onClick={handleGenerateClick}
-                >
-                  Generate New Email
-                </button>
-                
-                <button 
-                  className="domain-dropdown-toggle"
-                  onClick={() => setShowDomainDropdown(!showDomainDropdown)}
-                >
-                  ▼
-                </button>
-                
-                {showDomainDropdown && (
-                  <div className="domain-dropdown">
-                    <div className="domain-dropdown-header">Select Domain</div>
-                    {domains.map(domain => (
-                      <div 
-                        key={domain} 
-                        className="domain-option"
-                        onClick={() => handleDomainSelect(domain)}
-                      >
-                        @{domain}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-      
-      {email && (
-        <MailboxTimer 
-          email={email} 
-          onExpired={onMailboxExpired}
-        />
-      )}
-    </header>
+        <Nav>
+          <NavLink to="/">Home</NavLink>
+          <NavLink to="/about">About</NavLink>
+          <NavLink to="/contact">Contact</NavLink>
+        </Nav>
+      </HeaderContent>
+    </HeaderContainer>
   );
 };
 

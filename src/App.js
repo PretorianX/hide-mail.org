@@ -4,19 +4,47 @@ import EmailService from './services/EmailService.js';
 import MailboxTimer from './components/MailboxTimer.js';
 import { parseMultipartMessage } from './utils/messageParser.js';
 import { formatDate } from './utils/dateUtils.js';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import styled from 'styled-components';
 import Header from './components/Header.js';
 import EmailGenerator from './components/EmailGenerator.js';
 import EmailViewer from './components/EmailViewer.js';
 import ConfigProvider from './components/ConfigProvider.js';
 import GlobalStyle from './styles/GlobalStyle.js';
+import PrivacyPolicy from './pages/PrivacyPolicy.js';
+import TermsOfService from './pages/TermsOfService.js';
+import AboutUs from './pages/AboutUs.js';
+import ContactUs from './pages/ContactUs.js';
 
 const AppContainer = styled.div`
   max-width: 1200px;
   margin: 0 auto;
   padding: 20px;
   font-family: 'Roboto', sans-serif;
+`;
+
+// Add a styled footer component with links
+const FooterContainer = styled.footer`
+  margin-top: 40px;
+  padding: 20px 0;
+  border-top: 1px solid #eee;
+  text-align: center;
+`;
+
+const FooterLinks = styled.div`
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin-bottom: 15px;
+`;
+
+const FooterLink = styled(Link)`
+  color: #4285f4;
+  text-decoration: none;
+  
+  &:hover {
+    text-decoration: underline;
+  }
 `;
 
 function App() {
@@ -294,120 +322,146 @@ Content-Transfer-Encoding: 8bit
   };
 
   return (
-    <>
+    <Router>
       <GlobalStyle />
       <div className="app">
-        <header className="app-header">
-          <h1>Mail Duck</h1>
-          <p>Your friendly temporary email service</p>
-        </header>
+        <Header />
         
-        <div className="ad-container">
-          <div className="ad-banner">Google Ad Banner (728x90)</div>
-        </div>
-        
-        <div className="app-layout">
-          <div className="main-content">
-            <main className="app-main">
-              <section className="email-section">
-                <div className="email-container">
-                  <h2>Your Duck Mail Address</h2>
-                  
-                  <div className="domain-selector">
-                    <label htmlFor="domain-select">Choose a domain:</label>
-                    <select 
-                      id="domain-select" 
-                      className="domain-select"
-                      value={selectedDomain}
-                      onChange={(e) => {
-                        const newDomain = e.target.value;
-                        setSelectedDomain(newDomain);
-                        // Generate a new email when a domain is selected
-                        if (newDomain) {
-                          handleGenerateEmail(newDomain);
-                        }
-                      }}
-                    >
-                      <option value="">Random domain</option>
-                      {domains.map(domain => (
-                        <option key={domain} value={domain}>{domain}</option>
-                      ))}
-                    </select>
-                  </div>
-                  
-                  <div className="email-display">
-                    {email || 'Loading...'}
-                  </div>
-                  
-                  {email && (
-                    <MailboxTimer 
-                      email={email} 
-                      onExpired={handleMailboxExpired} 
-                    />
-                  )}
-                  
-                  <div className="email-actions">
-                    <button onClick={handleGenerateEmail}>Generate New Email</button>
-                    <button onClick={handleRefreshMessages}>Check Messages</button>
+        <Routes>
+          <Route path="/" element={
+            <>
+              <main className="content">
+                <div className="main-container">
+                  <div className="email-container">
+                    <section className="email-section">
+                      <h2>Your Temporary Email Address</h2>
+                      
+                      {loading ? (
+                        <p>Generating email address...</p>
+                      ) : error ? (
+                        <div className="error-message">{error}</div>
+                      ) : (
+                        <div className="email-display">
+                          <div className="email-address">
+                            <span className="email-text">{email}</span>
+                            <button 
+                              className="copy-button" 
+                              onClick={handleCopyClick}
+                              title="Copy to clipboard"
+                            >
+                              {copied ? 'Copied!' : 'Copy'}
+                            </button>
+                          </div>
+                          
+                          <div className="email-controls">
+                            <MailboxTimer 
+                              onExpire={handleMailboxExpired} 
+                              onExtend={handleRefreshMessages}
+                            />
+                            <div className="auto-refresh">
+                              <label>
+                                <input 
+                                  type="checkbox" 
+                                  checked={autoRefresh} 
+                                  onChange={toggleAutoRefresh} 
+                                />
+                                Auto-refresh
+                              </label>
+                              {refreshing && <span className="refreshing-indicator">Refreshing...</span>}
+                            </div>
+                          </div>
+                          
+                          <div className="domain-selection">
+                            <label htmlFor="domain-select">Select Domain:</label>
+                            <select 
+                              id="domain-select"
+                              value={selectedDomain}
+                              onChange={(e) => setSelectedDomain(e.target.value)}
+                            >
+                              <option value="">Random</option>
+                              {domains.map(domain => (
+                                <option key={domain} value={domain}>
+                                  @{domain}
+                                </option>
+                              ))}
+                            </select>
+                            <button onClick={handleGenerateEmail}>Generate New Email</button>
+                            <button onClick={handleRefreshMessages}>Check Messages</button>
+                          </div>
+                        </div>
+                      )}
+                    </section>
+                    
+                    <section className="messages-section">
+                      <h2>Duck Mail Inbox</h2>
+                      
+                      {loading ? (
+                        <p>Loading messages...</p>
+                      ) : error ? (
+                        <div className="error-message">{error}</div>
+                      ) : messages.length === 0 ? (
+                        <p>Your inbox is empty. Messages will appear here when you receive them.</p>
+                      ) : (
+                        <ul className="message-list">
+                          {messages.map(message => (
+                            <li key={message.id} className="message-item">
+                              <div className="message-header">
+                                <span>{message.from}</span>
+                                <span>{formatDate(message.date)}</span>
+                              </div>
+                              <div className="message-subject">{message.subject}</div>
+                              <div className="message-preview">{message.preview}</div>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </section>
                   </div>
                 </div>
-              </section>
-              
-              <section className="messages-section">
-                <h2>Duck Mail Inbox</h2>
                 
-                {loading ? (
-                  <p>Loading messages...</p>
-                ) : error ? (
-                  <div className="error-message">{error}</div>
-                ) : messages.length === 0 ? (
-                  <p>Your inbox is empty. Messages will appear here when you receive them.</p>
-                ) : (
-                  <ul className="message-list">
-                    {messages.map(message => (
-                      <li key={message.id} className="message-item">
-                        <div className="message-header">
-                          <span>{message.from}</span>
-                          <span>{formatDate(message.date)}</span>
-                        </div>
-                        <div className="message-subject">{message.subject}</div>
-                        <div className="message-preview">{message.preview}</div>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </section>
-            </main>
-          </div>
+                <div className="sidebar">
+                  <div className="ad-container">
+                    <div className="ad-sidebar">Google Ad (300x250)</div>
+                  </div>
+                  
+                  <div className="email-section">
+                    <h2>Why Use Mail Duck?</h2>
+                    <ul>
+                      <li>🦆 100% Free temporary email</li>
+                      <li>🦆 No registration required</li>
+                      <li>🦆 Protect your privacy</li>
+                      <li>🦆 Avoid spam in your personal inbox</li>
+                      <li>🦆 Perfect for one-time signups</li>
+                    </ul>
+                  </div>
+                </div>
+              </main>
+              
+              <div className="ad-container">
+                <div className="ad-banner">Google Ad Banner (728x90)</div>
+              </div>
+            </>
+          } />
           
-          <div className="sidebar">
-            <div className="ad-container">
-              <div className="ad-sidebar">Google Ad (300x250)</div>
-            </div>
-            
-            <div className="email-section">
-              <h2>Why Use Mail Duck?</h2>
-              <ul>
-                <li>🦆 100% Free temporary email</li>
-                <li>🦆 No registration required</li>
-                <li>🦆 Protect your privacy</li>
-                <li>🦆 Avoid spam in your personal inbox</li>
-                <li>🦆 Perfect for one-time signups</li>
-              </ul>
-            </div>
-          </div>
-        </div>
+          <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/terms" element={<TermsOfService />} />
+          <Route path="/about" element={<AboutUs />} />
+          <Route path="/contact" element={<ContactUs />} />
+        </Routes>
         
-        <div className="ad-container">
-          <div className="ad-banner">Google Ad Banner (728x90)</div>
-        </div>
-        
-        <footer className="footer">
-          <p>© 2025 Mail Duck - The friendly temporary email service</p>
-          <p>We value your privacy. Mail Duck does not store or share your personal information.</p>
-        </footer>
+        <FooterContainer>
+          <FooterLinks>
+            <FooterLink to="/privacy">Privacy Policy</FooterLink>
+            <FooterLink to="/terms">Terms of Service</FooterLink>
+            <FooterLink to="/about">About Us</FooterLink>
+            <FooterLink to="/contact">Contact Us</FooterLink>
+          </FooterLinks>
+          <p>© 2025 Hide Mail - The friendly temporary email service</p>
+          <p>We value your privacy. Hide Mail does not store or share your personal information.</p>
+          <p>Hide Mail is a service of <a href="https://mail-duck.com" target="_blank" rel="noopener noreferrer" style={{ color: '#4285f4', textDecoration: 'none' }}>mail-duck.com</a></p>
+        </FooterContainer>
       </div>
-    </>
+    </Router>
   );
 }
 
