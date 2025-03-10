@@ -47,7 +47,14 @@ echo "  }," >> $ENV_FILE
 echo "  api: {" >> $ENV_FILE
 echo "    url: '$CONFIG_API_URL'," >> $ENV_FILE
 echo "    timeout: $CONFIG_API_TIMEOUT," >> $ENV_FILE
-echo "  }" >> $ENV_FILE
+echo "  }," >> $ENV_FILE
+
+# Add AdSense configuration if available
+if [ ! -z "$REACT_APP_ADSENSE_CLIENT" ]; then
+  echo "  adsense: {" >> $ENV_FILE
+  echo "    client: '$REACT_APP_ADSENSE_CLIENT'," >> $ENV_FILE
+  echo "  }," >> $ENV_FILE
+fi
 
 # Close the config object
 echo "};" >> $ENV_FILE

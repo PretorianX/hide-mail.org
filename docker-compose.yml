@@ -16,6 +16,7 @@ services:
       - CONFIG_API_URL=/api
       - CONFIG_API_TIMEOUT=5000
       - NODE_ENV=production
+      - REACT_APP_ADSENSE_CLIENT=${REACT_APP_ADSENSE_CLIENT}
     restart: unless-stopped
 
   backend:

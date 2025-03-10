@@ -11,6 +11,11 @@
     <title>TempMail Service</title>
     <!-- Runtime environment variables will be injected here -->
     <script src="%PUBLIC_URL%/runtime-env.js"></script>
+    
+    <!-- Google AdSense - Only included in production -->
+    <% if (process.env.NODE_ENV === 'production' && process.env.REACT_APP_ADSENSE_CLIENT) { %>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+    <% } %>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
