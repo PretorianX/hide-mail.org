@@ -1,13 +1,24 @@
 const request = require('supertest');
-const { app } = require('../server');
+const { app } = require('../__mocks__/server');
 const emailService = require('../services/emailService');
 
 // Mock the emailService
 jest.mock('../services/emailService');
+// Mock ioredis is handled by jest.config.js
 
 describe('Email API Endpoints', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+  });
+  
+  afterAll(() => {
+    // Clean up any timers
+    if (emailService.__cleanupTimers) {
+      emailService.__cleanupTimers();
+    }
+    
+    // Close any open handles
+    jest.useRealTimers();
   });
 
   describe('GET /api/emails/:email', () => {

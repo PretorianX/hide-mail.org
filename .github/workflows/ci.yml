@@ -55,10 +55,11 @@ jobs:
       run: npm ci
       
     - name: Run backend tests with coverage
-      run: npm test
+      run: npm run test:ci
       env:
         CI: true
         NODE_ENV: test
+        EMAIL_DOMAINS: test.com,test.org
     
     - name: Upload backend test coverage
       uses: actions/upload-artifact@v4
