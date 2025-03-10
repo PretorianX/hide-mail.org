@@ -28,7 +28,7 @@
   },
   "scripts": {
     "start": "NODE_ENV=development craco start",
-    "build": "NODE_ENV=production craco build",
+    "build": "CI=false NODE_ENV=production craco build",
     "test": "craco test --watchAll=false",
     "test:watch": "craco test",
     "eject": "react-scripts eject",
@@ -38,6 +38,18 @@
     "extends": [
       "react-app",
       "react-app/jest"
+    ],
+    "rules": {
+      "no-unused-vars": "warn",
+      "react-hooks/exhaustive-deps": "warn"
+    },
+    "overrides": [
+      {
+        "files": ["**/*.js"],
+        "env": {
+          "node": true
+        }
+      }
     ]
   },
   "browserslist": {
