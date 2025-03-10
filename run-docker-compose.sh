@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Script to run Docker Compose with local builds
+# Script to run Docker Compose with GitHub Container Registry images
 
 # Set environment variables from .env file if it exists
 if [ -f .env ]; then
@@ -19,9 +19,10 @@ if ! docker info > /dev/null 2>&1; then
   exit 1
 fi
 
-# Build and run Docker Compose
-echo "Building and starting services with Docker Compose..."
-docker-compose up -d --build
+# Pull and run Docker Compose
+echo "Pulling images and starting services with Docker Compose..."
+docker-compose pull
+docker-compose up -d
 
 # Check if services are running
 echo "Checking if services are running..."
