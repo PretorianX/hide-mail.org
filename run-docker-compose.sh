@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Script to run Docker Compose with GitHub Container Registry images
+# Script to run Docker Compose with local builds
 
 # Set environment variables from .env file if it exists
 if [ -f .env ]; then
@@ -19,21 +19,9 @@ if ! docker info > /dev/null 2>&1; then
   exit 1
 fi
 
-# Check if user is logged in to GitHub Container Registry
-if ! docker pull ghcr.io/pretorianx/hide-mail.org/frontend:latest > /dev/null 2>&1; then
-  echo "Error: Failed to pull Docker image. You may need to authenticate with GitHub Container Registry."
-  echo "Run: echo \$GITHUB_TOKEN | docker login ghcr.io -u USERNAME --password-stdin"
-  exit 1
-fi
-
-# Pull the latest images
-echo "Pulling latest Docker images from GitHub Container Registry..."
-docker pull ghcr.io/pretorianx/hide-mail.org/frontend:latest --platform linux/amd64
-docker pull ghcr.io/pretorianx/hide-mail.org/backend:latest --platform linux/amd64
-
-# Run Docker Compose
-echo "Starting services with Docker Compose..."
-docker-compose up -d
+# Build and run Docker Compose
+echo "Building and starting services with Docker Compose..."
+docker-compose up -d --build
 
 # Check if services are running
 echo "Checking if services are running..."
