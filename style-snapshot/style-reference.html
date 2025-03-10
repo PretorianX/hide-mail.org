@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hide Mail Style Reference</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #0056b3;
+            border-bottom: 2px solid #0056b3;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #0056b3;
+            margin-top: 30px;
+        }
+        .color-swatch {
+            display: inline-block;
+            width: 100px;
+            height: 100px;
+            margin: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            text-align: center;
+            line-height: 100px;
+            color: white;
+            font-weight: bold;
+            text-shadow: 0 0 2px rgba(0,0,0,0.5);
+        }
+        .component-preview {
+            border: 1px solid #ddd;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        .code-example {
+            background-color: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            overflow-x: auto;
+        }
+        .iframe-container {
+            width: 100%;
+            height: 600px;
+            border: 1px solid #ddd;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Hide Mail Style Reference</h1>
+    <p>This document serves as a reference for the approved styling of the Hide Mail application as of March 10, 2024.</p>
+
+    <h2>Color Palette</h2>
+    <div>
+        <div class="color-swatch" style="background-color: #0056b3;">#0056b3</div>
+        <div class="color-swatch" style="background-color: #007bff;">#007bff</div>
+        <div class="color-swatch" style="background-color: #ff8c00;">#ff8c00</div>
+        <div class="color-swatch" style="background-color: #28a745;">#28a745</div>
+        <div class="color-swatch" style="background-color: #dc3545;">#dc3545</div>
+        <div class="color-swatch" style="color: #333; background-color: #f8f9fa;">#f8f9fa</div>
+    </div>
+
+    <h2>Typography</h2>
+    <div class="component-preview">
+        <h1 style="margin: 0;">Heading 1</h1>
+        <h2 style="margin: 10px 0;">Heading 2</h2>
+        <h3 style="margin: 10px 0;">Heading 3</h3>
+        <p>Regular paragraph text. The Hide Mail application uses a clean, modern sans-serif font throughout the interface.</p>
+        <a href="#">Link styling</a>
+    </div>
+
+    <h2>Components</h2>
+    
+    <h3>Buttons</h3>
+    <div class="component-preview">
+        <button style="background-color: #0056b3; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin-right: 10px;">Primary Button</button>
+        <button style="background-color: #f8f9fa; color: #333; border: 1px solid #ddd; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin-right: 10px;">Secondary Button</button>
+        <button style="background-color: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer;">Success Button</button>
+    </div>
+
+    <h3>Email Display</h3>
+    <div class="component-preview">
+        <div style="background-color: #f8f9fa; border: 1px solid #ddd; padding: 15px; border-radius: 4px; font-size: 18px; font-weight: bold; text-align: center;">
+            example.user@hidemail.com
+        </div>
+    </div>
+
+    <h3>Timer</h3>
+    <div class="component-preview">
+        <div style="margin-bottom: 10px;">
+            <span>Mailbox expires in: </span>
+            <span style="font-weight: bold;">29:45</span>
+            <button style="background-color: #f8f9fa; border: 1px solid #ddd; padding: 5px 10px; border-radius: 4px; margin-left: 10px;">Refresh Timer</button>
+        </div>
+        <div style="background-color: #e9ecef; height: 10px; border-radius: 5px; overflow: hidden;">
+            <div style="background-color: #ff8c00; height: 100%; width: 99%"></div>
+        </div>
+    </div>
+
+    <h2>Layout</h2>
+    <p>The Hide Mail application uses a responsive layout with a header, main content area, sidebar, and footer.</p>
+    
+    <h3>Original Reference Page</h3>
+    <p>Below is an iframe showing the original reference page:</p>
+    <iframe src="page_i_want_to_see.html" class="iframe-container"></iframe>
+
+    <h2>CSS Files</h2>
+    <p>The following CSS files are included in this snapshot:</p>
+    <ul>
+        <li><code>App.css</code> - Main application styles</li>
+        <li><code>index.css</code> - Global styles</li>
+        <li><code>Header.css</code> - Header component styles</li>
+        <li><code>MessageItem.css</code> - Message item styles</li>
+        <li><code>MessageList.css</code> - Message list styles</li>
+        <li><code>MessageView.css</code> - Message view styles</li>
+        <li><code>EmailDisplay.css</code> - Email display styles</li>
+        <li><code>MailboxTimer.css</code> - Mailbox timer styles</li>
+        <li><code>AdStyles.css</code> - Ad container styles</li>
+    </ul>
+
+    <h2>Styled Components</h2>
+    <p>The application also uses styled-components for component-specific styling. These are captured in the <code>styled-components</code> directory.</p>
+
+    <footer style="margin-top: 50px; padding-top: 20px; border-top: 1px solid #ddd; text-align: center;">
+        <p>© 2024 Hide Mail - Style Reference</p>
+    </footer>
+</body>
+</html> 

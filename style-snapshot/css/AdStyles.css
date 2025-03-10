@@ -1,0 +1,48 @@
+/* Ad container styles */
+.ad-container {
+  box-sizing: border-box;
+  position: relative;
+  margin: 20px auto;
+  clear: both;
+}
+
+/* Sidebar ad styles */
+.ad-sidebar {
+  margin: 0 auto 20px;
+}
+
+/* Inline ad styles (within content) */
+.ad-inline {
+  margin: 20px auto;
+}
+
+/* Top banner ad styles */
+.ad-banner {
+  width: 100% !important;
+  max-width: 728px;
+  margin: 0 auto 20px;
+}
+
+/* Mobile ad styles */
+@media (max-width: 768px) {
+  .ad-container {
+    margin: 15px auto;
+  }
+  
+  .ad-banner {
+    max-width: 320px;
+  }
+}
+
+/* Ad label for compliance */
+.ad-container::before {
+  content: 'Advertisement';
+  display: block;
+  position: absolute;
+  top: -18px;
+  left: 0;
+  font-size: 10px;
+  color: #999;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+} 
