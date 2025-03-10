@@ -1,46 +1,49 @@
-# Use Node.js as the base image
-FROM node:18-alpine as build
+# Use multi-stage builds to avoid storing credentials in the final image
+# Stage 1: Build stage
+FROM node:20-alpine AS builder
 
-# Set working directory
 WORKDIR /app
 
-# Copy package.json first
-COPY package.json ./
+# Copy only package files first to leverage Docker cache
+COPY package*.json ./
 
-# Install dependencies (use npm install since package-lock.json might not exist)
+# Install dependencies using npm install instead of npm ci
+# since package-lock.json might be missing
 RUN npm install
 
-# Copy all files
+# Copy source code
 COPY . .
 
-# Validate config files exist
-RUN if [ ! -f ./config/default.json ] || [ ! -f ./config/production.json ]; then \
-      echo "ERROR: Missing required config files" && exit 1; \
-    fi
-
-# Build the app
+# Build the application
 RUN npm run build
 
-# Production stage
-FROM nginx:alpine
+# Stage 2: Production stage
+FROM nginx:alpine AS production
+
+# Install bash for env-config.sh script
+RUN apk add --no-cache bash
 
 # Copy built files from build stage to nginx serve directory
-COPY --from=build /app/build /usr/share/nginx/html
+COPY --from=builder /app/build /usr/share/nginx/html
 
-# Copy config files to make them available at runtime
-COPY --from=build /app/config /usr/share/nginx/html/config
-
-# Copy custom nginx config
+# Copy nginx configuration
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # Add script to replace environment variables at runtime
-RUN apk add --no-cache bash
-COPY ./env-config.sh /usr/share/nginx/html/
-RUN chmod +x /usr/share/nginx/html/env-config.sh
+COPY ./env-config.sh /
+RUN chmod +x /env-config.sh
 
 # Create a wrapper script to run both env-config and nginx
 COPY ./docker-entrypoint.sh /
 RUN chmod +x /docker-entrypoint.sh
+
+# Update the docker-entrypoint.sh to use the env-config.sh from the root directory
+RUN sed -i 's|/usr/share/nginx/html/env-config.sh|/env-config.sh|g' /docker-entrypoint.sh
+
+# Add metadata labels following OCI image spec
+LABEL org.opencontainers.image.source="https://github.com/${GITHUB_REPOSITORY}"
+LABEL org.opencontainers.image.description="Hide Mail - disposable email service frontend"
+LABEL org.opencontainers.image.licenses="MIT"
 
 # Expose port 80
 EXPOSE 80

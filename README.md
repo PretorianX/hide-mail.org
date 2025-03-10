@@ -1,8 +1,6 @@
 # Hide Mail
 
-A temporary email service that provides disposable email addresses for privacy and spam protection.
-
-![Build and Test](https://github.com/mail-duck/hide-mail.org/actions/workflows/build-and-test.yml/badge.svg)
+A temporary email service that provides disposable email addresses for privacy and spam protection, with container images stored in GitHub Container Registry (GHCR).
 
 ## Features
 
@@ -13,33 +11,82 @@ A temporary email service that provides disposable email addresses for privacy a
 - Copy email address to clipboard
 - Mobile-friendly responsive design
 
+## Container Images
+
+This project uses GitHub Container Registry (GHCR) to store and distribute container images. The images are automatically built and pushed to GHCR using GitHub Actions.
+
+### Available Images
+
+- Frontend: `ghcr.io/YOUR_USERNAME/hide-mail-org/frontend:tag`
+- Backend: `ghcr.io/YOUR_USERNAME/hide-mail-org/backend:tag`
+
+### Pulling Images
+
+To pull the images:
+
+```bash
+# Pull the frontend image
+docker pull ghcr.io/YOUR_USERNAME/hide-mail-org/frontend:main
+
+# Pull the backend image
+docker pull ghcr.io/YOUR_USERNAME/hide-mail-org/backend:main
+```
+
+You can also use version tags:
+```bash
+docker pull ghcr.io/YOUR_USERNAME/hide-mail-org/frontend:v1.0.0
+```
+
+### Image Visibility
+
+By default, packages on GHCR are private. To make your images public:
+
+1. Go to your GitHub repository
+2. Click on "Packages" in the right sidebar
+3. Click on your container image
+4. Click on "Package settings"
+5. Under "Danger Zone", change the visibility to "Public"
+
 ## Development
 
 ### Prerequisites
 
 - Docker and Docker Compose
 - Git
+- Node.js (for local development)
 
 ### Local Development
 
 1. Clone the repository:
-   ```
-   git clone git@github.com:mail-duck/hide-mail.org.git
-   cd hide-mail.org
+   ```bash
+   git clone https://github.com/YOUR_USERNAME/hide-mail-org.git
+   cd hide-mail-org
    ```
 
 2. Start the development environment:
-   ```
+   ```bash
    docker-compose up -d
    ```
 
 3. Access the application:
-   - Frontend: http://localhost:3000
-   - Backend API: http://localhost:3001
+   - Frontend: http://localhost:3001
+   - Backend API: http://localhost:3002
+   - Redis Commander: http://localhost:8081
 
-### Testing
+### Environment Variables
 
-Tests are automatically run in GitHub Actions on every push and pull request.
+Create a `.env` file based on the `.env.template`:
+
+```bash
+cp .env.template .env
+```
+
+Edit the `.env` file to set your configuration:
+
+```
+EMAIL_DOMAINS=example.com,mail.example.com
+REACT_APP_ADSENSE_CLIENT=your-adsense-client-id
+```
 
 ## CI/CD with GitHub Actions
 
@@ -48,120 +95,24 @@ This project uses GitHub Actions for continuous integration and deployment:
 ### Workflows
 
 1. **Test** (`.github/workflows/test.yml`)
-   - Runs on every push to main/master and on pull requests
-   - Executes all tests including domain selection tests
+   - Runs tests for the application
 
 2. **Build and Test** (`.github/workflows/build-and-test.yml`)
-   - Runs on every push to main/master and on pull requests
    - Builds and tests both frontend and backend
-   - Creates Docker images
 
-3. **Deploy to Production** (`.github/workflows/deploy.yml`)
-   - Triggered when a new release is published
-   - Builds and pushes Docker images to Docker Hub
-   - Deploys to production server
+3. **Build and Push Container Images** (`.github/workflows/build-push-container.yml`)
+   - Builds and pushes Docker images to GitHub Container Registry
+   - Triggered on pushes to main, tags, or manually
 
-### Required Secrets
+## Security Best Practices
 
-For the deployment workflow to work, you need to set up the following secrets in your GitHub repository:
-
-- `DOCKER_HUB_USERNAME`: Your Docker Hub username
-- `DOCKER_HUB_TOKEN`: Your Docker Hub access token
-- `PRODUCTION_HOST`: The hostname or IP of your production server
-- `PRODUCTION_USERNAME`: SSH username for the production server
-- `PRODUCTION_SSH_KEY`: SSH private key for authentication
-
-## Architecture
-
-The application consists of:
-
-1. **Frontend**: React application
-2. **Backend**: Node.js Express API
-3. **Redis**: For storing email data and domains
+This setup follows these security best practices:
+- No credentials in the images
+- Multi-stage builds to minimize image size
+- Running as a non-root user
+- Using specific version tags for base images
+- Proper metadata labeling
 
 ## License
 
 [MIT License](LICENSE)
-
-## AdSense Integration
-
-This project includes Google AdSense integration with environment variable configuration for security.
-
-### Setup
-
-1. Add your AdSense client ID to the `.env` file:
-   ```
-   REACT_APP_ADSENSE_CLIENT=ca-pub-XXXXXXXXXXXXXXXX
-   ```
-
-2. The repository includes:
-   - `ads.txt` file in the public directory
-   - Meta tag verification in the HTML head
-   - AdSense script loading with client parameter in production mode only
-
-### Integration Methods
-
-1. **JavaScript Code Integration**:
-   - Script tag with client parameter in HTML head
-   - Manual ad placement with the AdSense component
-   - Auto ads support (enabled automatically by the script tag)
-
-2. **Ads.txt File**:
-   - Located in the public directory
-   - Follows the required format: `google.com, pub-XXXXXXXXXXXXXXXX, DIRECT, f08c47fec0942fa0`
-
-3. **Meta Tag Verification**:
-   - Added to the HTML head
-   - Helps Google verify site ownership
-
-### Usage
-
-#### Manual Ad Placement
-
-```jsx
-import AdSense from './components/AdSense';
-
-// In your component
-<AdSense 
-  slot="1234567890" 
-  format="auto" 
-  responsive={true} 
-  style={{ width: '100%', height: '250px' }} 
-/>
-```
-
-#### Using the AdContainer Component (Recommended)
-
-The AdContainer component provides proper sizing and styling for ads:
-
-```jsx
-import AdContainer from './components/AdContainer';
-
-// In your component
-<AdContainer 
-  slot="1234567890" 
-  width={300} 
-  height={250} 
-  position="sidebar" 
-/>
-```
-
-Common ad sizes:
-- 300x250 - Medium Rectangle
-- 336x280 - Large Rectangle
-- 728x90 - Leaderboard
-- 300x600 - Half Page
-- 320x100 - Large Mobile Banner
-
-#### Auto Ads
-
-```jsx
-import AdSense from './components/AdSense';
-
-// In your App.js or layout component
-<AdSense autoAd={true} />
-```
-
-### Testing
-
-The AdSense and AdContainer components show placeholders in development mode and only load actual ads in production.

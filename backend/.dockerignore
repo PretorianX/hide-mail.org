@@ -9,10 +9,10 @@ npm-debug.log
 yarn-debug.log
 yarn-error.log
 
-# Build outputs
-dist
-build
+# Test outputs
 coverage
+.nyc_output
+tests/
 
 # Environment variables and secrets
 .env
@@ -23,7 +23,6 @@ coverage
 # Docker
 Dockerfile
 .dockerignore
-docker-compose*
 
 # Documentation
 README.md
@@ -41,12 +40,8 @@ LICENSE
 .DS_Store
 Thumbs.db
 
-# Backend directory (for frontend build)
-backend/
-
-# Scripts that shouldn't be in the container
-extract-styled-components.sh
-fix-imports.sh
-
 # Don't exclude config directory needed for the app
-!config/ 
+!config/
+
+# Don't exclude logs directory
+!logs/ 

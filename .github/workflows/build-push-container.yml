@@ -1,0 +1,103 @@
+name: Build and Push Container Images
+
+on:
+  push:
+    branches: [ main ]
+    # Optionally trigger on tags for releases
+    tags: [ 'v*' ]
+  # Allow manual triggering
+  workflow_dispatch:
+
+env:
+  # Use GitHub Container Registry
+  REGISTRY: ghcr.io
+  # github.repository as <account>/<repo>
+  IMAGE_NAME: ${{ github.repository }}
+  # Default email domains for the container
+  EMAIL_DOMAINS: "example.com,mail.example.com"
+  # Default configuration values
+  CONFIG_EMAIL_EXPIRATIONTIME: "1800"
+  CONFIG_EMAIL_EXTENSIONTIME: "900"
+  CONFIG_API_URL: "/api"
+  CONFIG_API_TIMEOUT: "5000"
+
+jobs:
+  build-and-push:
+    name: Build and Push Containers
+    runs-on: ubuntu-latest
+    # Sets the permissions granted to the `GITHUB_TOKEN` for the actions in this job
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Login against GitHub Container Registry
+      # Uses the `GITHUB_TOKEN` secret automatically provided by GitHub
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Set up Docker Buildx for multi-platform builds
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Extract metadata for Docker
+      - name: Extract Frontend Docker metadata
+        id: meta-frontend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend
+          # Generate tags based on the following events:
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+
+      # Build and push Frontend Docker image
+      - name: Build and push Frontend Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta-frontend.outputs.tags }}
+          labels: ${{ steps.meta-frontend.outputs.labels }}
+          build-args: |
+            EMAIL_DOMAINS=${{ env.EMAIL_DOMAINS }}
+            CONFIG_EMAIL_EXPIRATIONTIME=${{ env.CONFIG_EMAIL_EXPIRATIONTIME }}
+            CONFIG_EMAIL_EXTENSIONTIME=${{ env.CONFIG_EMAIL_EXTENSIONTIME }}
+            CONFIG_API_URL=${{ env.CONFIG_API_URL }}
+            CONFIG_API_TIMEOUT=${{ env.CONFIG_API_TIMEOUT }}
+            NODE_ENV=production
+
+      # Extract metadata for Backend Docker
+      - name: Extract Backend Docker metadata
+        id: meta-backend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend
+          # Generate tags based on the following events:
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+
+      # Build and push Backend Docker image
+      - name: Build and push Backend Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: true
+          tags: ${{ steps.meta-backend.outputs.tags }}
+          labels: ${{ steps.meta-backend.outputs.labels }}
+          build-args: |
+            NODE_ENV=production 
