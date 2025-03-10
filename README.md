@@ -82,3 +82,48 @@ The application consists of:
 ## License
 
 [MIT License](LICENSE)
+
+## AdSense Integration
+
+This project includes Google AdSense integration with environment variable configuration for security.
+
+### Setup
+
+1. Add your AdSense client ID to the `.env` file:
+   ```
+   REACT_APP_ADSENSE_CLIENT=ca-pub-XXXXXXXXXXXXXXXX
+   ```
+
+2. The repository includes:
+   - `ads.txt` file in the public directory
+   - Meta tag verification in the HTML head
+   - AdSense script loading in production mode only
+
+### Usage
+
+#### Manual Ad Placement
+
+```jsx
+import AdSense from './components/AdSense';
+
+// In your component
+<AdSense 
+  slot="1234567890" 
+  format="auto" 
+  responsive={true} 
+  style={{ width: '100%', height: '250px' }} 
+/>
+```
+
+#### Auto Ads
+
+```jsx
+import AdSense from './components/AdSense';
+
+// In your App.js or layout component
+<AdSense autoAd={true} />
+```
+
+### Testing
+
+The AdSense component shows a placeholder in development mode and only loads actual ads in production.

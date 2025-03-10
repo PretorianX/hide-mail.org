@@ -9,10 +9,14 @@ describe('AdSense Component', () => {
   beforeEach(() => {
     jest.resetModules();
     process.env = { ...originalEnv };
+    // Mock window.adsbygoogle
+    window.adsbygoogle = [];
+    window.adsbygoogle.push = jest.fn();
   });
 
   afterEach(() => {
     process.env = originalEnv;
+    delete window.adsbygoogle;
   });
 
   test('renders placeholder in development mode', () => {
@@ -21,7 +25,7 @@ describe('AdSense Component', () => {
     
     render(<AdSense slot="1234567890" />);
     
-    expect(screen.getByText(/AdSense Placeholder/i)).toBeInTheDocument();
+    expect(screen.getByText(/AdSense Manual Ad Placeholder/i)).toBeInTheDocument();
     expect(screen.getByText(/ca-pub-9729692981183751/i)).toBeInTheDocument();
   });
 
@@ -31,7 +35,7 @@ describe('AdSense Component', () => {
     
     render(<AdSense slot="1234567890" />);
     
-    expect(screen.getByText(/AdSense Placeholder/i)).toBeInTheDocument();
+    expect(screen.getByText(/AdSense Manual Ad Placeholder/i)).toBeInTheDocument();
     expect(screen.getByText(/Not configured/i)).toBeInTheDocument();
   });
 
@@ -45,5 +49,28 @@ describe('AdSense Component', () => {
     expect(insElement).toBeInTheDocument();
     expect(insElement).toHaveAttribute('data-ad-client', 'ca-pub-9729692981183751');
     expect(insElement).toHaveAttribute('data-ad-slot', '1234567890');
+    expect(window.adsbygoogle.push).toHaveBeenCalled();
+  });
+
+  test('renders auto ad placeholder in development mode', () => {
+    process.env.NODE_ENV = 'development';
+    process.env.REACT_APP_ADSENSE_CLIENT = 'ca-pub-9729692981183751';
+    
+    render(<AdSense autoAd={true} />);
+    
+    expect(screen.getByText(/AdSense Auto Ad Placeholder/i)).toBeInTheDocument();
+  });
+
+  test('renders nothing for auto ads in production mode', () => {
+    process.env.NODE_ENV = 'production';
+    process.env.REACT_APP_ADSENSE_CLIENT = 'ca-pub-9729692981183751';
+    
+    const { container } = render(<AdSense autoAd={true} />);
+    
+    expect(container.firstChild).toBeNull();
+    expect(window.adsbygoogle.push).toHaveBeenCalledWith({
+      google_ad_client: 'ca-pub-9729692981183751',
+      enable_page_level_ads: true
+    });
   });
 }); 

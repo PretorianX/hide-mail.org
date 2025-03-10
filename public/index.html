@@ -6,6 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#000000" />
     <meta name="description" content="Temporary email service" />
+    <!-- AdSense verification meta tag - Only included in production -->
+    <% if (process.env.NODE_ENV === 'production' && process.env.REACT_APP_ADSENSE_CLIENT) { %>
+    <meta name="google-adsense-account" content="<%= process.env.REACT_APP_ADSENSE_CLIENT %>">
+    <% } %>
     <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
     <title>TempMail Service</title>
