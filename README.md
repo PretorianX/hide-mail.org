@@ -17,8 +17,8 @@ This project uses GitHub Container Registry (GHCR) to store and distribute conta
 
 ### Available Images
 
-- Frontend: `ghcr.io/YOUR_USERNAME/hide-mail-org/frontend:tag`
-- Backend: `ghcr.io/YOUR_USERNAME/hide-mail-org/backend:tag`
+- Frontend: `ghcr.io/mail-duck/hide-mail.org/frontend:latest`
+- Backend: `ghcr.io/mail-duck/hide-mail.org/backend:latest`
 
 ### Pulling Images
 
@@ -26,16 +26,46 @@ To pull the images:
 
 ```bash
 # Pull the frontend image
-docker pull ghcr.io/YOUR_USERNAME/hide-mail-org/frontend:main
+docker pull ghcr.io/mail-duck/hide-mail.org/frontend:latest
 
 # Pull the backend image
-docker pull ghcr.io/YOUR_USERNAME/hide-mail-org/backend:main
+docker pull ghcr.io/mail-duck/hide-mail.org/backend:latest
 ```
 
 You can also use version tags:
 ```bash
-docker pull ghcr.io/YOUR_USERNAME/hide-mail-org/frontend:v1.0.0
+docker pull ghcr.io/mail-duck/hide-mail.org/frontend:v1.0.0
 ```
+
+### Using Docker Compose with GHCR Images
+
+We've provided a Docker Compose configuration that uses the pre-built images from GitHub Container Registry:
+
+1. Make sure you're authenticated with GitHub Container Registry:
+   ```bash
+   echo $GITHUB_TOKEN | docker login ghcr.io -u USERNAME --password-stdin
+   ```
+
+2. Run the provided script to start all services:
+   ```bash
+   ./run-docker-compose.sh
+   ```
+
+   This script will:
+   - Load environment variables from your `.env` file
+   - Pull the latest images from GitHub Container Registry
+   - Start all services with Docker Compose
+   - Verify that services are running correctly
+
+3. Access the application:
+   - Frontend: http://localhost:3001
+   - Backend API: http://localhost:3002/api
+   - Redis Commander: http://localhost:8081
+
+4. To stop all services:
+   ```bash
+   docker-compose down
+   ```
 
 ### Image Visibility
 
