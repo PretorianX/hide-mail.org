@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import MailboxTimer from './MailboxTimer';
-import EmailService from '../services/EmailService';
+import MailboxTimer from './MailboxTimer.js';
+import EmailService from '../services/EmailService.js';
 import './Header.css';
 
 const Header = ({ email, onGenerateEmail, onRefreshMessages, onMailboxExpired }) => {
   const [domains, setDomains] = useState([]);
   const [showDomainDropdown, setShowDomainDropdown] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedDomain, setSelectedDomain] = useState('');
 
   useEffect(() => {
     const loadDomains = async () => {
@@ -18,10 +19,11 @@ const Header = ({ email, onGenerateEmail, onRefreshMessages, onMailboxExpired })
   }, []);
 
   const handleGenerateClick = () => {
-    onGenerateEmail();
+    onGenerateEmail(selectedDomain || null);
   };
 
   const handleDomainSelect = (domain) => {
+    setSelectedDomain(domain);
     onGenerateEmail(domain);
     setShowDomainDropdown(false);
   };

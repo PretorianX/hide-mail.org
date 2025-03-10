@@ -1,4 +1,4 @@
-import { getConfig } from '../utils/configLoader';
+import { getConfig } from '../utils/configLoader.js';
 
 // No fallback - will throw error if config is missing
 const API_URL = getConfig('api.url');

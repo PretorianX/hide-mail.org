@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import EmailService from '../services/EmailService';
+import EmailService from '../services/EmailService.js';
 
 const ViewerContainer = styled.div`
   display: flex;

@@ -1,10 +1,11 @@
 import React from 'react';
 import { render, screen, fireEvent, act } from '@testing-library/react';
-import MailboxTimer from './MailboxTimer';
-import EmailService from '../services/EmailService';
+import MailboxTimer from './MailboxTimer.js';
+import EmailService from '../services/EmailService.js';
 
-// Mock EmailService
-jest.mock('../services/EmailService', () => ({
+// Mock the EmailService
+jest.mock('../services/EmailService.js', () => ({
+  getExpirationTime: jest.fn(),
   getRemainingTime: jest.fn(),
   refreshExpirationTime: jest.fn()
 }));

@@ -1,4 +1,4 @@
-import { getConfig } from './configLoader';
+import { getConfig } from './configLoader.js';
 
 /**
  * Required configuration paths

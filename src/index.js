@@ -1,9 +1,9 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
-import App from './App';
-import reportWebVitals from './reportWebVitals';
-import { validateConfig } from './utils/configValidator';
+import App from './App.js';
+import reportWebVitals from './reportWebVitals.js';
+import { validateConfig } from './utils/configValidator.js';
 
 // Validate configuration before rendering the app
 try {

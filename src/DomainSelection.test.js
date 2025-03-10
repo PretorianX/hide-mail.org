@@ -1,9 +1,9 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import App from './App';
-import EmailService from './services/EmailService';
+import App from './App.js';
+import EmailService from './services/EmailService.js';
 
 // Mock the EmailService
-jest.mock('./services/EmailService', () => ({
+jest.mock('./services/EmailService.js', () => ({
   initialize: jest.fn().mockResolvedValue(undefined),
   getAvailableDomains: jest.fn().mockResolvedValue(['tempmail.com', 'duckmail.org', 'mailduck.io']),
   generateEmail: jest.fn().mockImplementation((domain) => {

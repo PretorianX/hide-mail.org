@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import EmailService from '../services/EmailService';
+import EmailService from '../services/EmailService.js';
 import './MailboxTimer.css';
 
 const MailboxTimer = ({ email, onExpired }) => {

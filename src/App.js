@@ -1,16 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './App.css';
-import EmailService from './services/EmailService';
-import MailboxTimer from './components/MailboxTimer';
-import { parseMultipartMessage } from './utils/messageParser';
-import { formatDate } from './utils/dateUtils';
+import EmailService from './services/EmailService.js';
+import MailboxTimer from './components/MailboxTimer.js';
+import { parseMultipartMessage } from './utils/messageParser.js';
+import { formatDate } from './utils/dateUtils.js';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import styled from 'styled-components';
-import Header from './components/Header';
-import EmailGenerator from './components/EmailGenerator';
-import EmailViewer from './components/EmailViewer';
-import ConfigProvider from './components/ConfigProvider';
-import GlobalStyle from './styles/GlobalStyle';
+import Header from './components/Header.js';
+import EmailGenerator from './components/EmailGenerator.js';
+import EmailViewer from './components/EmailViewer.js';
+import ConfigProvider from './components/ConfigProvider.js';
+import GlobalStyle from './styles/GlobalStyle.js';
 
 const AppContainer = styled.div`
   max-width: 1200px;

@@ -185,7 +185,7 @@ class EmailService {
       // Generate a new email address
       const localPart = this.generateRandomLocalPart();
       
-      // Use the provided domain if specified, otherwise use a random domain
+      // Use the provided domain if specified and valid, otherwise use a random domain
       const emailDomain = domain && this.domains.includes(domain) 
         ? domain 
         : this.getRandomElement(this.domains);

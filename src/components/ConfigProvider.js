@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { validateConfig } from '../utils/configValidator';
-import ConfigError from './ConfigError';
+import { validateConfig } from '../utils/configValidator.js';
+import ConfigError from './ConfigError.js';
 
 function ConfigProvider({ children }) {
   const [configError, setConfigError] = useState(null);

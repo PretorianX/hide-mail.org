@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import MessageView from './MessageView';
+import MessageView from './MessageView.js';
 
 describe('MessageView Component', () => {
   const mockMessage = {

@@ -1,4 +1,4 @@
-import { parseMultipartMessage } from '../messageParser';
+import { parseMultipartMessage } from '../messageParser.js';
 
 describe('Message Parser', () => {
   test('extracts text content from multipart message', () => {

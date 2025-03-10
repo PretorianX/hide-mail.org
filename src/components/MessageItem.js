@@ -1,6 +1,6 @@
 import React from 'react';
 import './MessageItem.css';
-import { formatDate } from '../utils/dateUtils';
+import { formatDate } from '../utils/dateUtils.js';
 
 const MessageItem = ({ message, onClick }) => {
   // Get the full preview text without truncation

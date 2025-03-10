@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
-import EmailService from '../services/EmailService';
-import { getConfig } from '../utils/configLoader';
+import EmailService from '../services/EmailService.js';
+import { getConfig } from '../utils/configLoader.js';
 
 const GeneratorContainer = styled.div`
   background-color: white;
