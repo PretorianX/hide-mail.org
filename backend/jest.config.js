@@ -12,5 +12,9 @@ module.exports = {
     '!**/tests/**'
   ],
   coverageReporters: ['text', 'lcov', 'clover'],
-  verbose: true
+  verbose: true,
+  // Mock ioredis module
+  moduleNameMapper: {
+    '^ioredis$': '<rootDir>/__mocks__/ioredis.js'
+  }
 }; 

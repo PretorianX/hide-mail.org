@@ -1,7 +1,7 @@
 import { getConfig } from './configLoader';
 
 // Mock the config imports
-jest.mock('../../config/default.json', () => ({
+jest.mock('../config/default.json', () => ({
   email: {
     expirationTime: 1800,
     extensionTime: 1800
@@ -12,7 +12,7 @@ jest.mock('../../config/default.json', () => ({
   }
 }), { virtual: true });
 
-jest.mock('../../config/development.json', () => ({
+jest.mock('../config/development.json', () => ({
   api: {
     url: 'http://localhost:3001'
   }

@@ -3,7 +3,7 @@
  */
 
 // Import default config directly
-import defaultConfig from '../../config/default.json';
+import defaultConfig from '../config/default.json';
 
 // Try to import environment-specific config
 let envConfig = {};
@@ -11,9 +11,9 @@ try {
   // Dynamic import not supported in Jest tests, use conditional require
   const env = process.env.NODE_ENV || 'development';
   if (env === 'development') {
-    envConfig = require('../../config/development.json');
+    envConfig = require('../config/development.json');
   } else if (env === 'production') {
-    envConfig = require('../../config/production.json');
+    envConfig = require('../config/production.json');
   } else if (env === 'test') {
     // For test environment, use environment variables or default test values
     envConfig = {

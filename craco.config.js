@@ -16,6 +16,12 @@ module.exports = {
       // Replace rollup-plugin-terser with @rollup/plugin-terser
       webpackConfig.resolve.alias['rollup-plugin-terser'] = '@rollup/plugin-terser';
       
+      // Add root directory to module resolution paths
+      if (!webpackConfig.resolve.modules) {
+        webpackConfig.resolve.modules = ['node_modules'];
+      }
+      webpackConfig.resolve.modules.unshift(process.cwd());
+      
       // Update Babel configuration to use newer plugins
       if (webpackConfig.module && webpackConfig.module.rules) {
         webpackConfig.module.rules.forEach(rule => {
