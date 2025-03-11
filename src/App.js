@@ -15,6 +15,8 @@ import PrivacyPolicy from './pages/PrivacyPolicy.js';
 import TermsOfService from './pages/TermsOfService.js';
 import AboutUs from './pages/AboutUs.js';
 import ContactUs from './pages/ContactUs.js';
+import Blog from './pages/Blog.js';
+import BlogPost from './pages/BlogPost.js';
 import ContentAwareAd from './components/ContentAwareAd.js';
 import CookieConsent from './components/CookieConsent.js';
 
@@ -559,6 +561,8 @@ function App() {
             <Route path="/terms-of-service" element={<TermsOfService />} />
             <Route path="/about-us" element={<AboutUs />} />
             <Route path="/contact-us" element={<ContactUs />} />
+            <Route path="/blog" element={<Blog />} />
+            <Route path="/blog/:postId" element={<BlogPost />} />
             
             {/* Redirects for backward compatibility */}
             <Route path="/about" element={<Navigate to="/about-us" replace />} />
@@ -571,6 +575,7 @@ function App() {
               <FooterLink to="/terms-of-service">Terms of Service</FooterLink>
               <FooterLink to="/about-us">About Us</FooterLink>
               <FooterLink to="/contact-us">Contact Us</FooterLink>
+              <FooterLink to="/blog">Blog</FooterLink>
             </FooterLinks>
             
             {/* Ad placement in footer */}

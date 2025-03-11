@@ -20,10 +20,13 @@ jest.mock('react-router-dom', () => {
   const originalModule = jest.requireActual('react-router-dom');
   return {
     ...originalModule,
-    BrowserRouter: ({ children }) => <div>{children}</div>,
-    Routes: ({ children }) => <div>{children}</div>,
+    BrowserRouter: ({ children }) => <div data-testid="browser-router">{children}</div>,
+    Routes: ({ children }) => <div data-testid="routes">{children}</div>,
     Route: ({ element }) => element,
-    Link: ({ children }) => <a>{children}</a>
+    Link: ({ children, to }) => <a href={to}>{children}</a>,
+    Navigate: ({ to }) => <div data-testid="navigate" data-to={to}>Navigate to {to}</div>,
+    useNavigate: () => jest.fn(),
+    useParams: () => ({ postId: 'temporary-email-guide' })
   };
 });
 

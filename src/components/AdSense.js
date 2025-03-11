@@ -90,7 +90,7 @@ const AdSense = ({ slot, format = 'auto', responsive = true, style = {}, autoAd 
       data-ad-client={clientId}
       data-ad-slot={slot}
       data-ad-format={format}
-      data-full-width-responsive={responsive ? 'true' : 'false'}
+      data-full-width-responsive={responsive.toString()}
     />
   );
 };

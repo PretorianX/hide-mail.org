@@ -17,11 +17,13 @@ describe('Header Component', () => {
     
     // Check for navigation links
     expect(screen.getByText('Home')).toBeInTheDocument();
+    expect(screen.getByText('Blog')).toBeInTheDocument();
     expect(screen.getByText('About')).toBeInTheDocument();
     expect(screen.getByText('Contact')).toBeInTheDocument();
     
     // Check that links have correct hrefs
     expect(screen.getByText('Home').closest('a')).toHaveAttribute('href', '/');
+    expect(screen.getByText('Blog').closest('a')).toHaveAttribute('href', '/blog');
     expect(screen.getByText('About').closest('a')).toHaveAttribute('href', '/about-us');
     expect(screen.getByText('Contact').closest('a')).toHaveAttribute('href', '/contact-us');
   });

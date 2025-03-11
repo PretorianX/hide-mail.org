@@ -5,7 +5,14 @@ import AdContainer from './AdContainer';
 // Mock the AdSense component
 jest.mock('./AdSense', () => {
   return function MockAdSense(props) {
-    return <div data-testid="adsense-mock" {...props} />;
+    const { responsive, ...otherProps } = props;
+    return (
+      <div 
+        data-testid="adsense-mock" 
+        data-responsive={responsive ? responsive.toString() : undefined}
+        {...otherProps} 
+      />
+    );
   };
 });
 
