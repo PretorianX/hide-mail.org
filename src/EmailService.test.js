@@ -258,4 +258,29 @@ describe('EmailService', () => {
     // Restore original method
     EmailService.generateEmail = originalGenerateEmail;
   });
+
+  describe('isExpired', () => {
+    test('returns true when expirationTime is null', () => {
+      EmailService.expirationTime = null;
+      expect(EmailService.isExpired()).toBe(true);
+    });
+
+    test('returns true when current time is after expirationTime', () => {
+      // Set expiration time to 1 minute ago
+      const pastTime = new Date();
+      pastTime.setMinutes(pastTime.getMinutes() - 1);
+      EmailService.expirationTime = pastTime;
+      
+      expect(EmailService.isExpired()).toBe(true);
+    });
+
+    test('returns false when current time is before expirationTime', () => {
+      // Set expiration time to 1 minute in the future
+      const futureTime = new Date();
+      futureTime.setMinutes(futureTime.getMinutes() + 1);
+      EmailService.expirationTime = futureTime;
+      
+      expect(EmailService.isExpired()).toBe(false);
+    });
+  });
 }); 

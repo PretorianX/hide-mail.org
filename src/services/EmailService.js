@@ -268,6 +268,13 @@ class EmailService {
     return Math.max(0, diff);
   }
 
+  static isExpired() {
+    if (!this.expirationTime) return true;
+    
+    const now = new Date();
+    return now >= this.expirationTime;
+  }
+
   static async refreshExpirationTime() {
     try {
       if (!this.currentEmail) {

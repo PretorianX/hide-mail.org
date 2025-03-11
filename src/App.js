@@ -125,107 +125,49 @@ function App() {
   }, [email, autoRefresh]);
 
   const fetchMessages = async (emailAddress) => {
+    if (!emailAddress) {
+      // Don't set an error if there's no email address
+      return;
+    }
+    
     try {
-      // Don't show loading indicator for auto-refresh to avoid UI flicker
-      if (!autoRefreshIntervalRef.current) {
-        setLoading(true);
-      } else {
-        // Show a subtle indicator for auto-refresh
-        setRefreshing(true);
-      }
+      setRefreshing(true);
       
-      console.log('Fetching messages for email:', emailAddress);
-      
-      const fetchedMessages = await EmailService.getMessages(emailAddress);
-      console.log('Fetched messages before processing:', fetchedMessages);
-      
-      if (!fetchedMessages || fetchedMessages.length === 0) {
-        console.log('No messages received from API');
-        
-        // For testing: If no messages are returned, create a test message
-        if (process.env.NODE_ENV === 'development') {
-          console.log('Adding test message for development');
-          const testMessage = {
-            id: 'test-1',
-            from: '"Test Sender" <test@example.com>',
-            subject: 'Test Email Message',
-            date: new Date().toISOString(),
-            body: `MIME-Version: 1.0
-Content-Type: multipart/alternative;
-	boundary="b1_test"
-Content-Transfer-Encoding: 8bit
-
-This is a multi-part message in MIME format.
---b1_test
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 8bit
-
-Begin nature main church. Admit total very really stock. Whose Congress interview factor.
-Close Mr three put first democratic. Money few agree politics break movement either agree.
-
---b1_test
-Content-Type: text/html; charset=utf-8
-Content-Transfer-Encoding: 8bit
-
-<html>
-<body>
-<p>Begin nature main church. Admit total very really stock. Whose Congress interview factor.</p>
-<p>Close Mr three put first democratic. Money few agree politics break movement either agree.</p>
-</body>
-</html>
---b1_test--`
-          };
-          
-          const parsedContent = parseMultipartMessage(testMessage.body);
-          const processedTestMessage = {
-            ...testMessage,
-            text: parsedContent.text || '',
-            html: parsedContent.html || '',
-            preview: parsedContent.text || ''
-          };
-          
-          setMessages([processedTestMessage]);
-          setLoading(false);
-          return;
-        }
-        
-        setMessages([]);
-        setLoading(false);
+      // Check if the email has expired
+      if (EmailService.isExpired()) {
+        handleMailboxExpired();
         return;
       }
       
-      // Process messages to extract better previews
+      // Fetch messages from the API
+      const fetchedMessages = await EmailService.getMessages(emailAddress);
+      
+      // Process messages
       const processedMessages = fetchedMessages.map(message => {
-        console.log('Processing message:', message);
-        
-        // Normalize date fields
-        const normalizedMessage = {
-          ...message,
-          date: message.date || message.receivedAt || new Date().toISOString()
-        };
-        
-        if (normalizedMessage.body) {
-          const parsedContent = parseMultipartMessage(normalizedMessage.body);
-          console.log('Parsed content:', parsedContent);
-          
+        // Parse multipart messages if needed
+        if (message.contentType && message.contentType.includes('multipart')) {
+          const parts = parseMultipartMessage(message.content, message.contentType);
           return {
-            ...normalizedMessage,
-            text: parsedContent.text || normalizedMessage.preview || '',
-            html: parsedContent.html || '',
-            preview: parsedContent.text || normalizedMessage.preview || ''
+            ...message,
+            content: parts.html || parts.text || message.content,
+            isHtml: !!parts.html
           };
         }
         
-        return normalizedMessage;
+        return message;
       });
       
-      console.log('Processed messages:', processedMessages);
       setMessages(processedMessages);
+      setError(null); // Clear any existing errors
     } catch (err) {
       console.error('Error fetching messages:', err);
-      setError('Failed to fetch messages. Please try again later.');
+      // Only set error if it's not an expired mailbox
+      if (err.message !== 'Mailbox expired') {
+        setError(`Failed to fetch messages: ${err.message}`);
+      } else {
+        handleMailboxExpired();
+      }
     } finally {
-      setLoading(false);
       setRefreshing(false);
     }
   };
@@ -267,9 +209,10 @@ Content-Transfer-Encoding: 8bit
   };
 
   const handleMailboxExpired = () => {
-    setError('Your mailbox has expired. Please generate a new email address.');
+    // Instead of setting an error message, just clear the email and messages
     setEmail(null);
     setMessages([]);
+    // Don't set an error message here
   };
 
   const toggleAutoRefresh = () => {
@@ -353,9 +296,9 @@ Content-Transfer-Encoding: 8bit
                         
                         {loading ? (
                           <p>Generating email address...</p>
-                        ) : error ? (
+                        ) : error && error !== 'Your mailbox has expired. Please generate a new email address.' ? (
                           <div className="error-message">{error}</div>
-                        ) : (
+                        ) : email ? (
                           <>
                             <div className="email-display">
                               {email}
@@ -371,6 +314,19 @@ Content-Transfer-Encoding: 8bit
                               <button onClick={handleRefreshMessages}>Check Messages</button>
                             </div>
                           </>
+                        ) : (
+                          <div className="generate-email-container">
+                            <p>Your mailbox has expired or you haven't generated an email yet.</p>
+                            <button 
+                              className="generate-button"
+                              onClick={() => handleGenerateEmail(selectedDomain)}
+                            >
+                              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 5V19M5 12H19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                              </svg>
+                              Generate New Email
+                            </button>
+                          </div>
                         )}
                       </div>
                     </section>
@@ -380,8 +336,21 @@ Content-Transfer-Encoding: 8bit
                       
                       {loading ? (
                         <p>Loading messages...</p>
-                      ) : error ? (
+                      ) : error && error !== 'Your mailbox has expired. Please generate a new email address.' ? (
                         <div className="error-message">{error}</div>
+                      ) : !email ? (
+                        <div className="generate-email-container">
+                          <p>Generate an email address to start receiving messages.</p>
+                          <button 
+                            className="generate-button"
+                            onClick={() => handleGenerateEmail(selectedDomain)}
+                          >
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M12 5V19M5 12H19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                            Generate New Email
+                          </button>
+                        </div>
                       ) : messages.length === 0 ? (
                         <p>Your inbox is empty. Messages will appear here when you receive them.</p>
                       ) : (
