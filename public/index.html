@@ -7,8 +7,8 @@
     <meta name="theme-color" content="#000000" />
     <meta name="description" content="Hide Mail - Your friendly temporary email service. Create disposable email addresses to protect your privacy." />
     <!-- AdSense verification meta tag - Only included in production -->
-    <% if (process.env.NODE_ENV === 'production' && process.env.REACT_APP_ADSENSE_CLIENT) { %>
-    <meta name="google-adsense-account" content="<%= process.env.REACT_APP_ADSENSE_CLIENT %>">
+    <% if (process.env.NODE_ENV === 'production') { %>
+    <meta name="google-adsense-account" content="ca-pub-9729692981183751">
     <% } %>
     <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
@@ -16,10 +16,13 @@
     <!-- Runtime environment variables will be injected here -->
     <script src="%PUBLIC_URL%/runtime-env.js"></script>
     
-    <!-- Google AdSense - Only included in production -->
-    <% if (process.env.NODE_ENV === 'production' && process.env.REACT_APP_ADSENSE_CLIENT) { %>
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=<%= process.env.REACT_APP_ADSENSE_CLIENT %>"></script>
+    <!-- AdSense configuration script to ensure correct client ID -->
+    <% if (process.env.NODE_ENV === 'production') { %>
+    <script src="%PUBLIC_URL%/adsense-config.js"></script>
     <% } %>
+    
+    <!-- AdSense script will be dynamically injected by adsense-config.js -->
+    <!-- We no longer include the placeholder script here -->
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>

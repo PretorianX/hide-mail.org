@@ -89,18 +89,9 @@ function App() {
 
     initializeApp();
      
-    // Add Google Adsense script (replace with your actual Adsense ID when you have one)
-    const script = document.createElement('script');
-    script.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-YOURPUBID';
-    script.async = true;
-    script.crossOrigin = 'anonymous';
-    document.head.appendChild(script);
+    // AdSense is now handled by adsense-config.js, so we don't need to load it here
      
     return () => {
-      if (document.head.contains(script)) {
-        document.head.removeChild(script);
-      }
-      
       // Clear auto-refresh interval on unmount
       if (autoRefreshIntervalRef.current) {
         clearInterval(autoRefreshIntervalRef.current);

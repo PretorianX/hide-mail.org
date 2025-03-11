@@ -59,4 +59,18 @@ fi
 # Close the config object
 echo "};" >> $ENV_FILE
 
+# Update the adsense-config.js file with the correct client ID if needed
+if [ ! -z "$REACT_APP_ADSENSE_CLIENT" ]; then
+  echo "Updating AdSense configuration..."
+  
+  # Update any hardcoded client IDs in JS files
+  find $JS_DIR -type f -name "*.js" -exec sed -i "s|ca-pub-YOURPUBID|$REACT_APP_ADSENSE_CLIENT|g" {} \;
+  find $JS_DIR -type f -name "*.js" -exec sed -i "s|\"ca-pub-YOURPUBID\"|\"$REACT_APP_ADSENSE_CLIENT\"|g" {} \;
+  
+  # Make sure the adsense-config.js file has the correct client ID
+  if [ -f "/usr/share/nginx/html/adsense-config.js" ]; then
+    sed -i "s|ca-pub-YOURPUBID|$REACT_APP_ADSENSE_CLIENT|g" /usr/share/nginx/html/adsense-config.js
+  fi
+fi
+
 echo "Environment variables injected to $ENV_FILE" 

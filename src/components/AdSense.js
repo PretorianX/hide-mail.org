@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 
 /**
@@ -12,11 +12,40 @@ import PropTypes from 'prop-types';
  * @param {boolean} props.autoAd - Whether to use Auto ads instead of manual placement
  */
 const AdSense = ({ slot, format = 'auto', responsive = true, style = {}, autoAd = false }) => {
-  const client = process.env.REACT_APP_ADSENSE_CLIENT;
-
+  // Use state to track the client ID so we can update it if it changes
+  const [clientId, setClientId] = useState('');
+  
+  // Get client ID from runtime config if available, fallback to process.env
+  const getClientId = () => {
+    if (typeof window !== 'undefined' && 
+        window.__RUNTIME_CONFIG__ && 
+        window.__RUNTIME_CONFIG__.adsense && 
+        window.__RUNTIME_CONFIG__.adsense.client) {
+      return window.__RUNTIME_CONFIG__.adsense.client;
+    }
+    return process.env.REACT_APP_ADSENSE_CLIENT || '';
+  };
+  
+  // Update client ID when component mounts and whenever runtime config changes
+  useEffect(() => {
+    // Set initial client ID
+    setClientId(getClientId());
+    
+    // Set up an interval to check for changes to the client ID
+    const intervalId = setInterval(() => {
+      const newClientId = getClientId();
+      if (newClientId !== clientId && newClientId !== '') {
+        setClientId(newClientId);
+      }
+    }, 1000); // Check every second
+    
+    // Clean up interval on unmount
+    return () => clearInterval(intervalId);
+  }, [clientId]);
+  
   useEffect(() => {
     // Only add the script if we're in production and have a client ID
-    if (process.env.NODE_ENV === 'production' && client) {
+    if (process.env.NODE_ENV === 'production' && clientId) {
       try {
         // For manual ads, push the ad
         if (!autoAd) {
@@ -28,10 +57,10 @@ const AdSense = ({ slot, format = 'auto', responsive = true, style = {}, autoAd 
         console.error('AdSense error:', error);
       }
     }
-  }, [client, autoAd]);
+  }, [clientId, autoAd]);
 
   // Don't render anything in development mode
-  if (process.env.NODE_ENV !== 'production' || !client) {
+  if (process.env.NODE_ENV !== 'production' || !clientId) {
     return (
       <div 
         style={{ 
@@ -43,7 +72,7 @@ const AdSense = ({ slot, format = 'auto', responsive = true, style = {}, autoAd 
           ...style
         }}
       >
-        AdSense {autoAd ? 'Auto Ad' : 'Manual Ad'} Placeholder (Client ID: {client || 'Not configured'})
+        AdSense {autoAd ? 'Auto Ad' : 'Manual Ad'} Placeholder (Client ID: {clientId || 'Not configured'})
       </div>
     );
   }
@@ -58,7 +87,7 @@ const AdSense = ({ slot, format = 'auto', responsive = true, style = {}, autoAd 
     <ins
       className="adsbygoogle"
       style={{ display: 'block', ...style }}
-      data-ad-client={client}
+      data-ad-client={clientId}
       data-ad-slot={slot}
       data-ad-format={format}
       data-full-width-responsive={responsive ? 'true' : 'false'}
