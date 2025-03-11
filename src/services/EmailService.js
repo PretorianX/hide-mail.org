@@ -330,39 +330,116 @@ class EmailService {
   
   static async getMessageDetails(email, messageId) {
     try {
+      console.log(`Getting message details for email: ${email}, messageId: ${messageId}`);
+      
       // Get detailed message from the backend API
       const response = await axios.get(`${API_URL}/emails/${encodeURIComponent(email)}/${messageId}`);
+      console.log('API response status:', response.status);
+      console.log('API response data structure:', Object.keys(response.data));
       
       // Import the message parser dynamically to avoid circular dependencies
       const { parseMultipartMessage } = await import('./messageParser');
       
       // Parse the message to extract HTML and text content
       const messageData = response.data.data;
+      console.log('Message data structure:', Object.keys(messageData));
+      
+      // Check if the message has a raw property
+      if (messageData.raw) {
+        console.log('Raw message found, length:', messageData.raw.length);
+      } else {
+        console.log('No raw message found in the response');
+      }
+      
+      // Check if the message has a body property
+      if (messageData.body) {
+        console.log('Body found, length:', messageData.body.length);
+        console.log('Body preview:', messageData.body.substring(0, 100));
+      }
       
       // If the message already has parsed content, use it
       if (messageData.html !== undefined || messageData.text !== undefined) {
+        console.log('Message already has parsed content:');
+        console.log('- HTML content:', messageData.html ? 'Yes' : 'No', messageData.html ? `(${messageData.html.length} chars)` : '');
+        console.log('- Text content:', messageData.text ? 'Yes' : 'No', messageData.text ? `(${messageData.text.length} chars)` : '');
         return messageData;
       }
       
       // Otherwise, parse the raw message if available
       if (messageData.raw) {
+        console.log('Parsing raw message');
         const parsedContent = parseMultipartMessage(messageData.raw);
+        console.log('Parsed content result:');
+        console.log('- HTML content:', parsedContent.html ? 'Yes' : 'No', parsedContent.html ? `(${parsedContent.html.length} chars)` : '');
+        console.log('- Text content:', parsedContent.text ? 'Yes' : 'No', parsedContent.text ? `(${parsedContent.text.length} chars)` : '');
         
         // Merge the parsed content with the original message data
-        return {
+        const result = {
           ...messageData,
           html: parsedContent.html || '',
           text: parsedContent.text || '',
           attachments: parsedContent.attachments || []
         };
+        
+        console.log('Final result after parsing raw message:');
+        console.log('- HTML content length:', result.html.length);
+        console.log('- Text content length:', result.text.length);
+        
+        return result;
       }
       
-      // If no raw message is available, try to use the body as text
-      return {
+      // If no raw message is available but we have a body, try to determine if it's HTML
+      if (messageData.body) {
+        // Check if the body looks like HTML
+        const looksLikeHtml = /<html|<body|<div|<p|<table|<a|<img|<br|<h[1-6]|<!DOCTYPE html/i.test(messageData.body);
+        
+        if (looksLikeHtml) {
+          console.log('Body appears to be HTML content');
+          const result = {
+            ...messageData,
+            html: messageData.body,
+            text: ''
+          };
+          
+          console.log('Final result using body as HTML:');
+          console.log('- HTML content length:', result.html.length);
+          
+          return result;
+        }
+        
+        // If the body contains Content-Type headers, it might be a raw email
+        if (messageData.body.includes('Content-Type:')) {
+          console.log('Body appears to be a raw email, parsing it');
+          const parsedContent = parseMultipartMessage(messageData.body);
+          
+          const result = {
+            ...messageData,
+            html: parsedContent.html || '',
+            text: parsedContent.text || messageData.body,
+            attachments: parsedContent.attachments || []
+          };
+          
+          console.log('Final result after parsing body as raw email:');
+          console.log('- HTML content length:', result.html.length);
+          console.log('- Text content length:', result.text.length);
+          
+          return result;
+        }
+      }
+      
+      // If no HTML content could be extracted, use the body as text
+      console.log('Using body as text content');
+      const result = {
         ...messageData,
         text: messageData.body || '',
         html: ''
       };
+      
+      console.log('Final result using body as text:');
+      console.log('- HTML content length:', result.html.length);
+      console.log('- Text content length:', result.text.length);
+      
+      return result;
     } catch (error) {
       console.error('Error fetching message details:', error);
       throw error;

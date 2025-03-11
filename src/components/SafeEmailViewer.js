@@ -67,6 +67,14 @@ const SafeEmailViewer = ({ htmlContent, textContent, className }) => {
   // Create a ref for the iframe
   const iframeRef = React.useRef(null);
   
+  // Log the content received by the component
+  React.useEffect(() => {
+    console.log('SafeEmailViewer received:');
+    console.log('- HTML content length:', (htmlContent || '').length);
+    console.log('- Text content length:', (textContent || '').length);
+    console.log('- HTML content preview:', (htmlContent || '').substring(0, 100));
+  }, [htmlContent, textContent]);
+  
   // Function to create and write to the iframe
   const writeToIframe = React.useCallback(() => {
     if (!iframeRef.current) return;
@@ -82,6 +90,8 @@ const SafeEmailViewer = ({ htmlContent, textContent, className }) => {
       FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover'],
       ALLOW_DATA_ATTR: false
     });
+    
+    console.log('Writing sanitized HTML to iframe, length:', sanitizedHtml.length);
     
     // Write the HTML to the iframe
     iframeDocument.open();
@@ -116,6 +126,7 @@ const SafeEmailViewer = ({ htmlContent, textContent, className }) => {
     
     // Add click event listeners to make links open in a new tab
     const links = iframeDocument.getElementsByTagName('a');
+    console.log('Found links in email:', links.length);
     for (let i = 0; i < links.length; i++) {
       links[i].setAttribute('target', '_blank');
       links[i].setAttribute('rel', 'noopener noreferrer');
@@ -134,6 +145,7 @@ const SafeEmailViewer = ({ htmlContent, textContent, className }) => {
     );
     
     iframe.style.height = `${height}px`;
+    console.log('Adjusted iframe height to:', height);
   }, [htmlContent]);
   
   // Set up the iframe when the component mounts or htmlContent changes

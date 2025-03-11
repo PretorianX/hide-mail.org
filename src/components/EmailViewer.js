@@ -114,6 +114,7 @@ function EmailViewer() {
       
       // In a real app, this would call your backend API
       const fetchedEmails = await EmailService.getMessages(email);
+      console.log('Fetched emails:', fetchedEmails);
       setEmails(fetchedEmails);
       
       // Select the first email if available and none is selected
@@ -132,10 +133,19 @@ function EmailViewer() {
       const email = localStorage.getItem('tempEmail');
       if (!email || !messageId) return;
       
+      console.log('Fetching message details for ID:', messageId);
+      
       // Fetch detailed message content
       const messageDetails = await EmailService.getMessageDetails(email, messageId);
       
+      console.log('Received message details:', messageDetails);
+      
       if (messageDetails) {
+        // Log the HTML and text content
+        console.log('HTML content length:', (messageDetails.html || '').length);
+        console.log('Text content length:', (messageDetails.text || '').length);
+        console.log('HTML content preview:', (messageDetails.html || '').substring(0, 100));
+        
         setEmailContent({
           html: messageDetails.html || '',
           text: messageDetails.text || ''
