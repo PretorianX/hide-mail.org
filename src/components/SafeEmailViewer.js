@@ -89,7 +89,7 @@ const SafeEmailViewer = ({ htmlContent, textContent, className }) => {
       FORBID_TAGS: ['script', 'iframe', 'object', 'embed'],
       FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover'],
       ALLOW_DATA_ATTR: false
-    });
+    }) || ''; // Ensure we have a string even if DOMPurify returns undefined
     
     console.log('Writing sanitized HTML to iframe, length:', sanitizedHtml.length);
     
