@@ -10,14 +10,16 @@ jest.mock('./AdSense', () => {
 });
 
 describe('AdContainer', () => {
+  let originalNodeEnv;
+  
   beforeEach(() => {
     // Save the original NODE_ENV
-    this.originalNodeEnv = process.env.NODE_ENV;
+    originalNodeEnv = process.env.NODE_ENV;
   });
 
   afterEach(() => {
     // Restore the original NODE_ENV
-    process.env.NODE_ENV = this.originalNodeEnv;
+    process.env.NODE_ENV = originalNodeEnv;
   });
 
   test('renders placeholder in development mode', () => {
