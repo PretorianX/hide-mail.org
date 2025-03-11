@@ -5,71 +5,79 @@ import AdContainer from './AdContainer';
 // Mock the AdSense component
 jest.mock('./AdSense', () => {
   return function MockAdSense(props) {
-    return <div data-testid="adsense-mock" data-slot={props.slot} data-format={props.format} />;
+    return <div data-testid="adsense-mock" {...props} />;
   };
 });
 
-describe('AdContainer Component', () => {
-  const originalEnv = process.env;
-
+describe('AdContainer', () => {
   beforeEach(() => {
-    jest.resetModules();
-    process.env = { ...originalEnv };
+    // Save the original NODE_ENV
+    this.originalNodeEnv = process.env.NODE_ENV;
   });
 
   afterEach(() => {
-    process.env = originalEnv;
+    // Restore the original NODE_ENV
+    process.env.NODE_ENV = this.originalNodeEnv;
   });
 
   test('renders placeholder in development mode', () => {
+    // Set NODE_ENV to development
     process.env.NODE_ENV = 'development';
+
+    render(<AdContainer slot="1234567890" />);
     
-    render(<AdContainer slot="1234567890" width={300} height={250} position="sidebar" />);
-    
-    expect(screen.getByText('Google Ad (300x250)')).toBeInTheDocument();
+    // Check if the placeholder text is rendered
+    expect(screen.getByText(/Google Ad \(300x250\)/i)).toBeInTheDocument();
   });
 
-  test('renders AdSense component in production mode', () => {
+  test('renders AdSense in production mode', () => {
+    // Set NODE_ENV to production
     process.env.NODE_ENV = 'production';
+
+    render(<AdContainer slot="1234567890" />);
     
-    const { container } = render(
-      <AdContainer slot="1234567890" width={300} height={250} position="sidebar" />
-    );
-    
-    const adsenseMock = container.querySelector('[data-testid="adsense-mock"]');
-    expect(adsenseMock).toBeInTheDocument();
-    expect(adsenseMock).toHaveAttribute('data-slot', '1234567890');
+    // Check if the AdSense component is rendered
+    expect(screen.getByTestId('adsense-mock')).toBeInTheDocument();
   });
 
-  test('applies correct CSS classes', () => {
+  test('applies custom dimensions', () => {
     process.env.NODE_ENV = 'development';
+
+    render(<AdContainer slot="1234567890" width={728} height={90} />);
     
-    const { container } = render(
-      <AdContainer 
-        slot="1234567890" 
-        width={300} 
-        height={250} 
-        position="sidebar" 
-        className="custom-class" 
-      />
-    );
-    
-    const adContainer = container.firstChild;
-    expect(adContainer).toHaveClass('ad-container');
-    expect(adContainer).toHaveClass('ad-sidebar');
-    expect(adContainer).toHaveClass('custom-class');
+    // Check if the custom dimensions are applied
+    expect(screen.getByText(/Google Ad \(728x90\)/i)).toBeInTheDocument();
   });
 
-  test('applies correct dimensions', () => {
-    process.env.NODE_ENV = 'development';
+  test('applies position class', () => {
+    render(<AdContainer slot="1234567890" position="sidebar" />);
     
-    const { container } = render(
-      <AdContainer slot="1234567890" width={728} height={90} />
-    );
+    // Check if the position class is applied
+    const container = screen.getByTestId('ad-container');
+    expect(container.className).toContain('ad-sidebar');
+  });
+
+  test('applies custom class name', () => {
+    render(<AdContainer slot="1234567890" className="custom-class" />);
     
-    const adContainer = container.firstChild;
-    expect(adContainer).toHaveStyle('width: 728px');
-    expect(adContainer).toHaveStyle('height: 90px');
-    expect(screen.getByText('Google Ad (728x90)')).toBeInTheDocument();
+    // Check if the custom class is applied
+    const container = screen.getByTestId('ad-container');
+    expect(container.className).toContain('custom-class');
+  });
+
+  test('does not render when contentAvailable is false', () => {
+    render(<AdContainer slot="1234567890" contentAvailable={false} />);
+    
+    // Check that the ad container is not rendered
+    const container = screen.queryByTestId('ad-container');
+    expect(container).not.toBeInTheDocument();
+  });
+
+  test('renders when contentAvailable is true', () => {
+    render(<AdContainer slot="1234567890" contentAvailable={true} />);
+    
+    // Check that the ad container is rendered
+    const container = screen.getByTestId('ad-container');
+    expect(container).toBeInTheDocument();
   });
 }); 

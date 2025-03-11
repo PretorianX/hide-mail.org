@@ -15,6 +15,7 @@ import PrivacyPolicy from './pages/PrivacyPolicy.js';
 import TermsOfService from './pages/TermsOfService.js';
 import AboutUs from './pages/AboutUs.js';
 import ContactUs from './pages/ContactUs.js';
+import ContentAwareAd from './components/ContentAwareAd.js';
 
 const AppContainer = styled.div`
   max-width: 1200px;
@@ -373,7 +374,15 @@ function App() {
                 
                 <div className="sidebar">
                   <div className="ad-container">
-                    <div className="ad-sidebar">Google Ad (300x250)</div>
+                    <ContentAwareAd
+                      slot="1234567890"
+                      format="rectangle"
+                      width={300}
+                      height={250}
+                      position="sidebar"
+                      contentSelector=".informative-content-section"
+                      minContentLength={500}
+                    />
                   </div>
                   
                   <div className="email-section">
@@ -390,7 +399,131 @@ function App() {
               </div>
               
               <div className="ad-container">
-                <div className="ad-banner">Google Ad Banner (728x90)</div>
+                <ContentAwareAd
+                  slot="9876543210"
+                  format="horizontal"
+                  width={728}
+                  height={90}
+                  position="banner"
+                  contentSelector=".informative-content-section"
+                  minContentLength={500}
+                />
+              </div>
+              
+              {/* Additional informative content for AdSense compliance */}
+              <div className="informative-content-section">
+                <h2>Understanding Temporary Email Services</h2>
+                <div className="info-content-grid">
+                  <div className="info-content-column">
+                    <h3>What is a Temporary Email Service?</h3>
+                    <p>
+                      A temporary email service provides disposable email addresses that you can use for a limited time. 
+                      These services allow you to receive emails without revealing your personal email address, 
+                      protecting your privacy and helping you avoid unwanted marketing communications.
+                    </p>
+                    
+                    <h3>Benefits of Using Hide Mail</h3>
+                    <ul>
+                      <li><strong>Enhanced Privacy:</strong> Keep your personal email address private when signing up for services online.</li>
+                      <li><strong>Spam Prevention:</strong> Avoid cluttering your primary inbox with promotional emails and potential spam.</li>
+                      <li><strong>No Registration:</strong> Use our service instantly without creating an account or providing personal information.</li>
+                      <li><strong>Security:</strong> Protect yourself from phishing attempts by using disposable emails for untrusted websites.</li>
+                      <li><strong>Simplicity:</strong> Our user-friendly interface makes it easy to generate and manage temporary email addresses.</li>
+                    </ul>
+                  </div>
+                  
+                  <div className="info-content-column">
+                    <h3>How Hide Mail Works</h3>
+                    <ol>
+                      <li><strong>Generate:</strong> Create a random email address with one click or customize your own.</li>
+                      <li><strong>Use:</strong> Provide this email address when signing up for services or newsletters.</li>
+                      <li><strong>Receive:</strong> All incoming messages appear instantly in your temporary inbox.</li>
+                      <li><strong>Read:</strong> View message content directly in our secure interface.</li>
+                      <li><strong>Expire:</strong> After the set period, the email address expires and all data is deleted.</li>
+                    </ol>
+                    
+                    <h3>When to Use Temporary Email</h3>
+                    <p>
+                      Temporary email addresses are ideal for:
+                    </p>
+                    <ul>
+                      <li>Signing up for free trials or one-time offers</li>
+                      <li>Creating accounts on forums or discussion boards</li>
+                      <li>Downloading content that requires email verification</li>
+                      <li>Testing your own email marketing campaigns</li>
+                      <li>Protecting your identity when using public Wi-Fi</li>
+                    </ul>
+                  </div>
+                </div>
+                
+                <div className="faq-section">
+                  <h3>Frequently Asked Questions</h3>
+                  <div className="faq-grid">
+                    <div className="faq-item">
+                      <h4>Is Hide Mail completely free?</h4>
+                      <p>Yes, Hide Mail is 100% free to use with no hidden fees or premium features. We're supported by non-intrusive advertisements.</p>
+                    </div>
+                    
+                    <div className="faq-item">
+                      <h4>How long do temporary emails last?</h4>
+                      <p>Our temporary email addresses remain active for 24 hours by default. After this period, all messages and the email address itself are permanently deleted.</p>
+                    </div>
+                    
+                    <div className="faq-item">
+                      <h4>Can I send emails from my temporary address?</h4>
+                      <p>Hide Mail is primarily designed for receiving emails. While some temporary email services offer sending capabilities, our focus is on providing secure, anonymous inboxes for receiving messages.</p>
+                    </div>
+                    
+                    <div className="faq-item">
+                      <h4>Is using a temporary email legal?</h4>
+                      <p>Yes, using temporary email services is completely legal. However, some websites may block known temporary email domains to prevent abuse.</p>
+                    </div>
+                    
+                    <div className="faq-item">
+                      <h4>Can I access my emails after they expire?</h4>
+                      <p>No, once the temporary email expires, all associated data is permanently deleted from our servers for security and privacy reasons.</p>
+                    </div>
+                    
+                    <div className="faq-item">
+                      <h4>Are temporary emails secure?</h4>
+                      <p>Hide Mail uses encryption and secure protocols to protect your data. However, as with any online service, you should avoid sharing sensitive personal information through temporary email addresses.</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="best-practices-section">
+                  <h3>Best Practices for Using Temporary Email Services</h3>
+                  <div className="best-practices-grid">
+                    <div className="best-practice-item">
+                      <h4>Do Use For:</h4>
+                      <ul>
+                        <li>Newsletter subscriptions</li>
+                        <li>Forum registrations</li>
+                        <li>Free downloads</li>
+                        <li>One-time verifications</li>
+                        <li>Testing your own applications</li>
+                      </ul>
+                    </div>
+                    
+                    <div className="best-practice-item">
+                      <h4>Don't Use For:</h4>
+                      <ul>
+                        <li>Important financial accounts</li>
+                        <li>Government services</li>
+                        <li>Job applications</li>
+                        <li>Long-term business communications</li>
+                        <li>Accounts you'll need to recover later</li>
+                      </ul>
+                    </div>
+                  </div>
+                  
+                  <div className="privacy-tip">
+                    <h4>Privacy Tip</h4>
+                    <p>
+                      For maximum privacy protection, consider using a combination of temporary email addresses and a VPN service when signing up for online services. This provides an additional layer of anonymity by masking both your email identity and IP address.
+                    </p>
+                  </div>
+                </div>
               </div>
             </>
           } />

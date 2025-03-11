@@ -192,6 +192,45 @@ This setup follows these security best practices:
 - Using specific version tags for base images
 - Proper metadata labeling
 
+## AdSense Compliance
+
+This project has been updated to comply with Google AdSense policies. The following changes have been made:
+
+### Content Additions
+
+- Added comprehensive informative content about temporary email services
+- Included detailed FAQ section answering common questions
+- Added "How It Works" section explaining the service
+- Included "Best Practices" section with usage guidelines
+
+### Ad Display Improvements
+
+- Implemented `ContentAwareAd` component that only displays ads when sufficient content is available
+- Updated `AdContainer` to check for content availability before rendering
+- Ensured ads are only displayed on pages with substantial content
+- Added responsive styling for all content sections
+
+### Testing
+
+- Added tests for content availability checks
+- Ensured all ad components have proper test coverage
+- Verified that ads only display when content requirements are met
+
+### AdSense Integration
+
+To configure AdSense for your deployment:
+
+1. Set your AdSense publisher ID in `.env.production`:
+   ```
+   REACT_APP_ADSENSE_CLIENT=ca-pub-YOURPUBID
+   ```
+
+2. Configure ad slots in the `ContentAwareAd` components in `App.js`
+
+3. Test your implementation using the AdSense preview tool before submitting for review
+
+For more information on AdSense policies, refer to the [Google AdSense Program Policies](https://support.google.com/adsense/answer/48182).
+
 ## License
 
 [MIT License](LICENSE)

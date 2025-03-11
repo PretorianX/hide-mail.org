@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import App from './App';
-import { MemoryRouter } from 'react-router-dom';
+import { BrowserRouter } from 'react-router-dom';
+import EmailService from './services/EmailService';
 
 // Mock EmailService to avoid API calls during tests
 jest.mock('./services/EmailService', () => ({
@@ -14,6 +15,61 @@ jest.mock('./services/EmailService', () => ({
   deactivateCurrentEmail: jest.fn().mockResolvedValue(undefined),
   getExpirationTime: jest.fn().mockReturnValue(new Date(Date.now() + 30 * 60 * 1000)),
 }));
+
+// Mock the IntersectionObserver
+global.IntersectionObserver = class IntersectionObserver {
+  constructor() {}
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+};
+
+describe('App component', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('renders main app components', async () => {
+    render(
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
+    );
+    
+    // Check for header
+    expect(await screen.findByText(/Hide Mail/i)).toBeInTheDocument();
+  });
+
+  // Add new test for AdSense compliance content
+  test('renders informative content for AdSense compliance', async () => {
+    render(
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
+    );
+    
+    // Wait for the app to load
+    await screen.findByText(/Hide Mail/i);
+    
+    // Check for informative content sections
+    expect(screen.getByText('Understanding Temporary Email Services')).toBeInTheDocument();
+    expect(screen.getByText('What is a Temporary Email Service?')).toBeInTheDocument();
+    expect(screen.getByText('Benefits of Using Hide Mail')).toBeInTheDocument();
+    expect(screen.getByText('How Hide Mail Works')).toBeInTheDocument();
+    expect(screen.getByText('When to Use Temporary Email')).toBeInTheDocument();
+    
+    // Check for FAQ section
+    expect(screen.getByText('Frequently Asked Questions')).toBeInTheDocument();
+    expect(screen.getByText('Is Hide Mail completely free?')).toBeInTheDocument();
+    expect(screen.getByText('How long do temporary emails last?')).toBeInTheDocument();
+    
+    // Check for Best Practices section
+    expect(screen.getByText('Best Practices for Using Temporary Email Services')).toBeInTheDocument();
+    expect(screen.getByText('Do Use For:')).toBeInTheDocument();
+    expect(screen.getByText('Don\'t Use For:')).toBeInTheDocument();
+    expect(screen.getByText('Privacy Tip')).toBeInTheDocument();
+  });
+});
 
 test('renders without crashing', () => {
   render(<App />);

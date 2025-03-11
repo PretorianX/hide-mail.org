@@ -13,6 +13,7 @@ import './AdStyles.css';
  * @param {number} props.height - Height of the ad container in pixels
  * @param {string} props.className - Additional CSS class for the container
  * @param {string} props.position - Position of the ad (sidebar, inline, etc.)
+ * @param {boolean} props.contentAvailable - Whether there is sufficient content to display ads
  */
 const AdContainer = ({ 
   slot, 
@@ -20,8 +21,14 @@ const AdContainer = ({
   width = 300, 
   height = 250, 
   className = '', 
-  position = 'sidebar' 
+  position = 'sidebar',
+  contentAvailable = true
 }) => {
+  // If no content is available, don't render the ad
+  if (!contentAvailable) {
+    return null;
+  }
+
   const containerStyle = {
     width: `${width}px`,
     height: `${height}px`,
@@ -38,7 +45,7 @@ const AdContainer = ({
   const containerClass = `ad-container ${position ? `ad-${position}` : ''} ${className}`.trim();
 
   return (
-    <div className={containerClass} style={containerStyle}>
+    <div className={containerClass} style={containerStyle} data-testid="ad-container">
       {process.env.NODE_ENV === 'development' ? (
         <div style={{ textAlign: 'center', color: '#666' }}>
           Google Ad ({width}x{height})
@@ -65,7 +72,8 @@ AdContainer.propTypes = {
   width: PropTypes.number,
   height: PropTypes.number,
   className: PropTypes.string,
-  position: PropTypes.string
+  position: PropTypes.string,
+  contentAvailable: PropTypes.bool
 };
 
 export default AdContainer; 

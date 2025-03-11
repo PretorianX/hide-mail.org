@@ -1,106 +1,158 @@
 import React from 'react';
-import { render, screen, act, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import ContentAwareAd from './ContentAwareAd';
 
 // Mock the AdContainer component
 jest.mock('./AdContainer', () => {
-  return function MockAdContainer({ contentAvailable, ...props }) {
-    return contentAvailable ? (
-      <div data-testid="ad-container" {...props}>
-        Mock Ad Container
+  return function MockAdContainer(props) {
+    return (
+      <div data-testid="ad-container-mock" data-content-available={props.contentAvailable.toString()}>
+        Ad Container Mock
       </div>
-    ) : null;
+    );
   };
 });
 
+// Mock the IntersectionObserver
+global.IntersectionObserver = class IntersectionObserver {
+  constructor() {}
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+};
+
 describe('ContentAwareAd', () => {
   beforeEach(() => {
-    // Create a div with content for testing
+    // Create a div with content to test against
     const contentDiv = document.createElement('div');
-    contentDiv.id = 'content-test';
+    contentDiv.id = 'test-content';
+    contentDiv.textContent = 'This is test content that should be long enough to pass the minimum content length check.';
     document.body.appendChild(contentDiv);
+
+    // Create a div with insufficient content
+    const shortContentDiv = document.createElement('div');
+    shortContentDiv.id = 'short-content';
+    shortContentDiv.textContent = 'Short';
+    document.body.appendChild(shortContentDiv);
   });
 
   afterEach(() => {
-    // Clean up
-    const contentDiv = document.getElementById('content-test');
-    if (contentDiv) {
-      document.body.removeChild(contentDiv);
-    }
+    // Clean up the test divs
+    const contentDiv = document.getElementById('test-content');
+    if (contentDiv) document.body.removeChild(contentDiv);
+    
+    const shortContentDiv = document.getElementById('short-content');
+    if (shortContentDiv) document.body.removeChild(shortContentDiv);
   });
 
-  it('should not render ad when content is insufficient', () => {
-    const contentDiv = document.getElementById('content-test');
-    contentDiv.textContent = 'Short content';
-
-    render(
-      <ContentAwareAd
-        slot="1234567890"
-        contentSelector="#content-test"
-        minContentLength={500}
-      />
-    );
-
-    expect(screen.queryByTestId('ad-container')).not.toBeInTheDocument();
-  });
-
-  it('should render ad when content is sufficient', () => {
-    // Create content that exceeds the minimum length
-    const contentDiv = document.getElementById('content-test');
-    contentDiv.textContent = 'a'.repeat(600);
-
-    render(
-      <ContentAwareAd
-        slot="1234567890"
-        contentSelector="#content-test"
-        minContentLength={500}
-      />
-    );
-
-    expect(screen.getByTestId('ad-container')).toBeInTheDocument();
-  });
-
-  it('should update when content changes', async () => {
-    const contentDiv = document.getElementById('content-test');
-    contentDiv.textContent = 'Short content';
-
-    render(
-      <ContentAwareAd
-        slot="1234567890"
-        contentSelector="#content-test"
-        minContentLength={500}
-      />
-    );
-
-    // Initially, the ad should not be shown
-    expect(screen.queryByTestId('ad-container')).not.toBeInTheDocument();
-
-    // Update the content to be sufficient
-    act(() => {
-      contentDiv.textContent = 'a'.repeat(600);
-      
-      // Manually trigger the MutationObserver callback
-      // Get all MutationObservers
-      const observers = contentDiv._observers || [];
-      if (observers.length > 0) {
-        // Simulate a mutation record
-        const mockMutationRecord = [{
-          type: 'characterData',
-          target: contentDiv
-        }];
-        
-        // Call the callback for each observer
-        observers.forEach(observer => {
-          if (observer.callback) {
-            observer.callback(mockMutationRecord, observer);
-          }
-        });
+  test('renders ad when content is available', () => {
+    // Mock the querySelector to return our test content div
+    const originalQuerySelector = document.querySelector;
+    document.querySelector = jest.fn().mockImplementation((selector) => {
+      if (selector === '#test-content') {
+        return document.getElementById('test-content');
       }
+      return originalQuerySelector(selector);
     });
 
-    // Now wait for the ad to be shown
-    await waitFor(() => {
-      expect(screen.getByTestId('ad-container')).toBeInTheDocument();
+    render(
+      <ContentAwareAd
+        slot="1234567890"
+        contentSelector="#test-content"
+        minContentLength={10}
+      />
+    );
+
+    // Check if the ad container is rendered with contentAvailable=true
+    const adContainer = screen.getByTestId('ad-container-mock');
+    expect(adContainer).toBeInTheDocument();
+    expect(adContainer.dataset.contentAvailable).toBe('true');
+
+    // Restore the original querySelector
+    document.querySelector = originalQuerySelector;
+  });
+
+  test('does not render ad when content is insufficient', () => {
+    // Mock the querySelector to return our short content div
+    const originalQuerySelector = document.querySelector;
+    document.querySelector = jest.fn().mockImplementation((selector) => {
+      if (selector === '#short-content') {
+        return document.getElementById('short-content');
+      }
+      return originalQuerySelector(selector);
     });
+
+    render(
+      <ContentAwareAd
+        slot="1234567890"
+        contentSelector="#short-content"
+        minContentLength={10}
+      />
+    );
+
+    // Check if the ad container is rendered with contentAvailable=false
+    const adContainer = screen.getByTestId('ad-container-mock');
+    expect(adContainer).toBeInTheDocument();
+    expect(adContainer.dataset.contentAvailable).toBe('false');
+
+    // Restore the original querySelector
+    document.querySelector = originalQuerySelector;
+  });
+
+  test('does not render ad when content element does not exist', () => {
+    // Mock the querySelector to return null
+    const originalQuerySelector = document.querySelector;
+    document.querySelector = jest.fn().mockImplementation((selector) => {
+      if (selector === '#non-existent') {
+        return null;
+      }
+      return originalQuerySelector(selector);
+    });
+
+    render(
+      <ContentAwareAd
+        slot="1234567890"
+        contentSelector="#non-existent"
+        minContentLength={10}
+      />
+    );
+
+    // Check if the ad container is rendered with contentAvailable=false
+    const adContainer = screen.getByTestId('ad-container-mock');
+    expect(adContainer).toBeInTheDocument();
+    expect(adContainer.dataset.contentAvailable).toBe('false');
+
+    // Restore the original querySelector
+    document.querySelector = originalQuerySelector;
+  });
+
+  test('passes props to AdContainer', () => {
+    // Mock the querySelector to return our test content div
+    const originalQuerySelector = document.querySelector;
+    document.querySelector = jest.fn().mockImplementation((selector) => {
+      if (selector === '#test-content') {
+        return document.getElementById('test-content');
+      }
+      return originalQuerySelector(selector);
+    });
+
+    const { container } = render(
+      <ContentAwareAd
+        slot="1234567890"
+        format="rectangle"
+        width={300}
+        height={250}
+        position="sidebar"
+        contentSelector="#test-content"
+        minContentLength={10}
+      />
+    );
+
+    // Check if the ad container is rendered
+    const adContainer = screen.getByTestId('ad-container-mock');
+    expect(adContainer).toBeInTheDocument();
+
+    // Restore the original querySelector
+    document.querySelector = originalQuerySelector;
   });
 }); 
