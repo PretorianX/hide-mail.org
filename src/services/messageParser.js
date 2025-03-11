@@ -78,171 +78,161 @@ export const parseMultipartMessage = (message) => {
  * @returns {Object} - The parsed message with extracted content
  */
 function parseRawMultipartMessage(rawMessage) {
-  if (!rawMessage) {
-    console.log('No raw message provided');
-    return { text: '', html: '', attachments: [] };
-  }
-
-  // Default values
-  let textContent = '';
-  let htmlContent = '';
-  const attachments = [];
-
-  // Check if the message contains HTML directly
-  const hasHtmlTags = /<html|<body|<div|<p|<table|<a|<img|<br|<h[1-6]|<!DOCTYPE html/i.test(rawMessage);
+  console.log('Parsing multipart message, length:', rawMessage.length);
   
-  // Try to determine if this is a multipart message
-  const contentTypeHeader = extractHeader(rawMessage, 'Content-Type');
-  console.log('Content-Type header:', contentTypeHeader);
+  // Check if this is a forwarded message
+  const isForwarded = rawMessage.includes('---------- Forwarded message ---------') || 
+                     rawMessage.includes('Begin forwarded message:');
   
-  // If this is a simple HTML message (not multipart)
-  if (hasHtmlTags && (!contentTypeHeader || !contentTypeHeader.includes('multipart'))) {
-    console.log('Found HTML tags in the message');
-    
-    // If we have a Content-Type header for HTML, extract the body
-    if (contentTypeHeader && contentTypeHeader.includes('text/html')) {
-      console.log('Found simple HTML message with Content-Type header');
-      htmlContent = extractMessageBody(rawMessage);
-    } else {
-      // Otherwise, try to extract HTML content from the raw message
-      console.log('Extracting HTML content from raw message');
-      
-      // Try to find HTML content between <html> and </html> tags
-      const htmlMatch = rawMessage.match(/<html[^>]*>([\s\S]*?)<\/html>/i);
-      if (htmlMatch) {
-        console.log('Found HTML content between <html> tags');
-        htmlContent = `<html>${htmlMatch[1]}</html>`;
-      } else {
-        // If no <html> tags, try to find content between <body> and </body> tags
-        const bodyMatch = rawMessage.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
-        if (bodyMatch) {
-          console.log('Found HTML content between <body> tags');
-          htmlContent = `<body>${bodyMatch[1]}</body>`;
-        } else {
-          // If no specific HTML structure found, use the whole message as HTML
-          // if it contains HTML tags
-          console.log('Using whole message as HTML');
-          htmlContent = rawMessage;
-        }
-      }
-    }
-    
-    console.log('Extracted HTML content length:', htmlContent.length);
-    return { text: '', html: htmlContent, attachments: [] };
+  if (isForwarded) {
+    console.log('Detected forwarded message format');
   }
   
-  // If this is a simple text message (not multipart)
-  if (contentTypeHeader && contentTypeHeader.includes('text/plain') && !contentTypeHeader.includes('multipart')) {
-    console.log('Found simple text message');
-    textContent = extractMessageBody(rawMessage);
-    console.log('Extracted text content length:', textContent.length);
-    return { text: textContent, html: '', attachments: [] };
-  }
-
-  // Extract the boundary from the Content-Type header
-  const boundaryMatch = rawMessage.match(/boundary="([^"]+)"|boundary=([^;]+)/i);
-  if (!boundaryMatch) {
-    console.log('No boundary found in multipart message');
-    
-    // If the message contains HTML tags but no boundary, try to extract HTML
-    if (hasHtmlTags) {
-      console.log('Message contains HTML tags, extracting as HTML');
-      return { text: '', html: rawMessage, attachments: [] };
-    }
-    
-    // If no boundary found, try to extract the body as plain text
-    textContent = extractMessageBody(rawMessage);
-    console.log('Extracted text content as fallback, length:', textContent.length);
-    return { text: textContent, html: '', attachments: [] };
-  }
-
-  const boundary = boundaryMatch[1] || boundaryMatch[2];
-  console.log('Found boundary:', boundary);
-  
-  // Split the message into parts using the boundary
-  const parts = rawMessage.split(`--${boundary}`);
-  console.log('Split message into', parts.length, 'parts');
-  
-  // Skip the first part (headers and preamble)
-  for (let i = 1; i < parts.length; i++) {
-    const part = parts[i];
-    
-    // Skip the closing boundary
-    if (part.trim().startsWith('--')) {
-      console.log('Skipping closing boundary part');
-      continue;
-    }
-    
-    // Extract the Content-Type of this part
-    const contentTypeMatch = part.match(/Content-Type:\s*([^;]+)/i);
-    if (!contentTypeMatch) {
-      console.log(`Part ${i} has no Content-Type, skipping`);
-      continue;
-    }
-    
-    const contentType = contentTypeMatch[1].trim().toLowerCase();
-    console.log(`Part ${i} has Content-Type:`, contentType);
-    
-    // Find where the headers end and the content begins
-    const headerEndIndex = part.indexOf('\r\n\r\n') !== -1 
-      ? part.indexOf('\r\n\r\n') + 4 
-      : part.indexOf('\n\n') + 2;
-    
-    if (headerEndIndex === -1 || headerEndIndex >= part.length) {
-      console.log(`Part ${i} has no header end or empty content, skipping`);
-      continue;
-    }
-    
-    const content = part.substring(headerEndIndex).trim();
-    console.log(`Part ${i} content length:`, content.length);
-    
-    if (contentType === 'text/plain') {
-      textContent = content;
-      console.log('Found text/plain part, content length:', textContent.length);
-    } else if (contentType === 'text/html') {
-      htmlContent = content;
-      console.log('Found text/html part, content length:', htmlContent.length);
-    } else if (contentType.startsWith('image/') || contentType.startsWith('application/')) {
-      // Extract filename from Content-Disposition if available
-      const filenameMatch = part.match(/filename="([^"]+)"/i);
-      const filename = filenameMatch ? filenameMatch[1] : `attachment-${i}.${getExtensionFromMimeType(contentType)}`;
-      
-      attachments.push({
-        filename,
-        mimeType: contentType,
-        size: content.length,
-        content: null // We don't handle binary content here
-      });
-      console.log('Found attachment:', filename);
-    }
-  }
-  
-  // If we didn't find any HTML content but the message contains HTML tags,
-  // try to extract HTML from the raw message
-  if (!htmlContent && hasHtmlTags) {
-    console.log('No HTML content found in parts, but message contains HTML tags');
-    
-    // Try to find HTML content between <html> and </html> tags
-    const htmlMatch = rawMessage.match(/<html[^>]*>([\s\S]*?)<\/html>/i);
-    if (htmlMatch) {
-      console.log('Found HTML content between <html> tags');
-      htmlContent = `<html>${htmlMatch[1]}</html>`;
-    } else {
-      // If no <html> tags, try to find content between <body> and </body> tags
-      const bodyMatch = rawMessage.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
-      if (bodyMatch) {
-        console.log('Found HTML content between <body> tags');
-        htmlContent = `<body>${bodyMatch[1]}</body>`;
-      }
-    }
-  }
-  
-  console.log('Raw message parsing result - HTML length:', htmlContent.length, 'Text length:', textContent.length);
-  return {
-    text: textContent,
-    html: htmlContent,
-    attachments
+  // Initialize result object
+  const result = {
+    html: '',
+    text: '',
+    attachments: []
   };
+  
+  try {
+    // Try to find Content-Type header
+    const contentTypeMatch = rawMessage.match(/Content-Type:\s*([^;\r\n]+)/i);
+    const contentType = contentTypeMatch ? contentTypeMatch[1].trim().toLowerCase() : '';
+    console.log('Detected Content-Type:', contentType || 'not found');
+    
+    // Check if this is a multipart message
+    if (contentType.includes('multipart/')) {
+      // Extract boundary
+      const boundaryMatch = rawMessage.match(/boundary="?([^"\r\n]+)"?/i);
+      
+      if (boundaryMatch) {
+        const boundary = boundaryMatch[1].trim();
+        console.log('Found boundary:', boundary);
+        
+        // Split message into parts using the boundary
+        const parts = rawMessage.split(new RegExp(`--${boundary}(?:--)?`, 'g'));
+        console.log(`Split message into ${parts.length} parts`);
+        
+        // Process each part
+        parts.forEach((part, index) => {
+          if (!part.trim()) return;
+          
+          console.log(`Processing part ${index}, length: ${part.length}`);
+          
+          // Check content type of this part
+          const partContentTypeMatch = part.match(/Content-Type:\s*([^;\r\n]+)/i);
+          const partContentType = partContentTypeMatch ? partContentTypeMatch[1].trim().toLowerCase() : '';
+          
+          console.log(`Part ${index} Content-Type:`, partContentType || 'not found');
+          
+          // Extract content based on type
+          if (partContentType.includes('text/html')) {
+            // Find the actual content (after headers)
+            const htmlContent = part.split(/\r?\n\r?\n/).slice(1).join('\n\n');
+            console.log(`Found HTML content in part ${index}, length: ${htmlContent.length}`);
+            result.html = htmlContent.trim();
+          } else if (partContentType.includes('text/plain')) {
+            // Find the actual content (after headers)
+            const textContent = part.split(/\r?\n\r?\n/).slice(1).join('\n\n');
+            console.log(`Found text content in part ${index}, length: ${textContent.length}`);
+            result.text = textContent.trim();
+          } else if (partContentType.includes('multipart/')) {
+            // Handle nested multipart content
+            console.log(`Part ${index} contains nested multipart content`);
+            const nestedResult = parseMultipartMessage(part);
+            
+            // Merge nested results
+            if (nestedResult.html && !result.html) {
+              result.html = nestedResult.html;
+            }
+            if (nestedResult.text && !result.text) {
+              result.text = nestedResult.text;
+            }
+            if (nestedResult.attachments.length) {
+              result.attachments = [...result.attachments, ...nestedResult.attachments];
+            }
+          } else if (partContentType) {
+            // This might be an attachment
+            console.log(`Part ${index} might be an attachment`);
+            
+            // Try to extract filename
+            const filenameMatch = part.match(/filename="?([^"\r\n]+)"?/i);
+            const filename = filenameMatch ? filenameMatch[1].trim() : `attachment-${index}`;
+            
+            // Add to attachments
+            result.attachments.push({
+              filename,
+              contentType: partContentType,
+              content: part.split(/\r?\n\r?\n/).slice(1).join('\n\n')
+            });
+            
+            console.log(`Added attachment: ${filename}`);
+          }
+        });
+      } else {
+        console.log('No boundary found in multipart message');
+      }
+    } else if (contentType.includes('text/html')) {
+      // This is a simple HTML message
+      console.log('Processing as simple HTML message');
+      const htmlContent = rawMessage.split(/\r?\n\r?\n/).slice(1).join('\n\n');
+      result.html = htmlContent.trim();
+      console.log('Extracted HTML content, length:', result.html.length);
+    } else if (contentType.includes('text/plain') || !contentType) {
+      // This is a simple text message or couldn't determine content type
+      console.log('Processing as simple text message');
+      const textContent = rawMessage.split(/\r?\n\r?\n/).slice(1).join('\n\n');
+      result.text = textContent.trim();
+      console.log('Extracted text content, length:', result.text.length);
+    }
+    
+    // Special handling for forwarded messages if we couldn't extract HTML content
+    if (isForwarded && !result.html) {
+      console.log('Creating HTML representation for forwarded message');
+      
+      // Use the text content or the raw message if no text content was extracted
+      const forwardedContent = result.text || rawMessage;
+      
+      // Create a simple HTML representation
+      result.html = `
+        <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+          <div style="white-space: pre-wrap;">${forwardedContent.replace(/\n/g, '<br>')}</div>
+        </div>
+      `;
+      
+      console.log('Created HTML content for forwarded message, length:', result.html.length);
+    }
+    
+    // If we still don't have HTML content but have text, create simple HTML
+    if (!result.html && result.text) {
+      console.log('Creating simple HTML from text content');
+      result.html = `
+        <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+          <div style="white-space: pre-wrap;">${result.text.replace(/\n/g, '<br>')}</div>
+        </div>
+      `;
+      console.log('Created HTML from text, length:', result.html.length);
+    }
+    
+    // Final check of results
+    console.log('Final parsing results:');
+    console.log('- HTML content:', result.html ? 'Yes' : 'No', result.html ? `(${result.html.length} chars)` : '');
+    console.log('- Text content:', result.text ? 'Yes' : 'No', result.text ? `(${result.text.length} chars)` : '');
+    console.log('- Attachments:', result.attachments.length);
+    
+    return result;
+  } catch (error) {
+    console.error('Error parsing multipart message:', error);
+    
+    // Fallback: if parsing fails, return the raw message as text
+    console.log('Parsing failed, using raw message as text');
+    return {
+      html: '',
+      text: rawMessage,
+      attachments: []
+    };
+  }
 }
 
 /**

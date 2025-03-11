@@ -347,6 +347,7 @@ class EmailService {
       // Check if the message has a raw property
       if (messageData.raw) {
         console.log('Raw message found, length:', messageData.raw.length);
+        console.log('Raw message preview:', messageData.raw.substring(0, 500));
       } else {
         console.log('No raw message found in the response');
       }
@@ -354,7 +355,11 @@ class EmailService {
       // Check if the message has a body property
       if (messageData.body) {
         console.log('Body found, length:', messageData.body.length);
-        console.log('Body preview:', messageData.body.substring(0, 100));
+        console.log('Body preview:', messageData.body.substring(0, 500));
+        
+        // Check if the body contains HTML tags
+        const hasHtmlTags = /<html|<body|<div|<p|<table|<a|<img|<br|<h[1-6]|<!DOCTYPE html/i.test(messageData.body);
+        console.log('Body contains HTML tags:', hasHtmlTags);
       }
       
       // If the message already has parsed content, use it
@@ -393,6 +398,11 @@ class EmailService {
         // Check if the body looks like HTML
         const looksLikeHtml = /<html|<body|<div|<p|<table|<a|<img|<br|<h[1-6]|<!DOCTYPE html/i.test(messageData.body);
         
+        // Check if it's a forwarded message
+        const isForwarded = messageData.body.includes('---------- Forwarded message ---------') || 
+                           messageData.body.includes('Begin forwarded message:');
+        console.log('Message appears to be forwarded:', isForwarded);
+        
         if (looksLikeHtml) {
           console.log('Body appears to be HTML content');
           const result = {
@@ -422,6 +432,32 @@ class EmailService {
           console.log('Final result after parsing body as raw email:');
           console.log('- HTML content length:', result.html.length);
           console.log('- Text content length:', result.text.length);
+          
+          return result;
+        }
+        
+        // Special handling for forwarded messages
+        if (isForwarded) {
+          console.log('Handling forwarded message');
+          
+          // Try to extract the original message content
+          const forwardedContent = messageData.body;
+          
+          // For forwarded messages, we'll create a simple HTML representation
+          const htmlContent = `
+            <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+              <div style="white-space: pre-wrap;">${forwardedContent.replace(/\n/g, '<br>')}</div>
+            </div>
+          `;
+          
+          const result = {
+            ...messageData,
+            html: htmlContent,
+            text: forwardedContent
+          };
+          
+          console.log('Created HTML representation for forwarded message');
+          console.log('- HTML content length:', result.html.length);
           
           return result;
         }
