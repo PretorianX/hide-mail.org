@@ -29,6 +29,8 @@ describe('AdSense Component', () => {
         }
       }
     };
+    // Initialize adsbygoogle as an array with a push method
+    global.window.adsbygoogle = [];
     global.window.adsbygoogle.push = jest.fn();
     
     // Reset React hooks mocks
@@ -64,7 +66,12 @@ describe('AdSense Component', () => {
   test('renders placeholder when client ID is missing', () => {
     process.env.NODE_ENV = 'production';
     process.env.REACT_APP_ADSENSE_CLIENT = '';
-    global.window.__RUNTIME_CONFIG__.adsense.client = '';
+    // Ensure __RUNTIME_CONFIG__ and adsense are properly initialized
+    global.window.__RUNTIME_CONFIG__ = {
+      adsense: {
+        client: ''
+      }
+    };
     
     // Mock useState to return empty client ID
     React.useState.mockImplementationOnce(() => ['', jest.fn()]);
@@ -78,7 +85,12 @@ describe('AdSense Component', () => {
   test('renders AdSense ins element in production mode with client ID', () => {
     process.env.NODE_ENV = 'production';
     process.env.REACT_APP_ADSENSE_CLIENT = '';
-    global.window.__RUNTIME_CONFIG__.adsense.client = 'ca-pub-9729692981183751';
+    // Ensure __RUNTIME_CONFIG__ and adsense are properly initialized
+    global.window.__RUNTIME_CONFIG__ = {
+      adsense: {
+        client: 'ca-pub-9729692981183751'
+      }
+    };
     
     // Mock useState to return the client ID
     React.useState.mockImplementationOnce(() => ['ca-pub-9729692981183751', jest.fn()]);
@@ -107,7 +119,12 @@ describe('AdSense Component', () => {
   test('renders nothing for auto ads in production mode', () => {
     process.env.NODE_ENV = 'production';
     process.env.REACT_APP_ADSENSE_CLIENT = '';
-    global.window.__RUNTIME_CONFIG__.adsense.client = 'ca-pub-9729692981183751';
+    // Ensure __RUNTIME_CONFIG__ and adsense are properly initialized
+    global.window.__RUNTIME_CONFIG__ = {
+      adsense: {
+        client: 'ca-pub-9729692981183751'
+      }
+    };
     
     // Mock useState to return the client ID
     React.useState.mockImplementationOnce(() => ['ca-pub-9729692981183751', jest.fn()]);
@@ -122,7 +139,12 @@ describe('AdSense Component', () => {
   test('prefers runtime config over process.env', () => {
     process.env.NODE_ENV = 'production';
     process.env.REACT_APP_ADSENSE_CLIENT = 'ca-pub-old-value';
-    global.window.__RUNTIME_CONFIG__.adsense.client = 'ca-pub-9729692981183751';
+    // Ensure __RUNTIME_CONFIG__ and adsense are properly initialized
+    global.window.__RUNTIME_CONFIG__ = {
+      adsense: {
+        client: 'ca-pub-9729692981183751'
+      }
+    };
     
     // Mock useState to return the client ID from runtime config
     React.useState.mockImplementationOnce(() => ['ca-pub-9729692981183751', jest.fn()]);
@@ -144,7 +166,11 @@ describe('AdSense Component', () => {
     React.useEffect.mockImplementationOnce((callback) => {
       callback();
       // Simulate interval callback
-      global.window.__RUNTIME_CONFIG__.adsense.client = 'ca-pub-9729692981183751';
+      global.window.__RUNTIME_CONFIG__ = {
+        adsense: {
+          client: 'ca-pub-9729692981183751'
+        }
+      };
       callback();
       return jest.fn();
     });
