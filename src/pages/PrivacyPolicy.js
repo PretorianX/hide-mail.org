@@ -104,7 +104,35 @@ const PrivacyPolicy = () => {
           We use Google AdSense to display advertisements on our Service. Google AdSense uses cookies to serve ads based on a user's prior visits to our website or other websites. Google's use of advertising cookies enables it and its partners to serve ads to our users based on their visit to our Service and/or other websites on the Internet.
         </Paragraph>
         <Paragraph>
-          You may opt out of personalized advertising by visiting <a href="https://www.google.com/settings/ads" target="_blank" rel="noopener noreferrer">Google's Ads Settings</a>.
+          <strong>AdSense Cookies:</strong> Google AdSense uses cookies for various purposes, including:
+        </Paragraph>
+        <List>
+          <ListItem><strong>Preference cookies:</strong> These cookies remember your preferences to personalize your ad experience.</ListItem>
+          <ListItem><strong>Security cookies:</strong> These cookies enable security features and help detect malicious activity.</ListItem>
+          <ListItem><strong>Process cookies:</strong> These cookies help make the ad service work properly.</ListItem>
+          <ListItem><strong>Advertising cookies:</strong> These cookies are used to make advertising messages more relevant to you and your interests. They also help measure the effectiveness of advertising campaigns.</ListItem>
+          <ListItem><strong>Session State cookies:</strong> These cookies store information about how you interact with ads.</ListItem>
+        </List>
+        <Paragraph>
+          <strong>Ad Personalization:</strong> Google AdSense may collect information such as:
+        </Paragraph>
+        <List>
+          <ListItem>Websites you visit and mobile apps you use</ListItem>
+          <ListItem>Your IP address and device identifiers</ListItem>
+          <ListItem>Geographic location information</ListItem>
+          <ListItem>Demographic and interest data</ListItem>
+        </List>
+        <Paragraph>
+          <strong>Your Ad Choices:</strong> You have several options to control your ad experience:
+        </Paragraph>
+        <List>
+          <ListItem>You may opt out of personalized advertising by visiting <a href="https://www.google.com/settings/ads" target="_blank" rel="noopener noreferrer">Google's Ads Settings</a>.</ListItem>
+          <ListItem>You can also use the <a href="https://optout.aboutads.info/" target="_blank" rel="noopener noreferrer">Digital Advertising Alliance's WebChoices tool</a> to opt out of interest-based advertising from participating companies.</ListItem>
+          <ListItem>For mobile apps, you can use your device settings to limit ad tracking (instructions vary by device and operating system).</ListItem>
+          <ListItem>You can manage or block cookies through your browser settings. Please note that blocking all cookies may impact your experience on our Service.</ListItem>
+        </List>
+        <Paragraph>
+          For more information about how Google uses cookies in advertising, please visit the <a href="https://policies.google.com/technologies/ads" target="_blank" rel="noopener noreferrer">Google Advertising Technologies page</a>.
         </Paragraph>
       </Section>
 

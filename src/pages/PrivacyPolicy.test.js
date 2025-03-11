@@ -40,4 +40,30 @@ describe('PrivacyPolicy Component', () => {
     const mailDuckLink = screen.getByRole('link', { name: /mail-duck\.com/i });
     expect(mailDuckLink).toHaveAttribute('href', 'https://mail-duck.com');
   });
+  
+  test('contains detailed AdSense cookie information', () => {
+    render(<PrivacyPolicy />);
+    
+    // Check for AdSense cookies section
+    expect(screen.getByText(/AdSense Cookies:/i)).toBeInTheDocument();
+    
+    // Check for specific cookie types
+    expect(screen.getByText(/Preference cookies:/i)).toBeInTheDocument();
+    expect(screen.getByText(/Security cookies:/i)).toBeInTheDocument();
+    expect(screen.getByText(/Process cookies:/i)).toBeInTheDocument();
+    expect(screen.getByText(/Advertising cookies:/i)).toBeInTheDocument();
+    expect(screen.getByText(/Session State cookies:/i)).toBeInTheDocument();
+  });
+  
+  test('provides user ad preference options', () => {
+    render(<PrivacyPolicy />);
+    
+    // Check for ad choices section
+    expect(screen.getByText(/Your Ad Choices:/i)).toBeInTheDocument();
+    
+    // Check for links to ad preference settings
+    expect(screen.getByRole('link', { name: /Google's Ads Settings/i })).toHaveAttribute('href', 'https://www.google.com/settings/ads');
+    expect(screen.getByRole('link', { name: /Digital Advertising Alliance's WebChoices tool/i })).toHaveAttribute('href', 'https://optout.aboutads.info/');
+    expect(screen.getByRole('link', { name: /Google Advertising Technologies page/i })).toHaveAttribute('href', 'https://policies.google.com/technologies/ads');
+  });
 }); 
