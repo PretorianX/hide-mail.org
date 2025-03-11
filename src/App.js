@@ -491,6 +491,19 @@ function App() {
                   </div>
                 </div>
                 
+                {/* Ad placement between FAQ and Best Practices */}
+                <div className="ad-container ad-between-sections">
+                  <ContentAwareAd
+                    slot="3456789012"
+                    format="horizontal"
+                    width={728}
+                    height={90}
+                    position="between-sections"
+                    contentSelector=".faq-section"
+                    minContentLength={300}
+                  />
+                </div>
+                
                 <div className="best-practices-section">
                   <h3>Best Practices for Using Temporary Email Services</h3>
                   <div className="best-practices-grid">
@@ -524,6 +537,19 @@ function App() {
                     </p>
                   </div>
                 </div>
+                
+                {/* Ad placement after Best Practices and before Footer */}
+                <div className="ad-container ad-before-footer">
+                  <ContentAwareAd
+                    slot="5678901234"
+                    format="horizontal"
+                    width={728}
+                    height={90}
+                    position="before-footer"
+                    contentSelector=".best-practices-section"
+                    minContentLength={300}
+                  />
+                </div>
               </div>
             </>
           } />
@@ -541,6 +567,20 @@ function App() {
             <FooterLink to="/about">About Us</FooterLink>
             <FooterLink to="/contact">Contact Us</FooterLink>
           </FooterLinks>
+          
+          {/* Ad placement in footer */}
+          <div className="ad-container ad-in-footer">
+            <ContentAwareAd
+              slot="6789012345"
+              format="horizontal"
+              width={728}
+              height={90}
+              position="in-footer"
+              contentSelector=".footer"
+              minContentLength={100}
+            />
+          </div>
+          
           <p>© 2025 Hide Mail - The friendly temporary email service</p>
           <p>We value your privacy. Hide Mail does not store or share your personal information.</p>
         </FooterContainer>

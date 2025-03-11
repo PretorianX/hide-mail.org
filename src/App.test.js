@@ -69,6 +69,27 @@ describe('App component', () => {
     expect(screen.getByText('Don\'t Use For:')).toBeInTheDocument();
     expect(screen.getByText('Privacy Tip')).toBeInTheDocument();
   });
+
+  // Add test for additional ad placements
+  test('renders additional ad placements', async () => {
+    render(
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
+    );
+    
+    // Wait for the app to load
+    await screen.findByText(/Hide Mail/i);
+    
+    // Check for ad containers with specific classes
+    const adContainers = document.querySelectorAll('.ad-container');
+    expect(adContainers.length).toBeGreaterThanOrEqual(5); // At least 5 ad containers
+    
+    // Check for specific ad placements
+    expect(document.querySelector('.ad-between-sections')).toBeInTheDocument();
+    expect(document.querySelector('.ad-before-footer')).toBeInTheDocument();
+    expect(document.querySelector('.ad-in-footer')).toBeInTheDocument();
+  });
 });
 
 test('renders without crashing', () => {

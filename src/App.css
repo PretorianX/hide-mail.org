@@ -678,4 +678,45 @@ button:disabled {
   .privacy-tip h4 {
     font-size: 16px;
   }
+}
+
+/* Additional Ad Placement Styles */
+.ad-between-sections {
+  margin: 30px auto;
+  max-width: 728px;
+  padding: 15px 0;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.ad-before-footer {
+  margin: 40px auto 20px;
+  max-width: 728px;
+  padding: 15px 0;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.ad-in-footer {
+  margin: 20px auto;
+  max-width: 728px;
+  padding: 15px 0;
+  background-color: transparent;
+  border-radius: 8px;
+}
+
+/* Responsive styles for the new ad placements */
+@media (max-width: 768px) {
+  .ad-between-sections,
+  .ad-before-footer,
+  .ad-in-footer {
+    max-width: 100%;
+    padding: 10px;
+  }
+  
+  .ad-in-footer {
+    padding: 10px 0;
+  }
 } 
