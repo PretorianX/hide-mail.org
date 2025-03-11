@@ -180,10 +180,6 @@ const ContactUs = () => {
           <span>contact@mail-duck.com</span>
         </InfoItem>
         <InfoItem>
-          <Label>Twitter:</Label>
-          <span>@MailDuckApp</span>
-        </InfoItem>
-        <InfoItem>
           <Label>GitHub:</Label>
           <span>github.com/mail-duck</span>
         </InfoItem>

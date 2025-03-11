@@ -105,6 +105,30 @@ By default, packages on GHCR are private. To make your images public:
    - Backend API: http://localhost:3002
    - Redis Commander: http://localhost:8081
 
+### Development with Local Builds
+
+For local development with builds from source instead of pulling pre-built images:
+
+1. Use the development compose file:
+   ```bash
+   docker-compose -f docker-compose-dev.yml up --build
+   ```
+
+   This will:
+   - Build the frontend and backend images from local source code
+   - Mount source directories as volumes for hot-reloading
+   - Set NODE_ENV to development
+   - Enable debug logging
+
+2. Make changes to your code and see them reflected in real-time
+   - Frontend changes in the `src` and `public` directories
+   - Backend changes in the `backend` directory
+
+3. To stop the development environment:
+   ```bash
+   docker-compose -f docker-compose-dev.yml down
+   ```
+
 ### Environment Variables
 
 Create a `.env` file based on the `.env.template`:

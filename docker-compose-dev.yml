@@ -1,0 +1,79 @@
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3001:80"
+    depends_on:
+      - backend
+    environment:
+      - EMAIL_DOMAINS=${EMAIL_DOMAINS}
+      - CONFIG_EMAIL_EXPIRATIONTIME=1800
+      - CONFIG_EMAIL_EXTENSIONTIME=900
+      - CONFIG_API_URL=/api
+      - CONFIG_API_TIMEOUT=5000
+      - NODE_ENV=development
+      - REACT_APP_ADSENSE_CLIENT=${REACT_APP_ADSENSE_CLIENT}
+    restart: unless-stopped
+    volumes:
+      - ./src:/app/src
+      - ./public:/app/public
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "3002:3001"
+      - "25:2525"
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      - SMTP_PORT=2525
+      - REDIS_URL=redis://redis:6379
+      - EMAIL_DOMAINS=${EMAIL_DOMAINS}
+      - EMAIL_EXPIRATION=30
+      - EMAIL_EXTENSION_TIME=30
+      - LOG_LEVEL=debug
+    depends_on:
+      - redis
+    restart: unless-stopped
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+      - ./backend/logs:/app/logs
+    networks:
+      - internal
+      - default
+
+  redis:
+    image: redis:alpine
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    restart: unless-stopped
+    networks:
+      - internal
+
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "127.0.0.1:8081:8081"
+    depends_on:
+      - redis
+    restart: unless-stopped
+    networks:
+      - internal
+
+volumes:
+  redis-data:
+
+networks:
+  internal:
+    driver: bridge
+    internal: true
+  default:
+    driver: bridge 
