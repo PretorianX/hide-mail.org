@@ -71,14 +71,31 @@ function parseRawMultipartMessage(rawMessage) {
   let htmlContent = '';
   const attachments = [];
 
+  // Try to determine if this is a multipart message
+  const contentTypeHeader = extractHeader(rawMessage, 'Content-Type');
+  
+  // If this is a simple HTML or text message (not multipart)
+  if (contentTypeHeader && !contentTypeHeader.includes('multipart')) {
+    if (contentTypeHeader.includes('text/html')) {
+      // Extract HTML content
+      htmlContent = extractMessageBody(rawMessage);
+      return { text: '', html: htmlContent, attachments: [] };
+    } else if (contentTypeHeader.includes('text/plain')) {
+      // Extract plain text content
+      textContent = extractMessageBody(rawMessage);
+      return { text: textContent, html: '', attachments: [] };
+    }
+  }
+
   // Extract the boundary from the Content-Type header
   const boundaryMatch = rawMessage.match(/boundary="([^"]+)"/);
   if (!boundaryMatch) {
-    return { text: '', html: '', attachments: [] };
+    // If no boundary found, try to extract the body as plain text
+    textContent = extractMessageBody(rawMessage);
+    return { text: textContent, html: '', attachments: [] };
   }
 
   const boundary = boundaryMatch[1];
-  const boundaryRegex = new RegExp(`--${boundary}(?:--|$)`, 'g');
   
   // Split the message into parts using the boundary
   const parts = rawMessage.split(`--${boundary}`);
@@ -116,8 +133,16 @@ function parseRawMultipartMessage(rawMessage) {
     } else if (contentType === 'text/html') {
       htmlContent = content;
     } else if (contentType.startsWith('image/') || contentType.startsWith('application/')) {
-      // This is an attachment, but we're not handling attachments in this simple parser
-      // You could extract filename from Content-Disposition and add to attachments array
+      // Extract filename from Content-Disposition if available
+      const filenameMatch = part.match(/filename="([^"]+)"/i);
+      const filename = filenameMatch ? filenameMatch[1] : `attachment-${i}.${getExtensionFromMimeType(contentType)}`;
+      
+      attachments.push({
+        filename,
+        mimeType: contentType,
+        size: content.length,
+        content: null // We don't handle binary content here
+      });
     }
   }
   
@@ -126,4 +151,55 @@ function parseRawMultipartMessage(rawMessage) {
     html: htmlContent,
     attachments
   };
+}
+
+/**
+ * Helper function to extract a specific header from a raw message
+ * @param {string} rawMessage - The raw message
+ * @param {string} headerName - The name of the header to extract
+ * @returns {string|null} - The header value or null if not found
+ */
+function extractHeader(rawMessage, headerName) {
+  const headerRegex = new RegExp(`^${headerName}:\\s*(.+?)$`, 'im');
+  const match = rawMessage.match(headerRegex);
+  return match ? match[1].trim() : null;
+}
+
+/**
+ * Helper function to extract the message body from a raw message
+ * @param {string} rawMessage - The raw message
+ * @returns {string} - The message body
+ */
+function extractMessageBody(rawMessage) {
+  // Find the end of headers (blank line)
+  const headerEndIndex = rawMessage.indexOf('\r\n\r\n') !== -1 
+    ? rawMessage.indexOf('\r\n\r\n') + 4 
+    : rawMessage.indexOf('\n\n') + 2;
+  
+  if (headerEndIndex === -1 || headerEndIndex >= rawMessage.length) {
+    return '';
+  }
+  
+  return rawMessage.substring(headerEndIndex).trim();
+}
+
+/**
+ * Helper function to get a file extension from a MIME type
+ * @param {string} mimeType - The MIME type
+ * @returns {string} - The file extension
+ */
+function getExtensionFromMimeType(mimeType) {
+  const mimeToExt = {
+    'image/jpeg': 'jpg',
+    'image/png': 'png',
+    'image/gif': 'gif',
+    'application/pdf': 'pdf',
+    'application/zip': 'zip',
+    'application/msword': 'doc',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+    'application/vnd.ms-excel': 'xls',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx'
+  };
+  
+  return mimeToExt[mimeType] || 'bin';
 } 

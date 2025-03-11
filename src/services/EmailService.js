@@ -332,7 +332,37 @@ class EmailService {
     try {
       // Get detailed message from the backend API
       const response = await axios.get(`${API_URL}/emails/${encodeURIComponent(email)}/${messageId}`);
-      return response.data.data;
+      
+      // Import the message parser dynamically to avoid circular dependencies
+      const { parseMultipartMessage } = await import('./messageParser');
+      
+      // Parse the message to extract HTML and text content
+      const messageData = response.data.data;
+      
+      // If the message already has parsed content, use it
+      if (messageData.html !== undefined || messageData.text !== undefined) {
+        return messageData;
+      }
+      
+      // Otherwise, parse the raw message if available
+      if (messageData.raw) {
+        const parsedContent = parseMultipartMessage(messageData.raw);
+        
+        // Merge the parsed content with the original message data
+        return {
+          ...messageData,
+          html: parsedContent.html || '',
+          text: parsedContent.text || '',
+          attachments: parsedContent.attachments || []
+        };
+      }
+      
+      // If no raw message is available, try to use the body as text
+      return {
+        ...messageData,
+        text: messageData.body || '',
+        html: ''
+      };
     } catch (error) {
       console.error('Error fetching message details:', error);
       throw error;

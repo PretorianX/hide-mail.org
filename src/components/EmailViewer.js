@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import EmailService from '../services/EmailService.js';
+import SafeEmailViewer from './SafeEmailViewer';
 
 const ViewerContainer = styled.div`
   display: flex;
@@ -90,10 +91,20 @@ function EmailViewer() {
   const [emails, setEmails] = useState([]);
   const [selectedEmail, setSelectedEmail] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [emailContent, setEmailContent] = useState({ html: '', text: '' });
 
   useEffect(() => {
     loadEmails();
   }, []);
+
+  useEffect(() => {
+    // Fetch detailed email content when an email is selected
+    if (selectedEmail) {
+      fetchEmailContent(selectedEmail.id);
+    } else {
+      setEmailContent({ html: '', text: '' });
+    }
+  }, [selectedEmail]);
 
   const loadEmails = async () => {
     try {
@@ -113,6 +124,26 @@ function EmailViewer() {
       console.error('Failed to fetch emails:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchEmailContent = async (messageId) => {
+    try {
+      const email = localStorage.getItem('tempEmail');
+      if (!email || !messageId) return;
+      
+      // Fetch detailed message content
+      const messageDetails = await EmailService.getMessageDetails(email, messageId);
+      
+      if (messageDetails) {
+        setEmailContent({
+          html: messageDetails.html || '',
+          text: messageDetails.text || ''
+        });
+      }
+    } catch (error) {
+      console.error('Failed to fetch email content:', error);
+      setEmailContent({ html: '', text: '' });
     }
   };
 
@@ -172,7 +203,10 @@ function EmailViewer() {
                   <div>Received: {formatDate(selectedEmail.timestamp)}</div>
                 </EmailDetails>
               </EmailHeader>
-              <EmailBody dangerouslySetInnerHTML={{ __html: selectedEmail.body }} />
+              <SafeEmailViewer 
+                htmlContent={emailContent.html} 
+                textContent={emailContent.text} 
+              />
             </>
           ) : (
             <NoEmailSelected>
