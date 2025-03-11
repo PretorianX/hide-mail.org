@@ -4,7 +4,7 @@ import EmailService from './services/EmailService.js';
 import MailboxTimer from './components/MailboxTimer.js';
 import { parseMultipartMessage } from './utils/messageParser.js';
 import { formatDate } from './utils/dateUtils.js';
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, Navigate } from 'react-router-dom';
 import styled from 'styled-components';
 import Header from './components/Header.js';
 import EmailGenerator from './components/EmailGenerator.js';
@@ -559,6 +559,10 @@ function App() {
             <Route path="/terms-of-service" element={<TermsOfService />} />
             <Route path="/about-us" element={<AboutUs />} />
             <Route path="/contact-us" element={<ContactUs />} />
+            
+            {/* Redirects for backward compatibility */}
+            <Route path="/about" element={<Navigate to="/about-us" replace />} />
+            <Route path="/contact" element={<Navigate to="/contact-us" replace />} />
           </Routes>
           
           <FooterContainer className="footer">

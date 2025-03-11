@@ -22,7 +22,7 @@ describe('Header Component', () => {
     
     // Check that links have correct hrefs
     expect(screen.getByText('Home').closest('a')).toHaveAttribute('href', '/');
-    expect(screen.getByText('About').closest('a')).toHaveAttribute('href', '/about');
-    expect(screen.getByText('Contact').closest('a')).toHaveAttribute('href', '/contact');
+    expect(screen.getByText('About').closest('a')).toHaveAttribute('href', '/about-us');
+    expect(screen.getByText('Contact').closest('a')).toHaveAttribute('href', '/contact-us');
   });
 }); 
