@@ -1,8 +1,9 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import App from './App';
 import { MemoryRouter } from 'react-router-dom';
 import EmailService from './services/EmailService';
+import { ThemeProvider } from './styles/ThemeContext';
 
 // Mock the EmailService
 jest.mock('./services/EmailService', () => ({
@@ -13,6 +14,11 @@ jest.mock('./services/EmailService', () => ({
   getMessages: jest.fn().mockResolvedValue([]),
   isExpired: jest.fn().mockReturnValue(false),
   getExpirationTime: jest.fn().mockReturnValue(new Date(Date.now() + 30 * 60 * 1000)),
+  __esModule: true,
+  default: {
+    getRandomEmail: jest.fn().mockResolvedValue({ email: 'test@example.com', domains: ['example.com'] }),
+    getDomains: jest.fn().mockResolvedValue(['example.com']),
+  },
 }));
 
 // Mock react-router-dom
@@ -123,5 +129,49 @@ describe('Content sections', () => {
     expect(container.querySelector('.ad-between-sections')).toBeInTheDocument();
     expect(container.querySelector('.ad-before-footer')).toBeInTheDocument();
     expect(container.querySelector('.ad-in-footer')).toBeInTheDocument();
+  });
+});
+
+describe('App Component', () => {
+  test('renders the app with header and footer', () => {
+    render(
+      <ThemeProvider>
+        <App />
+      </ThemeProvider>
+    );
+    
+    expect(screen.getByText(/Hide Mail/i)).toBeInTheDocument();
+    expect(screen.getByText(/Privacy Policy/i)).toBeInTheDocument();
+  });
+  
+  test('footer links work correctly in dark theme', () => {
+    render(
+      <ThemeProvider>
+        <App />
+      </ThemeProvider>
+    );
+    
+    // Find and click the theme toggle button to switch to dark mode
+    const themeToggle = screen.getByLabelText(/Switch to dark mode/i);
+    fireEvent.click(themeToggle);
+    
+    // Check that the footer links are present and have the correct styling
+    const footerLinks = screen.getAllByText(/Privacy Policy/i);
+    // Find the one in the footer (it should have the FooterLink class or be in the FooterLinks container)
+    const privacyLink = footerLinks.find(link => 
+      link.closest('.footer-links') || 
+      link.className.includes('sc-biaZqF')
+    );
+    
+    expect(privacyLink).toBeInTheDocument();
+    
+    // Check that the link is clickable (has proper href)
+    expect(privacyLink.getAttribute('href')).toBe('/privacy-policy');
+    
+    // Verify other footer links
+    expect(screen.getByText(/Terms of Service/i, { selector: '.footer-links a' })).toBeInTheDocument();
+    expect(screen.getByText(/About Us/i, { selector: '.footer-links a' })).toBeInTheDocument();
+    expect(screen.getByText(/Contact Us/i, { selector: '.footer-links a' })).toBeInTheDocument();
+    expect(screen.getByText(/Blog/i, { selector: '.footer-links a' })).toBeInTheDocument();
   });
 }); 

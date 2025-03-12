@@ -56,7 +56,7 @@ const FooterLink = styled(Link)`
     text-decoration: underline;
   }
   
-  [data-theme='dark'] & {
+  body[data-theme='dark'] & {
     color: var(--duck-orange);
     
     &:hover {
