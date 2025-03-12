@@ -6,20 +6,42 @@ import EmailService from './services/EmailService';
 import { ThemeProvider } from './styles/ThemeContext';
 
 // Mock the EmailService
-jest.mock('./services/EmailService', () => ({
-  initialize: jest.fn().mockResolvedValue(),
-  generateEmail: jest.fn().mockResolvedValue('test@example.com'),
-  getAvailableDomains: jest.fn().mockResolvedValue(['example.com']),
-  currentEmail: 'test@example.com',
-  getMessages: jest.fn().mockResolvedValue([]),
-  isExpired: jest.fn().mockReturnValue(false),
-  getExpirationTime: jest.fn().mockReturnValue(new Date(Date.now() + 30 * 60 * 1000)),
-  __esModule: true,
-  default: {
-    getRandomEmail: jest.fn().mockResolvedValue({ email: 'test@example.com', domains: ['example.com'] }),
-    getDomains: jest.fn().mockResolvedValue(['example.com']),
-  },
-}));
+jest.mock('./services/EmailService', () => {
+  const mockEmailService = {
+    initialize: jest.fn().mockResolvedValue(),
+    generateEmail: jest.fn().mockResolvedValue('test@example.com'),
+    getAvailableDomains: jest.fn().mockResolvedValue(['example.com']),
+    currentEmail: 'test@example.com',
+    getMessages: jest.fn().mockResolvedValue([]),
+    isExpired: jest.fn().mockReturnValue(false),
+    getExpirationTime: jest.fn().mockReturnValue(new Date(Date.now() + 30 * 60 * 1000)),
+    domains: ['example.com'],
+    initialized: true,
+    loadFromStorage: jest.fn(),
+    saveToStorage: jest.fn(),
+    clearStorage: jest.fn(),
+    deactivateCurrentEmail: jest.fn().mockResolvedValue(),
+    refreshExpirationTime: jest.fn().mockResolvedValue(),
+    getRemainingTime: jest.fn().mockReturnValue(1800),
+    getRandomElement: jest.fn(arr => arr[0]),
+    generateRandomLocalPart: jest.fn().mockReturnValue('testuser'),
+    getMessageDetails: jest.fn().mockResolvedValue({
+      id: 'test-id',
+      subject: 'Test Subject',
+      from: 'sender@example.com',
+      date: new Date().toISOString(),
+      html: '<p>Test content</p>',
+      text: 'Test content'
+    }),
+    deleteMessage: jest.fn().mockResolvedValue({ success: true }),
+    deleteAllMessages: jest.fn().mockResolvedValue({ success: true })
+  };
+  
+  return {
+    __esModule: true,
+    default: mockEmailService
+  };
+});
 
 // Mock react-router-dom
 jest.mock('react-router-dom', () => {
