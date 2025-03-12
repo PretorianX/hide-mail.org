@@ -52,6 +52,14 @@ const FooterLink = styled(Link)`
   &:hover {
     text-decoration: underline;
   }
+  
+  [data-theme='dark'] & {
+    color: var(--duck-orange);
+    
+    &:hover {
+      color: var(--duck-orange-light);
+    }
+  }
 `;
 
 function App() {

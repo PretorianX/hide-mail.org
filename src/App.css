@@ -857,12 +857,29 @@ button:disabled {
   box-shadow: 0 2px 8px var(--shadow-color);
 }
 
+/* Dark mode styling for footer */
+[data-theme='dark'] footer,
 [data-theme='dark'] .footer {
   border-top: 1px solid var(--border-color);
 }
 
+[data-theme='dark'] footer p,
 [data-theme='dark'] .footer p {
   color: var(--light-text);
+}
+
+/* Fix for footer links in dark mode */
+[data-theme='dark'] footer a,
+[data-theme='dark'] .footer a {
+  color: var(--duck-orange);
+  text-decoration: none;
+  transition: color 0.3s;
+}
+
+[data-theme='dark'] footer a:hover,
+[data-theme='dark'] .footer a:hover {
+  color: var(--duck-orange-light);
+  text-decoration: underline;
 }
 
 /* Cookie banner dark mode styles */
