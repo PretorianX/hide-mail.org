@@ -20,6 +20,7 @@ import ContactUs from './pages/ContactUs.js';
 import Blog from './pages/Blog.js';
 import BlogPost from './pages/BlogPost.js';
 import ContentAwareAd from './components/ContentAwareAd.js';
+import PageAds from './components/PageAds.js';
 import CookieConsent from './components/CookieConsent.js';
 import MessageList from './components/MessageList.js';
 
@@ -305,6 +306,7 @@ function App() {
                 <>
                   <div className="app-layout">
                     <div className="main-content">
+                      <PageAds position="top" slot="1234567890" />
                       <main className="app-main">
                         <section className="email-section">
                           <div className="email-container">
@@ -362,6 +364,7 @@ function App() {
                           )}
                         </section>
                       </main>
+                      <PageAds position="bottom" slot="9876543210" />
                     </div>
                     <div className="sidebar">
                       <div className="ad-container">

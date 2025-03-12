@@ -304,7 +304,7 @@ button:disabled {
 }
 
 .ad-container {
-  margin-bottom: 20px;
+  margin: 20px 0;
   text-align: center;
 }
 
@@ -988,4 +988,44 @@ footer a:hover {
 
 [data-theme='dark'] .empty-inbox {
   color: var(--light-text);
+}
+
+/* Page ad styles */
+.page-ad {
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  margin: 20px 0;
+}
+
+.page-ad-top {
+  margin-bottom: 30px;
+}
+
+.page-ad-bottom {
+  margin-top: 30px;
+}
+
+.ad-top-banner,
+.ad-bottom-banner {
+  width: 100%;
+  max-width: 728px;
+  margin: 0 auto;
+}
+
+/* Responsive adjustments for ads */
+@media (max-width: 768px) {
+  .ad-top-banner,
+  .ad-bottom-banner {
+    width: 100%;
+    max-width: 468px;
+  }
+}
+
+@media (max-width: 480px) {
+  .ad-top-banner,
+  .ad-bottom-banner {
+    width: 100%;
+    max-width: 320px;
+  }
 } 
