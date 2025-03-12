@@ -43,11 +43,14 @@ const FooterLinks = styled.div`
   justify-content: center;
   gap: 20px;
   margin-bottom: 15px;
+  flex-wrap: wrap;
+  padding: 0 10px;
 `;
 
 const FooterLink = styled(Link)`
   color: #4285f4;
   text-decoration: none;
+  transition: color 0.3s ease;
   
   &:hover {
     text-decoration: underline;
@@ -516,7 +519,7 @@ function App() {
             </div>
             
             <FooterContainer>
-              <FooterLinks>
+              <FooterLinks className="footer-links">
                 <FooterLink to="/privacy-policy">Privacy Policy</FooterLink>
                 <FooterLink to="/terms-of-service">Terms of Service</FooterLink>
                 <FooterLink to="/about-us">About Us</FooterLink>

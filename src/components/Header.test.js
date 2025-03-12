@@ -2,13 +2,16 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import Header from './Header';
+import { ThemeProvider } from '../styles/ThemeContext';
 
 describe('Header Component', () => {
   test('renders header with logo and navigation links', () => {
     render(
-      <BrowserRouter>
-        <Header />
-      </BrowserRouter>
+      <ThemeProvider>
+        <BrowserRouter>
+          <Header />
+        </BrowserRouter>
+      </ThemeProvider>
     );
     
     // Check for logo text
@@ -26,5 +29,8 @@ describe('Header Component', () => {
     expect(screen.getByText('Blog').closest('a')).toHaveAttribute('href', '/blog');
     expect(screen.getByText('About').closest('a')).toHaveAttribute('href', '/about-us');
     expect(screen.getByText('Contact').closest('a')).toHaveAttribute('href', '/contact-us');
+    
+    // Check that theme toggle button is present
+    expect(screen.getByRole('button', { name: /switch to (dark|light) mode/i })).toBeInTheDocument();
   });
 }); 

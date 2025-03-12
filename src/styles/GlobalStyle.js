@@ -95,6 +95,16 @@ const GlobalStyle = createGlobalStyle`
     background-color: rgba(255, 255, 255, 0.2);
   }
 
+  /* Dark mode specific theme toggle styling */
+  [data-theme='dark'] .theme-toggle {
+    color: var(--duck-white);
+    border-color: var(--duck-white);
+  }
+
+  [data-theme='dark'] .theme-toggle:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+  }
+
   /* Add smooth transitions for theme changes */
   a, button, input, textarea, select {
     transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
@@ -146,6 +156,19 @@ const GlobalStyle = createGlobalStyle`
   [data-theme='dark'] .mailbox-timer {
     background-color: #2a3649;
     border-color: var(--dark-border);
+  }
+  
+  /* Footer styling for dark mode */
+  [data-theme='dark'] footer {
+    border-top-color: var(--border-color);
+  }
+  
+  [data-theme='dark'] footer a {
+    color: var(--duck-orange);
+  }
+  
+  [data-theme='dark'] footer a:hover {
+    color: var(--duck-orange-light);
   }
 `;
 

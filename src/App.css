@@ -868,17 +868,32 @@ button:disabled {
   color: var(--light-text);
 }
 
+/* Footer links styling */
+.footer-links a,
+footer a {
+  color: #4285f4;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.footer-links a:hover,
+footer a:hover {
+  text-decoration: underline;
+}
+
 /* Fix for footer links in dark mode */
 [data-theme='dark'] footer a,
-[data-theme='dark'] .footer a {
-  color: var(--duck-orange);
+[data-theme='dark'] .footer a,
+[data-theme='dark'] .footer-links a {
+  color: var(--duck-orange) !important;
   text-decoration: none;
   transition: color 0.3s;
 }
 
 [data-theme='dark'] footer a:hover,
-[data-theme='dark'] .footer a:hover {
-  color: var(--duck-orange-light);
+[data-theme='dark'] .footer a:hover,
+[data-theme='dark'] .footer-links a:hover {
+  color: var(--duck-orange-light) !important;
   text-decoration: underline;
 }
 

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import styled from 'styled-components';
+import ThemeToggle from './ThemeToggle';
 
 const HeaderContainer = styled.header`
   background-color: var(--duck-orange);
@@ -16,6 +17,7 @@ const HeaderContent = styled.div`
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 20px;
+  position: relative;
 `;
 
 const Logo = styled(Link)`
@@ -39,11 +41,23 @@ const Logo = styled(Link)`
   }
 `;
 
+const NavContainer = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 15px;
+`;
+
 const Nav = styled.nav`
   display: flex;
   justify-content: center;
   gap: 20px;
-  margin-top: 15px;
+`;
+
+const ThemeToggleContainer = styled.div`
+  position: absolute;
+  right: 20px;
+  top: 20px;
 `;
 
 const NavLink = styled(Link)`
@@ -74,17 +88,23 @@ const Header = () => {
   return (
     <HeaderContainer className="app-header">
       <HeaderContent>
+        <ThemeToggleContainer>
+          <ThemeToggle />
+        </ThemeToggleContainer>
+        
         <Logo to="/">
           <h1>Hide Mail</h1>
           <span>Your friendly temporary email service</span>
         </Logo>
         
-        <Nav>
-          <NavLink to="/">Home</NavLink>
-          <NavLink to="/blog">Blog</NavLink>
-          <NavLink to="/about-us">About</NavLink>
-          <NavLink to="/contact-us">Contact</NavLink>
-        </Nav>
+        <NavContainer>
+          <Nav>
+            <NavLink to="/">Home</NavLink>
+            <NavLink to="/blog">Blog</NavLink>
+            <NavLink to="/about-us">About</NavLink>
+            <NavLink to="/contact-us">Contact</NavLink>
+          </Nav>
+        </NavContainer>
       </HeaderContent>
     </HeaderContainer>
   );
