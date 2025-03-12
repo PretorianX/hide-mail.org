@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { useNavigate } from 'react-router-dom';
 import EmailService from '../services/EmailService.js';
 import { getConfig } from '../utils/configLoader.js';
 
@@ -63,17 +62,12 @@ const Timer = styled.div`
   color: ${props => props.isExpiring ? 'red' : 'var(--text-color)'};
 `;
 
-const ButtonContainer = styled.div`
-  display: flex;
-  gap: 10px;
-`;
-
 function EmailGenerator() {
   const [domains] = useState(getConfig('email.domains'));
   const [selectedDomain, setSelectedDomain] = useState(domains[0]);
   const [email, setEmail] = useState('');
   const [timeRemaining, setTimeRemaining] = useState(getConfig('email.expirationTime'));
-  const navigate = useNavigate();
+  const [extensionTime] = useState(getConfig('email.extensionTime'));
 
   useEffect(() => {
     // Generate email on component mount or domain change
@@ -104,24 +98,6 @@ function EmailGenerator() {
     } catch (error) {
       console.error('Failed to generate email:', error);
     }
-  };
-
-  const handleExtendTime = async () => {
-    try {
-      // In a real app, this would call your backend API
-      await EmailService.refreshExpirationTime();
-      const extensionTime = getConfig('email.extensionTime');
-      setTimeRemaining(prev => prev + extensionTime);
-      
-      // Update localStorage
-      localStorage.setItem('expiryTime', Date.now() + (timeRemaining * 1000) + (extensionTime * 1000));
-    } catch (error) {
-      console.error('Failed to extend email lifetime:', error);
-    }
-  };
-
-  const handleViewInbox = () => {
-    navigate('/inbox');
   };
 
   // Format time remaining as MM:SS
@@ -161,14 +137,6 @@ function EmailGenerator() {
               <Timer isExpiring={timeRemaining < 300}>
                 Expires in: {formatTime(timeRemaining)}
               </Timer>
-              <ButtonContainer>
-                <button onClick={handleExtendTime}>
-                  Extend (+{getConfig('email.extensionTime') / 60} min)
-                </button>
-                <button onClick={handleViewInbox}>
-                  View Inbox
-                </button>
-              </ButtonContainer>
             </TimerContainer>
           </>
         )}
