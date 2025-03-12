@@ -1,6 +1,20 @@
 import { createGlobalStyle } from 'styled-components';
 
 const DarkModeOverrides = createGlobalStyle`
+  /* Navigation Dark Mode Styles */
+  [data-theme='dark'] .app-header {
+    background-color: var(--duck-orange);
+  }
+  
+  [data-theme='dark'] .app-header a {
+    color: var(--duck-white);
+    text-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
+  }
+  
+  [data-theme='dark'] .app-header a:hover {
+    background-color: rgba(0, 0, 0, 0.2);
+  }
+
   /* Blog Page Dark Mode Styles */
   [data-theme='dark'] .BlogContainer {
     color: var(--text-color);

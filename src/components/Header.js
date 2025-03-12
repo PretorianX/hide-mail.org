@@ -70,6 +70,12 @@ const NavLink = styled(Link)`
   &:hover {
     background-color: rgba(255, 255, 255, 0.2);
   }
+  
+  /* Fix for dark mode - ensure proper contrast without changing font weight */
+  [data-theme='dark'] & {
+    color: var(--duck-white);
+    text-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
+  }
 `;
 
 const ParentSite = styled.a`
