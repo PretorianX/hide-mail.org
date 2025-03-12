@@ -140,8 +140,13 @@ describe('App Component', () => {
       </ThemeProvider>
     );
     
-    expect(screen.getByText(/Hide Mail/i)).toBeInTheDocument();
-    expect(screen.getByText(/Privacy Policy/i)).toBeInTheDocument();
+    // Find the h1 element with "Hide Mail" text, regardless of nesting
+    const headerTitle = screen.getByText(/Hide Mail/i, { selector: 'header h1' });
+    expect(headerTitle).toBeInTheDocument();
+    
+    // Find the Privacy Policy link specifically in the footer
+    const privacyLink = screen.getByText(/Privacy Policy/i, { selector: 'footer a' });
+    expect(privacyLink).toBeInTheDocument();
   });
   
   test('footer links work correctly in dark theme', () => {

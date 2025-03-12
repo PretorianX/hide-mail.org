@@ -51,6 +51,9 @@ const FooterLink = styled(Link)`
   color: #4285f4;
   text-decoration: none;
   transition: color 0.3s ease;
+  cursor: pointer;
+  display: inline-block;
+  padding: 5px;
   
   &:hover {
     text-decoration: underline;
@@ -299,90 +302,217 @@ function App() {
             </div>
             <Routes>
               <Route path="/" element={
-                <div className="app-layout">
-                  <div className="main-content">
-                    <main className="app-main">
-                      <section className="email-section">
-                        <div className="email-container">
-                          <h2>Your Hide Mail Address</h2>
-                          <div className="domain-selector">
-                            <label htmlFor="domain-select">Choose a domain:</label>
-                            <select
-                              id="domain-select"
-                              data-testid="domain-select"
-                              className="domain-select"
-                              value={selectedDomain}
-                              onChange={(e) => setSelectedDomain(e.target.value)}
-                              aria-label="Choose a domain"
-                            >
-                              <option value="">Random domain</option>
-                              {domains.map(domain => (
-                                <option key={domain} value={domain}>{domain}</option>
-                              ))}
-                            </select>
+                <>
+                  <div className="app-layout">
+                    <div className="main-content">
+                      <main className="app-main">
+                        <section className="email-section">
+                          <div className="email-container">
+                            <h2>Your Hide Mail Address</h2>
+                            <div className="domain-selector">
+                              <label htmlFor="domain-select">Choose a domain:</label>
+                              <select
+                                id="domain-select"
+                                data-testid="domain-select"
+                                className="domain-select"
+                                value={selectedDomain}
+                                onChange={(e) => setSelectedDomain(e.target.value)}
+                                aria-label="Choose a domain"
+                              >
+                                <option value="">Random domain</option>
+                                {domains.map(domain => (
+                                  <option key={domain} value={domain}>{domain}</option>
+                                ))}
+                              </select>
+                            </div>
+                            {email ? (
+                              <>
+                                <div className="email-display">
+                                  {email}
+                                </div>
+                                <MailboxTimer
+                                  onExpire={handleMailboxExpired}
+                                  onRefresh={handleRefreshMessages}
+                                />
+                                <div className="email-actions">
+                                  <button onClick={handleGenerateEmail}>Generate New Email</button>
+                                  <button onClick={handleRefreshMessages} disabled={refreshing}>
+                                    {refreshing ? 'Checking...' : 'Check Messages'}
+                                  </button>
+                                </div>
+                              </>
+                            ) : (
+                              <EmailGenerator onGenerate={handleGenerateEmail} />
+                            )}
                           </div>
-                          {email ? (
-                            <>
-                              <div className="email-display">
-                                {email}
-                              </div>
-                              <MailboxTimer
-                                onExpire={handleMailboxExpired}
-                                onRefresh={handleRefreshMessages}
-                              />
-                              <div className="email-actions">
-                                <button onClick={handleGenerateEmail}>Generate New Email</button>
-                                <button onClick={handleRefreshMessages} disabled={refreshing}>
-                                  {refreshing ? 'Checking...' : 'Check Messages'}
-                                </button>
-                              </div>
-                            </>
+                        </section>
+                        <section className="messages-section">
+                          <h2>Hide Mail Inbox</h2>
+                          {error && <div className="error-message">{error}</div>}
+                          {loading ? (
+                            <p>Loading...</p>
+                          ) : messages.length > 0 ? (
+                            <MessageList
+                              messages={messages}
+                              onSelectMessage={handleSelectMessage}
+                              selectedMessageId={selectedMessageId}
+                            />
                           ) : (
-                            <EmailGenerator onGenerate={handleGenerateEmail} />
+                            <p>Your inbox is empty. Messages will appear here when you receive them.</p>
                           )}
-                        </div>
-                      </section>
-                      <section className="messages-section">
-                        <h2>Hide Mail Inbox</h2>
-                        {error && <div className="error-message">{error}</div>}
-                        {loading ? (
-                          <p>Loading...</p>
-                        ) : messages.length > 0 ? (
-                          <MessageList
-                            messages={messages}
-                            onSelectMessage={handleSelectMessage}
-                            selectedMessageId={selectedMessageId}
-                          />
-                        ) : (
-                          <p>Your inbox is empty. Messages will appear here when you receive them.</p>
-                        )}
-                      </section>
-                    </main>
+                        </section>
+                      </main>
+                    </div>
+                    <div className="sidebar">
+                      <div className="ad-container">
+                        <ContentAwareAd
+                          slot="1234567890"
+                          format="rectangle"
+                          width={300}
+                          height={250}
+                          position="sidebar"
+                          contentSelector=".email-section"
+                          minContentLength={100}
+                        />
+                      </div>
+                      <div className="email-section">
+                        <h2>Why Use Hide Mail?</h2>
+                        <ul>
+                          <li>🦆 100% Free temporary email</li>
+                          <li>🦆 No registration required</li>
+                          <li>🦆 Protect your privacy</li>
+                          <li>🦆 Avoid spam in your personal inbox</li>
+                          <li>🦆 Perfect for one-time signups</li>
+                        </ul>
+                      </div>
+                    </div>
                   </div>
-                  <div className="sidebar">
-                    <div className="ad-container">
+                  
+                  {/* Informative content for SEO and AdSense compliance - moved outside app-layout */}
+                  <div className="informative-content-section">
+                    <h2>Understanding Temporary Email Services</h2>
+                    <div className="info-content-grid">
+                      <div className="info-content-column">
+                        <h3>What is a Temporary Email Service?</h3>
+                        <p>A temporary email service provides disposable email addresses that you can use for a limited time. These services allow you to receive emails without revealing your personal email address, protecting your privacy and helping you avoid unwanted marketing communications.</p>
+                        
+                        <h3>Benefits of Using Hide Mail</h3>
+                        <ul>
+                          <li><strong>Enhanced Privacy:</strong> Keep your personal email address private when signing up for services online.</li>
+                          <li><strong>Spam Prevention:</strong> Avoid cluttering your primary inbox with promotional emails and potential spam.</li>
+                          <li><strong>No Registration:</strong> Use our service instantly without creating an account or providing personal information.</li>
+                          <li><strong>Security:</strong> Protect yourself from phishing attempts by using disposable emails for untrusted websites.</li>
+                          <li><strong>Simplicity:</strong> Our user-friendly interface makes it easy to generate and manage temporary email addresses.</li>
+                        </ul>
+                      </div>
+                      <div className="info-content-column">
+                        <h3>How Hide Mail Works</h3>
+                        <ol>
+                          <li><strong>Generate:</strong> Create a random email address with one click or customize your own.</li>
+                          <li><strong>Use:</strong> Provide this email address when signing up for services or newsletters.</li>
+                          <li><strong>Receive:</strong> All incoming messages appear instantly in your temporary inbox.</li>
+                          <li><strong>Read:</strong> View message content directly in our secure interface.</li>
+                          <li><strong>Expire:</strong> After the set period, the email address expires and all data is deleted.</li>
+                        </ol>
+                        
+                        <h3>When to Use Temporary Email</h3>
+                        <p>Temporary email addresses are ideal for:</p>
+                        <ul>
+                          <li>Signing up for free trials or one-time offers</li>
+                          <li>Creating accounts on forums or discussion boards</li>
+                          <li>Downloading content that requires email verification</li>
+                          <li>Testing your own email marketing campaigns</li>
+                          <li>Protecting your identity when using public Wi-Fi</li>
+                        </ul>
+                      </div>
+                    </div>
+                    
+                    <div className="faq-section">
+                      <h3>Frequently Asked Questions</h3>
+                      <div className="faq-grid">
+                        <div className="faq-item">
+                          <h4>Is Hide Mail completely free?</h4>
+                          <p>Yes, Hide Mail is 100% free to use with no hidden fees or premium features. We're supported by non-intrusive advertisements.</p>
+                        </div>
+                        <div className="faq-item">
+                          <h4>How long do temporary emails last?</h4>
+                          <p>Our temporary email addresses remain active for 24 hours by default. After this period, all messages and the email address itself are permanently deleted.</p>
+                        </div>
+                        <div className="faq-item">
+                          <h4>Can I send emails from my temporary address?</h4>
+                          <p>Hide Mail is primarily designed for receiving emails. While some temporary email services offer sending capabilities, our focus is on providing secure, anonymous inboxes for receiving messages.</p>
+                        </div>
+                        <div className="faq-item">
+                          <h4>Is using a temporary email legal?</h4>
+                          <p>Yes, using temporary email services is completely legal. However, some websites may block known temporary email domains to prevent abuse.</p>
+                        </div>
+                        <div className="faq-item">
+                          <h4>Can I access my emails after they expire?</h4>
+                          <p>No, once the temporary email expires, all associated data is permanently deleted from our servers for security and privacy reasons.</p>
+                        </div>
+                        <div className="faq-item">
+                          <h4>Are temporary emails secure?</h4>
+                          <p>Hide Mail uses encryption and secure protocols to protect your data. However, as with any online service, you should avoid sharing sensitive personal information through temporary email addresses.</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="ad-container ad-between-sections">
                       <ContentAwareAd
-                        slot="1234567890"
-                        format="rectangle"
-                        width={300}
-                        height={250}
-                        position="sidebar"
-                        contentSelector=".email-section"
-                        minContentLength={100}
+                        slot="3456789012"
+                        format="horizontal"
+                        width={728}
+                        height={90}
+                        position="middle-of-page"
+                        contentSelector=".faq-section"
+                        minContentLength={300}
                       />
                     </div>
-                    <div className="email-section">
-                      <h2>Why Use Hide Mail?</h2>
-                      <ul>
-                        <li>🦆 100% Free temporary email</li>
-                        <li>🦆 No registration required</li>
-                        <li>🦆 Protect your privacy</li>
-                        <li>🦆 Avoid spam in your personal inbox</li>
-                        <li>🦆 Perfect for one-time signups</li>
-                      </ul>
+                    
+                    <div className="best-practices-section">
+                      <h3>Best Practices for Using Temporary Email Services</h3>
+                      <div className="best-practices-grid">
+                        <div className="best-practice-item">
+                          <h4>Do Use For:</h4>
+                          <ul>
+                            <li>Newsletter subscriptions</li>
+                            <li>Forum registrations</li>
+                            <li>Free downloads</li>
+                            <li>One-time verifications</li>
+                            <li>Testing your own applications</li>
+                          </ul>
+                        </div>
+                        <div className="best-practice-item">
+                          <h4>Don't Use For:</h4>
+                          <ul>
+                            <li>Important financial accounts</li>
+                            <li>Government services</li>
+                            <li>Job applications</li>
+                            <li>Long-term business communications</li>
+                            <li>Accounts you'll need to recover later</li>
+                          </ul>
+                        </div>
+                      </div>
+                      
+                      <div className="privacy-tip">
+                        <h4>Privacy Tip</h4>
+                        <p>For maximum privacy protection, consider using a combination of temporary email addresses and a VPN service when signing up for online services. This provides an additional layer of anonymity by masking both your email identity and IP address.</p>
+                      </div>
+                    </div>
+                    
+                    <div className="ad-container ad-before-footer">
+                      <ContentAwareAd
+                        slot="5678901234"
+                        format="horizontal"
+                        width={728}
+                        height={90}
+                        position="before-footer"
+                        contentSelector=".best-practices-section"
+                        minContentLength={200}
+                      />
                     </div>
                   </div>
-                </div>
+                </>
               } />
               <Route path="/privacy-policy" element={<PrivacyPolicy />} />
               <Route path="/terms-of-service" element={<TermsOfService />} />
@@ -393,138 +523,13 @@ function App() {
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>
             
-            {/* Informative content for SEO and AdSense compliance */}
-            <div className="informative-content-section">
-              <h2>Understanding Temporary Email Services</h2>
-              <div className="info-content-grid">
-                <div className="info-content-column">
-                  <h3>What is a Temporary Email Service?</h3>
-                  <p>A temporary email service provides disposable email addresses that you can use for a limited time. These services allow you to receive emails without revealing your personal email address, protecting your privacy and helping you avoid unwanted marketing communications.</p>
-                  
-                  <h3>Benefits of Using Hide Mail</h3>
-                  <ul>
-                    <li><strong>Enhanced Privacy:</strong> Keep your personal email address private when signing up for services online.</li>
-                    <li><strong>Spam Prevention:</strong> Avoid cluttering your primary inbox with promotional emails and potential spam.</li>
-                    <li><strong>No Registration:</strong> Use our service instantly without creating an account or providing personal information.</li>
-                    <li><strong>Security:</strong> Protect yourself from phishing attempts by using disposable emails for untrusted websites.</li>
-                    <li><strong>Simplicity:</strong> Our user-friendly interface makes it easy to generate and manage temporary email addresses.</li>
-                  </ul>
-                </div>
-                <div className="info-content-column">
-                  <h3>How Hide Mail Works</h3>
-                  <ol>
-                    <li><strong>Generate:</strong> Create a random email address with one click or customize your own.</li>
-                    <li><strong>Use:</strong> Provide this email address when signing up for services or newsletters.</li>
-                    <li><strong>Receive:</strong> All incoming messages appear instantly in your temporary inbox.</li>
-                    <li><strong>Read:</strong> View message content directly in our secure interface.</li>
-                    <li><strong>Expire:</strong> After the set period, the email address expires and all data is deleted.</li>
-                  </ol>
-                  
-                  <h3>When to Use Temporary Email</h3>
-                  <p>Temporary email addresses are ideal for:</p>
-                  <ul>
-                    <li>Signing up for free trials or one-time offers</li>
-                    <li>Creating accounts on forums or discussion boards</li>
-                    <li>Downloading content that requires email verification</li>
-                    <li>Testing your own email marketing campaigns</li>
-                    <li>Protecting your identity when using public Wi-Fi</li>
-                  </ul>
-                </div>
-              </div>
-              
-              <div className="faq-section">
-                <h3>Frequently Asked Questions</h3>
-                <div className="faq-grid">
-                  <div className="faq-item">
-                    <h4>Is Hide Mail completely free?</h4>
-                    <p>Yes, Hide Mail is 100% free to use with no hidden fees or premium features. We're supported by non-intrusive advertisements.</p>
-                  </div>
-                  <div className="faq-item">
-                    <h4>How long do temporary emails last?</h4>
-                    <p>Our temporary email addresses remain active for 24 hours by default. After this period, all messages and the email address itself are permanently deleted.</p>
-                  </div>
-                  <div className="faq-item">
-                    <h4>Can I send emails from my temporary address?</h4>
-                    <p>Hide Mail is primarily designed for receiving emails. While some temporary email services offer sending capabilities, our focus is on providing secure, anonymous inboxes for receiving messages.</p>
-                  </div>
-                  <div className="faq-item">
-                    <h4>Is using a temporary email legal?</h4>
-                    <p>Yes, using temporary email services is completely legal. However, some websites may block known temporary email domains to prevent abuse.</p>
-                  </div>
-                  <div className="faq-item">
-                    <h4>Can I access my emails after they expire?</h4>
-                    <p>No, once the temporary email expires, all associated data is permanently deleted from our servers for security and privacy reasons.</p>
-                  </div>
-                  <div className="faq-item">
-                    <h4>Are temporary emails secure?</h4>
-                    <p>Hide Mail uses encryption and secure protocols to protect your data. However, as with any online service, you should avoid sharing sensitive personal information through temporary email addresses.</p>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="ad-container ad-between-sections">
-                <ContentAwareAd
-                  slot="3456789012"
-                  format="horizontal"
-                  width={728}
-                  height={90}
-                  position="middle-of-page"
-                  contentSelector=".faq-section"
-                  minContentLength={300}
-                />
-              </div>
-              
-              <div className="best-practices-section">
-                <h3>Best Practices for Using Temporary Email Services</h3>
-                <div className="best-practices-grid">
-                  <div className="best-practice-item">
-                    <h4>Do Use For:</h4>
-                    <ul>
-                      <li>Newsletter subscriptions</li>
-                      <li>Forum registrations</li>
-                      <li>Free downloads</li>
-                      <li>One-time verifications</li>
-                      <li>Testing your own applications</li>
-                    </ul>
-                  </div>
-                  <div className="best-practice-item">
-                    <h4>Don't Use For:</h4>
-                    <ul>
-                      <li>Important financial accounts</li>
-                      <li>Government services</li>
-                      <li>Job applications</li>
-                      <li>Long-term business communications</li>
-                      <li>Accounts you'll need to recover later</li>
-                    </ul>
-                  </div>
-                </div>
-                
-                <div className="privacy-tip">
-                  <h4>Privacy Tip</h4>
-                  <p>For maximum privacy protection, consider using a combination of temporary email addresses and a VPN service when signing up for online services. This provides an additional layer of anonymity by masking both your email identity and IP address.</p>
-                </div>
-              </div>
-              
-              <div className="ad-container ad-before-footer">
-                <ContentAwareAd
-                  slot="5678901234"
-                  format="horizontal"
-                  width={728}
-                  height={90}
-                  position="before-footer"
-                  contentSelector=".best-practices-section"
-                  minContentLength={200}
-                />
-              </div>
-            </div>
-            
             <FooterContainer>
               <FooterLinks className="footer-links">
-                <FooterLink to="/privacy-policy">Privacy Policy</FooterLink>
-                <FooterLink to="/terms-of-service">Terms of Service</FooterLink>
-                <FooterLink to="/about-us">About Us</FooterLink>
-                <FooterLink to="/contact-us">Contact Us</FooterLink>
-                <FooterLink to="/blog">Blog</FooterLink>
+                <FooterLink to="/privacy-policy" onClick={(e) => e.currentTarget.blur()}>Privacy Policy</FooterLink>
+                <FooterLink to="/terms-of-service" onClick={(e) => e.currentTarget.blur()}>Terms of Service</FooterLink>
+                <FooterLink to="/about-us" onClick={(e) => e.currentTarget.blur()}>About Us</FooterLink>
+                <FooterLink to="/contact-us" onClick={(e) => e.currentTarget.blur()}>Contact Us</FooterLink>
+                <FooterLink to="/blog" onClick={(e) => e.currentTarget.blur()}>Blog</FooterLink>
               </FooterLinks>
               <div className="ad-container ad-in-footer">
                 <ContentAwareAd
