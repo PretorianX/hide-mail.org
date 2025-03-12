@@ -121,10 +121,10 @@ const Blog = () => {
   ];
 
   return (
-    <BlogContainer>
-      <BlogHeader>
-        <BlogTitle>Hide Mail Blog</BlogTitle>
-        <BlogDescription>
+    <BlogContainer className="BlogContainer">
+      <BlogHeader className="blog-header">
+        <BlogTitle className="BlogTitle">Hide Mail Blog</BlogTitle>
+        <BlogDescription className="BlogDescription">
           Explore our articles about email privacy, security best practices, and how to make the most of temporary email services.
         </BlogDescription>
       </BlogHeader>
@@ -141,14 +141,14 @@ const Blog = () => {
         />
       </AdContainer>
       
-      <BlogPostsGrid>
+      <BlogPostsGrid className="blog-posts-grid">
         {blogPosts.map(post => (
-          <BlogPostCard key={post.id}>
+          <BlogPostCard key={post.id} className="BlogPostCard">
             <BlogPostImage style={{ backgroundImage: `url(${post.image})` }} />
             <BlogPostContent>
-              <BlogPostTitle>{post.title}</BlogPostTitle>
-              <BlogPostExcerpt>{post.excerpt}</BlogPostExcerpt>
-              <ReadMoreLink to={`/blog/${post.id}`}>Read More →</ReadMoreLink>
+              <BlogPostTitle className="BlogPostTitle">{post.title}</BlogPostTitle>
+              <BlogPostExcerpt className="BlogPostExcerpt">{post.excerpt}</BlogPostExcerpt>
+              <ReadMoreLink to={`/blog/${post.id}`} className="ReadMoreLink">Read More →</ReadMoreLink>
             </BlogPostContent>
           </BlogPostCard>
         ))}

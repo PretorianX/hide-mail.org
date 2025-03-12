@@ -162,52 +162,53 @@ const ContactUs = () => {
   };
 
   return (
-    <Container>
-      <Title>Contact Us</Title>
+    <Container className="Container">
+      <Title className="Title">Contact Us</Title>
       
-      <Section>
-        <Paragraph>
+      <Section className="Section">
+        <Paragraph className="Paragraph">
           We'd love to hear from you! Whether you have a question about our service, need help with an issue, or just want to say hello, please don't hesitate to reach out to us.
         </Paragraph>
-        <Paragraph>
+        <Paragraph className="Paragraph">
           Hide Mail is part of the mail-duck.com family of privacy services. For inquiries about our other services, please visit <a href="https://mail-duck.com" target="_blank" rel="noopener noreferrer">mail-duck.com</a>.
         </Paragraph>
       </Section>
 
-      <ContactInfo>
-        <InfoItem>
-          <Label>Email:</Label>
+      <ContactInfo className="ContactInfo">
+        <InfoItem className="InfoItem">
+          <Label className="Label">Email:</Label>
           <span>contact@mail-duck.com</span>
         </InfoItem>
-        <InfoItem>
-          <Label>GitHub:</Label>
+        <InfoItem className="InfoItem">
+          <Label className="Label">GitHub:</Label>
           <span>github.com/mail-duck</span>
         </InfoItem>
-        <InfoItem>
-          <Label>Parent:</Label>
+        <InfoItem className="InfoItem">
+          <Label className="Label">Parent:</Label>
           <span><a href="https://mail-duck.com" target="_blank" rel="noopener noreferrer">mail-duck.com</a></span>
         </InfoItem>
       </ContactInfo>
 
-      <Section>
-        <h2>Send Us a Message</h2>
+      <Section className="Section">
+        <h2 className="SectionTitle">Send Us a Message</h2>
         
         {formStatus.submitted && formStatus.success && (
-          <SuccessMessage>
+          <SuccessMessage className="SuccessMessage">
             Thank you for your message! We'll get back to you as soon as possible.
           </SuccessMessage>
         )}
         
         {formStatus.submitted && !formStatus.success && (
-          <ErrorMessage>
+          <ErrorMessage className="ErrorMessage">
             {formStatus.error}
           </ErrorMessage>
         )}
         
         <form onSubmit={handleSubmit}>
-          <FormGroup>
+          <FormGroup className="FormGroup">
             <label htmlFor="name">Name *</label>
             <Input
+              className="Input"
               type="text"
               id="name"
               name="name"
@@ -217,9 +218,10 @@ const ContactUs = () => {
             />
           </FormGroup>
           
-          <FormGroup>
+          <FormGroup className="FormGroup">
             <label htmlFor="email">Email *</label>
             <Input
+              className="Input"
               type="email"
               id="email"
               name="email"
@@ -229,9 +231,10 @@ const ContactUs = () => {
             />
           </FormGroup>
           
-          <FormGroup>
+          <FormGroup className="FormGroup">
             <label htmlFor="subject">Subject</label>
             <Input
+              className="Input"
               type="text"
               id="subject"
               name="subject"
@@ -240,9 +243,10 @@ const ContactUs = () => {
             />
           </FormGroup>
           
-          <FormGroup>
+          <FormGroup className="FormGroup">
             <label htmlFor="message">Message *</label>
             <TextArea
+              className="TextArea"
               id="message"
               name="message"
               value={formData.message}
@@ -251,43 +255,43 @@ const ContactUs = () => {
             />
           </FormGroup>
           
-          <Button type="submit" disabled={formStatus.submitted && formStatus.success}>
+          <Button className="Button" type="submit" disabled={formStatus.submitted && formStatus.success}>
             Send Message
           </Button>
         </form>
       </Section>
 
-      <Section>
-        <h2>Frequently Asked Questions</h2>
+      <Section className="Section">
+        <h2 className="SectionTitle">Frequently Asked Questions</h2>
         
         <div>
-          <h3>How long do temporary emails last?</h3>
-          <Paragraph>
+          <h3 className="SectionTitle">How long do temporary emails last?</h3>
+          <Paragraph className="Paragraph">
             Our temporary email addresses automatically expire after 24 hours. After this period, any emails sent to that address will not be received.
           </Paragraph>
           
-          <h3>Is this service completely free?</h3>
-          <Paragraph>
+          <h3 className="SectionTitle">Is this service completely free?</h3>
+          <Paragraph className="Paragraph">
             Yes, Hide Mail is 100% free to use. We support our service through non-intrusive advertisements.
           </Paragraph>
           
-          <h3>Can I send emails from my temporary address?</h3>
-          <Paragraph>
+          <h3 className="SectionTitle">Can I send emails from my temporary address?</h3>
+          <Paragraph className="Paragraph">
             No, Hide Mail is a receive-only service. You cannot send emails from the temporary addresses.
           </Paragraph>
           
-          <h3>Are my emails private?</h3>
-          <Paragraph>
+          <h3 className="SectionTitle">Are my emails private?</h3>
+          <Paragraph className="Paragraph">
             We take privacy seriously. Emails are automatically deleted after 24 hours, and we do not read or analyze the content of your messages.
           </Paragraph>
           
-          <h3>Is Hide Mail related to other services?</h3>
-          <Paragraph>
+          <h3 className="SectionTitle">Is Hide Mail related to other services?</h3>
+          <Paragraph className="Paragraph">
             Yes, Hide Mail is part of the mail-duck.com family of privacy services. We share the same commitment to privacy and security across all our products.
           </Paragraph>
           
-          <h3>Can I report abuse?</h3>
-          <Paragraph>
+          <h3 className="SectionTitle">Can I report abuse?</h3>
+          <Paragraph className="Paragraph">
             Yes, if you believe our service is being used for abusive purposes, please contact us immediately at abuse@mail-duck.com.
           </Paragraph>
         </div>
