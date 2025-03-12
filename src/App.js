@@ -19,6 +19,7 @@ import Blog from './pages/Blog.js';
 import BlogPost from './pages/BlogPost.js';
 import ContentAwareAd from './components/ContentAwareAd.js';
 import CookieConsent from './components/CookieConsent.js';
+import MessageList from './components/MessageList.js';
 
 const AppContainer = styled.div`
   max-width: 1200px;
@@ -62,6 +63,7 @@ function App() {
   const [refreshing, setRefreshing] = useState(false);
   const [domains, setDomains] = useState([]);
   const [selectedDomain, setSelectedDomain] = useState('');
+  const [selectedMessageId, setSelectedMessageId] = useState(null);
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -259,6 +261,10 @@ function App() {
     }
   };
 
+  const handleSelectMessage = (messageId) => {
+    setSelectedMessageId(messageId);
+  };
+
   return (
     <Router>
       <ConfigProvider>
@@ -358,18 +364,7 @@ function App() {
                         ) : messages.length === 0 ? (
                           <p>Your inbox is empty. Messages will appear here when you receive them.</p>
                         ) : (
-                          <ul className="message-list">
-                            {messages.map(message => (
-                              <li key={message.id} className="message-item">
-                                <div className="message-header">
-                                  <span>{message.from}</span>
-                                  <span>{formatDate(message.date)}</span>
-                                </div>
-                                <div className="message-subject">{message.subject}</div>
-                                <div className="message-preview">{message.preview}</div>
-                              </li>
-                            ))}
-                          </ul>
+                          <MessageList messages={messages} onSelectMessage={handleSelectMessage} selectedMessageId={selectedMessageId} />
                         )}
                       </section>
                     </main>

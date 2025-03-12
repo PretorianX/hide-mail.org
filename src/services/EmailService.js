@@ -337,12 +337,26 @@ class EmailService {
       console.log('API response status:', response.status);
       console.log('API response data structure:', Object.keys(response.data));
       
-      // Import the message parser dynamically to avoid circular dependencies
-      const { parseMultipartMessage } = await import('./messageParser');
-      
       // Parse the message to extract HTML and text content
       const messageData = response.data.data;
       console.log('Message data structure:', Object.keys(messageData));
+      
+      // Log the content received from the API
+      console.log('Message data html:', messageData.html ? 'Yes' : 'No', messageData.html ? `(${messageData.html.length} chars)` : '');
+      console.log('Message data text:', messageData.text ? 'Yes' : 'No', messageData.text ? `(${messageData.text.length} chars)` : '');
+      
+      // If the message already has html or text content, use it directly
+      if (messageData.html || messageData.text) {
+        console.log('Using html and text content directly from API response');
+        return {
+          ...messageData,
+          html: messageData.html || '',
+          text: messageData.text || ''
+        };
+      }
+      
+      // Import the message parser dynamically to avoid circular dependencies
+      const { parseMultipartMessage } = await import('./messageParser');
       
       // Check if the message has a raw property
       if (messageData.raw) {
@@ -362,15 +376,7 @@ class EmailService {
         console.log('Body contains HTML tags:', hasHtmlTags);
       }
       
-      // If the message already has parsed content, use it
-      if (messageData.html !== undefined || messageData.text !== undefined) {
-        console.log('Message already has parsed content:');
-        console.log('- HTML content:', messageData.html ? 'Yes' : 'No', messageData.html ? `(${messageData.html.length} chars)` : '');
-        console.log('- Text content:', messageData.text ? 'Yes' : 'No', messageData.text ? `(${messageData.text.length} chars)` : '');
-        return messageData;
-      }
-      
-      // Otherwise, parse the raw message if available
+      // If the message has a raw property, parse it
       if (messageData.raw) {
         console.log('Parsing raw message');
         const parsedContent = parseMultipartMessage(messageData.raw);

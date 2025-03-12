@@ -12,12 +12,12 @@ const MessageItem = ({ message, onClick }) => {
     <div className="message-item" onClick={onClick}>
       <div className="message-header">
         <div className="message-from">{message.from}</div>
-        <div className="message-date">
+        <div className="message-date" data-testid="message-date">
           {formatDate(message.date || message.receivedAt)}
         </div>
       </div>
       <div className="message-subject">{message.subject}</div>
-      <div className="message-preview">{getPreviewText()}</div>
+      <div className="message-preview" data-testid="message-preview">{getPreviewText()}</div>
     </div>
   );
 };

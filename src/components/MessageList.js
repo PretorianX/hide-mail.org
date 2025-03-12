@@ -1,7 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import './MessageList.css';
+import EmailModal from './EmailModal';
 
 const MessageList = ({ messages, onSelectMessage, selectedMessageId }) => {
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedMessage, setSelectedMessage] = useState(null);
+
   // Function to format the message preview with proper length
   const formatPreview = (message) => {
     let preview = message.preview || '';
@@ -17,6 +21,20 @@ const MessageList = ({ messages, onSelectMessage, selectedMessageId }) => {
     }
     
     return preview;
+  };
+
+  const handleMessageClick = (message) => {
+    setSelectedMessage(message);
+    setModalOpen(true);
+    
+    // Also call the parent's onSelectMessage if provided
+    if (onSelectMessage) {
+      onSelectMessage(message.id);
+    }
+  };
+
+  const handleCloseModal = () => {
+    setModalOpen(false);
   };
 
   if (!messages || messages.length === 0) {
@@ -43,7 +61,7 @@ const MessageList = ({ messages, onSelectMessage, selectedMessageId }) => {
           <div 
             key={message.id} 
             className={`message-item ${selectedMessageId === message.id ? 'selected' : ''}`}
-            onClick={() => onSelectMessage(message.id)}
+            onClick={() => handleMessageClick(message)}
           >
             <div className="message-sender">{message.from}</div>
             <div className="message-subject">{message.subject}</div>
@@ -54,6 +72,13 @@ const MessageList = ({ messages, onSelectMessage, selectedMessageId }) => {
           </div>
         ))}
       </div>
+      
+      {/* Email Modal */}
+      <EmailModal 
+        message={selectedMessage}
+        isOpen={modalOpen}
+        onClose={handleCloseModal}
+      />
     </div>
   );
 };

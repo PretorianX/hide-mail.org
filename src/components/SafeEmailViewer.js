@@ -73,6 +73,14 @@ const SafeEmailViewer = ({ htmlContent, textContent, className }) => {
     console.log('- HTML content length:', (htmlContent || '').length);
     console.log('- Text content length:', (textContent || '').length);
     console.log('- HTML content preview:', (htmlContent || '').substring(0, 100));
+    console.log('- Text content preview:', (textContent || '').substring(0, 100));
+    
+    // Check for common issues
+    if (!htmlContent && !textContent) {
+      console.warn('SafeEmailViewer: No content received (both HTML and text are empty)');
+    } else if (htmlContent && htmlContent.includes('Content-Type:')) {
+      console.warn('SafeEmailViewer: HTML content appears to be raw email headers');
+    }
   }, [htmlContent, textContent]);
   
   // Function to create and write to the iframe
@@ -165,7 +173,8 @@ const SafeEmailViewer = ({ htmlContent, textContent, className }) => {
   
   // Determine what to render based on available content
   const renderContent = () => {
-    if (htmlContent) {
+    // Check if we have valid HTML content
+    if (htmlContent && htmlContent.trim().length > 0) {
       return (
         <iframe 
           ref={iframeRef}
@@ -173,15 +182,18 @@ const SafeEmailViewer = ({ htmlContent, textContent, className }) => {
           sandbox="allow-same-origin allow-popups"
         />
       );
-    } else if (textContent) {
+    } 
+    // Check if we have valid text content
+    else if (textContent && textContent.trim().length > 0) {
       // Fallback to plain text if no HTML content
       return (
         <div className="plain-text">
           {textContent}
         </div>
       );
-    } else {
-      // No content available
+    } 
+    // No valid content available
+    else {
       return (
         <div className="plain-text">
           No content available for this email.
