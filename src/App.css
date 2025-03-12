@@ -15,6 +15,14 @@
   --border-color: #e0e0e0;
   --card-bg: #ffffff;
   --bg-color: #f5f7fa;
+  
+  /* Dark theme variables */
+  --background-color: #1a1a1a;
+  --card-background: #2a2a2a;
+  --shadow-color: rgba(0, 0, 0, 0.3);
+  --dark-text-color: #e0e0e0;
+  --dark-text-secondary: #b0b0b0;
+  --dark-border-color: #444444;
 }
 
 body {
@@ -70,6 +78,7 @@ body {
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   overflow: hidden;
+  margin-bottom: 20px;
 }
 
 .email-section {
@@ -78,6 +87,14 @@ body {
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   margin-bottom: 20px;
+}
+
+.app-main .email-section {
+  background-color: transparent;
+  border-radius: 0;
+  box-shadow: none;
+  margin-bottom: 0;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .email-container {
@@ -227,10 +244,18 @@ button:disabled {
 }
 
 .messages-section {
-  padding: 20px;
   background-color: var(--card-bg);
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+}
+
+/* When messages-section is inside app-main, remove duplicate styling */
+.app-main .messages-section {
+  background-color: transparent;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 20px;
 }
 
 .messages-section h2 {
@@ -751,7 +776,7 @@ button:disabled {
 
 [data-theme='dark'] button {
   background-color: var(--duck-orange);
-  color: var(--dark-button-text);
+  color: var(--dark-text-color);
 }
 
 [data-theme='dark'] button:hover {
@@ -760,7 +785,7 @@ button:disabled {
 
 [data-theme='dark'] .refresh-button {
   background-color: var(--duck-orange-light);
-  color: var(--dark-button-text);
+  color: var(--dark-text-color);
 }
 
 [data-theme='dark'] .timer-progress-bar {
@@ -794,11 +819,11 @@ button:disabled {
 
 [data-theme='dark'] .info-content-column p,
 [data-theme='dark'] .info-content-column li {
-  color: var(--light-text);
+  color: var(--dark-text-secondary);
 }
 
 [data-theme='dark'] .faq-section {
-  background-color: var(--dark-card-hover);
+  background-color: var(--card-background);
 }
 
 [data-theme='dark'] .faq-section h3 {
@@ -815,11 +840,11 @@ button:disabled {
 }
 
 [data-theme='dark'] .faq-item p {
-  color: var(--light-text);
+  color: var(--dark-text-secondary);
 }
 
 [data-theme='dark'] .best-practices-section {
-  background-color: var(--dark-card-hover);
+  background-color: var(--card-background);
 }
 
 [data-theme='dark'] .best-practices-section h3 {
@@ -835,7 +860,7 @@ button:disabled {
 }
 
 [data-theme='dark'] .best-practice-item li {
-  color: var(--light-text);
+  color: var(--dark-text-secondary);
 }
 
 [data-theme='dark'] .privacy-tip {
@@ -848,7 +873,7 @@ button:disabled {
 }
 
 [data-theme='dark'] .privacy-tip p {
-  color: var(--light-text);
+  color: var(--dark-text-secondary);
 }
 
 [data-theme='dark'] .ad-between-sections,
@@ -865,7 +890,7 @@ button:disabled {
 
 [data-theme='dark'] footer p,
 [data-theme='dark'] .footer p {
-  color: var(--light-text);
+  color: var(--dark-text-secondary);
 }
 
 /* Footer links styling */
@@ -909,7 +934,7 @@ footer a:hover {
 }
 
 [data-theme='dark'] .sc-UBoew {
-  color: var(--light-text);
+  color: var(--dark-text-secondary);
 }
 
 [data-theme='dark'] .sc-bAomZO {
@@ -918,7 +943,7 @@ footer a:hover {
 
 [data-theme='dark'] .sc-fJVbdy.sc-kwHJyZ {
   background-color: var(--duck-orange);
-  color: var(--dark-button-text);
+  color: var(--dark-text-color);
 }
 
 [data-theme='dark'] .sc-fJVbdy.sc-OeHys {
@@ -954,7 +979,7 @@ footer a:hover {
 }
 
 [data-theme='dark'] .message-item {
-  background-color: var(--dark-card-hover);
+  background-color: var(--card-background);
   border-bottom: 1px solid var(--border-color);
   transition: background-color 0.2s;
 }
@@ -979,15 +1004,15 @@ footer a:hover {
 }
 
 [data-theme='dark'] .message-preview {
-  color: var(--light-text);
+  color: var(--dark-text-secondary);
 }
 
 [data-theme='dark'] .message-date {
-  color: var(--light-text);
+  color: var(--dark-text-secondary);
 }
 
 [data-theme='dark'] .empty-inbox {
-  color: var(--light-text);
+  color: var(--dark-text-secondary);
 }
 
 /* Page ad styles */
@@ -1028,4 +1053,28 @@ footer a:hover {
     width: 100%;
     max-width: 320px;
   }
+}
+
+/* Fix dark theme styling for app-main */
+[data-theme='dark'] .app-main,
+[data-theme='dark'] .email-section,
+[data-theme='dark'] .messages-section {
+  background-color: var(--card-background);
+  box-shadow: 0 2px 8px var(--shadow-color);
+  border: 1px solid var(--border-color);
+}
+
+/* When email-section is inside app-main in dark mode, adjust styling */
+[data-theme='dark'] .app-main .email-section {
+  background-color: transparent;
+  box-shadow: none;
+  border: none;
+  border-bottom: 1px solid var(--dark-border-color);
+}
+
+/* When messages-section is inside app-main in dark mode, adjust styling */
+[data-theme='dark'] .app-main .messages-section {
+  background-color: transparent;
+  box-shadow: none;
+  border: none;
 } 
