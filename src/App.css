@@ -731,6 +731,12 @@ button:disabled {
 [data-theme='dark'] .messages-section {
   background-color: var(--card-background);
   box-shadow: 0 2px 8px var(--shadow-color);
+  border: 1px solid var(--border-color);
+}
+
+[data-theme='dark'] .messages-section {
+  padding: 20px;
+  border-radius: 12px;
 }
 
 [data-theme='dark'] .email-container h2,
@@ -893,4 +899,61 @@ button:disabled {
   background-color: var(--duck-gray);
   color: var(--duck-white);
   border: 2px solid var(--duck-white);
+}
+
+/* Dark mode styling for messages */
+[data-theme='dark'] .message-list-container {
+  background-color: var(--card-background);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px var(--shadow-color);
+  border: 1px solid var(--border-color);
+}
+
+[data-theme='dark'] .message-list {
+  background-color: var(--card-background);
+}
+
+[data-theme='dark'] .message-list-header {
+  border-bottom: 1px solid var(--border-color);
+}
+
+[data-theme='dark'] .message-list-header h2 {
+  color: var(--duck-white);
+}
+
+[data-theme='dark'] .message-item {
+  background-color: var(--dark-card-hover);
+  border-bottom: 1px solid var(--border-color);
+  transition: background-color 0.2s;
+}
+
+[data-theme='dark'] .message-item:hover {
+  background-color: var(--card-background);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px var(--shadow-color);
+}
+
+[data-theme='dark'] .message-item.selected {
+  background-color: rgba(255, 159, 48, 0.15);
+  border-left: 3px solid var(--duck-orange);
+}
+
+[data-theme='dark'] .message-sender {
+  color: var(--duck-white);
+}
+
+[data-theme='dark'] .message-subject {
+  color: var(--duck-orange);
+}
+
+[data-theme='dark'] .message-preview {
+  color: var(--light-text);
+}
+
+[data-theme='dark'] .message-date {
+  color: var(--light-text);
+}
+
+[data-theme='dark'] .empty-inbox {
+  color: var(--light-text);
 } 
