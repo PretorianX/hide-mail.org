@@ -200,7 +200,8 @@ function App() {
       setLoading(true);
       // Use the provided domain override if available, otherwise use the selectedDomain state
       const domainToUse = domainOverride !== null ? domainOverride : selectedDomain;
-      const newEmail = await EmailService.generateEmail(domainToUse);
+      // Only pass the domain if it's not empty (not the "Random domain" option)
+      const newEmail = await EmailService.generateEmail(domainToUse || null);
       setEmail(newEmail);
       setMessages([]);
     } catch (err) {
@@ -337,7 +338,7 @@ function App() {
                                   onRefresh={handleRefreshMessages}
                                 />
                                 <div className="email-actions">
-                                  <button onClick={handleGenerateEmail}>Generate New Email</button>
+                                  <button onClick={() => handleGenerateEmail()}>Generate New Email</button>
                                   <button onClick={handleRefreshMessages} disabled={refreshing}>
                                     {refreshing ? 'Checking...' : 'Check Messages'}
                                   </button>

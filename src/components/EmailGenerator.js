@@ -62,7 +62,7 @@ const Timer = styled.div`
   color: ${props => props.isExpiring ? 'red' : 'var(--text-color)'};
 `;
 
-function EmailGenerator() {
+function EmailGenerator({ onGenerate }) {
   const [domains] = useState(getConfig('email.domains'));
   const [selectedDomain, setSelectedDomain] = useState(domains[0]);
   const [email, setEmail] = useState('');
@@ -70,9 +70,9 @@ function EmailGenerator() {
   const [extensionTime] = useState(getConfig('email.extensionTime'));
 
   useEffect(() => {
-    // Generate email on component mount or domain change
+    // Generate email on component mount
     handleGenerateEmail();
-  }, [selectedDomain]);
+  }, []);
 
   useEffect(() => {
     // Timer countdown
@@ -87,14 +87,19 @@ function EmailGenerator() {
 
   const handleGenerateEmail = async () => {
     try {
-      // In a real app, this would call your backend API
-      const generatedEmail = await EmailService.generateEmail(selectedDomain);
-      setEmail(generatedEmail);
-      setTimeRemaining(getConfig('email.expirationTime')); // Reset timer to configured expiration time
-      
-      // Save to localStorage for persistence
-      localStorage.setItem('tempEmail', generatedEmail);
-      localStorage.setItem('expiryTime', Date.now() + (timeRemaining * 1000));
+      if (onGenerate) {
+        // Use the parent component's handler if provided
+        onGenerate(selectedDomain);
+      } else {
+        // Fallback to local implementation
+        const generatedEmail = await EmailService.generateEmail(selectedDomain);
+        setEmail(generatedEmail);
+        setTimeRemaining(getConfig('email.expirationTime')); // Reset timer to configured expiration time
+        
+        // Save to localStorage for persistence
+        localStorage.setItem('tempEmail', generatedEmail);
+        localStorage.setItem('expiryTime', Date.now() + (timeRemaining * 1000));
+      }
     } catch (error) {
       console.error('Failed to generate email:', error);
     }
@@ -123,6 +128,8 @@ function EmailGenerator() {
             ))}
           </Select>
         </SelectContainer>
+        
+        <button onClick={handleGenerateEmail}>Generate Email</button>
         
         {email && (
           <>

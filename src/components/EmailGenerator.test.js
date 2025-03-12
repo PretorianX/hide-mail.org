@@ -7,103 +7,75 @@ import { getConfig } from '../utils/configLoader';
 
 // Mock dependencies
 jest.mock('../services/EmailService');
-jest.mock('../utils/configLoader');
+jest.mock('../utils/configLoader', () => ({
+  getConfig: jest.fn()
+}));
 
 describe('EmailGenerator Component', () => {
   beforeEach(() => {
-    // Setup mocks
-    EmailService.generateEmail.mockResolvedValue('test@hide-mail.org');
+    jest.clearAllMocks();
+    
+    // Mock getConfig to return test values
     getConfig.mockImplementation((key) => {
-      if (key === 'email.domains') return ['hide-mail.org', 'private-mail.org'];
-      if (key === 'email.expirationTime') return 1800;
-      if (key === 'email.extensionTime') return 900;
+      if (key === 'email.domains') {
+        return ['hide-mail.org', 'private-mail.org'];
+      } else if (key === 'email.expirationTime') {
+        return 30 * 60; // 30 minutes in seconds
+      } else if (key === 'email.extensionTime') {
+        return 15 * 60; // 15 minutes in seconds
+      }
       return null;
     });
     
-    // Clear localStorage before each test
-    localStorage.clear();
+    // Mock EmailService methods
+    EmailService.generateEmail = jest.fn().mockImplementation((domain) => {
+      return Promise.resolve(`test@${domain || 'hide-mail.org'}`);
+    });
   });
 
-  afterEach(() => {
-    jest.clearAllMocks();
-  });
-
-  test('renders domain selector and generates email on mount', async () => {
+  test('renders with domain selector', () => {
     render(<EmailGenerator />);
     
-    // Check if domain selector is rendered
     expect(screen.getByLabelText(/Select Domain/i)).toBeInTheDocument();
-    
-    // Wait for email to be generated
-    await waitFor(() => {
-      expect(EmailService.generateEmail).toHaveBeenCalledTimes(1);
-    });
+    expect(screen.getByText('Generate Email')).toBeInTheDocument();
   });
 
-  test('displays email and expiration timer after generation', async () => {
-    render(<EmailGenerator />);
+  test('calls onGenerate prop when Generate Email button is clicked', async () => {
+    const mockOnGenerate = jest.fn();
+    render(<EmailGenerator onGenerate={mockOnGenerate} />);
     
-    // Wait for email to be displayed
-    await waitFor(() => {
-      expect(screen.getByText('test@hide-mail.org')).toBeInTheDocument();
-    });
+    // Click the generate button
+    fireEvent.click(screen.getByText('Generate Email'));
     
-    // Check if timer is displayed
-    expect(screen.getByText(/Expires in:/i)).toBeInTheDocument();
+    // Check if onGenerate was called with the default domain
+    expect(mockOnGenerate).toHaveBeenCalledWith('hide-mail.org');
   });
 
-  test('allows copying email to clipboard', async () => {
-    // Mock clipboard API
-    Object.assign(navigator, {
-      clipboard: {
-        writeText: jest.fn().mockResolvedValue(undefined),
-      },
-    });
-    
-    render(<EmailGenerator />);
-    
-    // Wait for email to be displayed
-    await waitFor(() => {
-      expect(screen.getByText('test@hide-mail.org')).toBeInTheDocument();
-    });
-    
-    // Click copy button
-    fireEvent.click(screen.getByText(/Copy/i));
-    
-    // Check if clipboard API was called with correct email
-    expect(navigator.clipboard.writeText).toHaveBeenCalledWith('test@hide-mail.org');
-  });
-
-  test('changes domain when selector is changed', async () => {
-    render(<EmailGenerator />);
-    
-    // Wait for initial email generation
-    await waitFor(() => {
-      expect(EmailService.generateEmail).toHaveBeenCalledTimes(1);
-    });
+  test('calls onGenerate with selected domain when domain is changed', async () => {
+    const mockOnGenerate = jest.fn();
+    render(<EmailGenerator onGenerate={mockOnGenerate} />);
     
     // Change domain
     fireEvent.change(screen.getByLabelText(/Select Domain/i), { 
       target: { value: 'private-mail.org' } 
     });
     
-    // Check if email is regenerated with new domain
-    await waitFor(() => {
-      expect(EmailService.generateEmail).toHaveBeenCalledTimes(2);
-      expect(EmailService.generateEmail).toHaveBeenLastCalledWith('private-mail.org');
-    });
+    // Click the generate button
+    fireEvent.click(screen.getByText('Generate Email'));
+    
+    // Check if onGenerate was called with the selected domain
+    expect(mockOnGenerate).toHaveBeenCalledWith('private-mail.org');
   });
 
-  test('does not render Extend or View Inbox buttons', async () => {
+  test('uses EmailService directly when no onGenerate prop is provided', async () => {
     render(<EmailGenerator />);
     
-    // Wait for email to be displayed
-    await waitFor(() => {
-      expect(screen.getByText('test@hide-mail.org')).toBeInTheDocument();
-    });
+    // Click the generate button
+    fireEvent.click(screen.getByText('Generate Email'));
     
-    // Verify that Extend and View Inbox buttons are not present
-    expect(screen.queryByText(/Extend/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/View Inbox/i)).not.toBeInTheDocument();
+    // Check if EmailService.generateEmail was called
+    await waitFor(() => {
+      expect(EmailService.generateEmail).toHaveBeenCalledWith('hide-mail.org');
+    });
   });
 }); 

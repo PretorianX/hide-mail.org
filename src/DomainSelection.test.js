@@ -1,6 +1,8 @@
+import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import App from './App.js';
-import EmailService from './services/EmailService.js';
+import '@testing-library/jest-dom';
+import App from './App';
+import EmailService from './services/EmailService';
 
 // Mock the EmailService
 jest.mock('./services/EmailService.js');
@@ -53,20 +55,13 @@ describe('Domain Selection Tests', () => {
     const generateButton = await screen.findByText('Generate New Email');
     fireEvent.click(generateButton);
     
-    // Verify that generateEmail was called
+    // Verify that generateEmail was called with the selected domain
     await waitFor(() => {
-      expect(EmailService.generateEmail).toHaveBeenCalled();
+      expect(EmailService.generateEmail).toHaveBeenCalledWith('private-mail.org');
     });
-    
-    // Since we can't directly test the selectedDomain state in App.js,
-    // we'll check that the function was called at least once
-    expect(EmailService.generateEmail).toHaveBeenCalledTimes(1);
-    
-    // The test passes if generateEmail was called, even if we can't verify
-    // the exact parameter due to how the App component is implemented
   });
 
-  test('selecting random domain option does not trigger email generation', async () => {
+  test('selecting random domain option uses null for domain', async () => {
     render(<App />);
     
     // Wait for the app to initialize
@@ -83,7 +78,13 @@ describe('Domain Selection Tests', () => {
     // Select the random domain option (empty value)
     fireEvent.change(domainSelect, { target: { value: '' } });
     
-    // Verify that generateEmail was not called
-    expect(EmailService.generateEmail).not.toHaveBeenCalled();
+    // Find and click the Generate New Email button
+    const generateButton = await screen.findByText('Generate New Email');
+    fireEvent.click(generateButton);
+    
+    // Verify that generateEmail was called with null
+    await waitFor(() => {
+      expect(EmailService.generateEmail).toHaveBeenCalledWith(null);
+    });
   });
 }); 
