@@ -44,6 +44,7 @@
       // Create and inject the correct script
       var newScript = document.createElement('script');
       newScript.async = true;
+      newScript.crossOrigin = "anonymous";
       newScript.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=' + clientId;
       document.head.appendChild(newScript);
       console.log('AdSense script injected with correct client ID');
