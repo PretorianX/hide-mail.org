@@ -51,7 +51,7 @@ class RedisMock {
   }
 
   async keys(pattern) {
-    const regex = new RegExp(pattern.replace('*', '.*'));
+    const regex = new RegExp(pattern.replace(/\*/g, '.*'));
     return Object.keys(this.data).filter(key => regex.test(key));
   }
 
