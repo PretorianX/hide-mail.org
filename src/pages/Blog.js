@@ -131,7 +131,7 @@ const Blog = () => {
       
       <AdContainer>
         <ContentAwareAd
-          slot="1234567890"
+          slot="9781643326"
           format="horizontal"
           width={728}
           height={90}
@@ -156,7 +156,7 @@ const Blog = () => {
       
       <AdContainer>
         <ContentAwareAd
-          slot="2345678901"
+          slot="3985572926"
           format="horizontal"
           width={728}
           height={90}

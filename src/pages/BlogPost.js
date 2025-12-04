@@ -236,7 +236,7 @@ const BlogPost = () => {
       
       <AdContainer>
         <ContentAwareAd
-          slot="3456789012"
+          slot="8910596547"
           format="horizontal"
           width={728}
           height={90}
@@ -250,7 +250,7 @@ const BlogPost = () => {
       
       <AdContainer>
         <ContentAwareAd
-          slot="4567890123"
+          slot="7597514877"
           format="horizontal"
           width={728}
           height={90}
@@ -278,7 +278,7 @@ const BlogPost = () => {
       
       <AdContainer>
         <ContentAwareAd
-          slot="5678901234"
+          slot="7053098703"
           format="horizontal"
           width={728}
           height={90}

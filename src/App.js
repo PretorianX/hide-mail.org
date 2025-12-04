@@ -293,7 +293,7 @@ function App() {
             <Header />
             <div className="ad-container">
               <ContentAwareAd
-                slot="9876543210"
+                slot="2183915405"
                 format="horizontal"
                 width={728}
                 height={90}
@@ -307,7 +307,7 @@ function App() {
                 <>
                   <div className="app-layout">
                     <div className="main-content">
-                      <PageAds position="top" slot="1234567890" />
+                      <PageAds position="top" slot="6667576583" />
                       <main className="app-main">
                         <section className="email-section">
                           <div className="email-container">
@@ -365,12 +365,12 @@ function App() {
                           )}
                         </section>
                       </main>
-                      <PageAds position="bottom" slot="9876543210" />
+                      <PageAds position="bottom" slot="8004708986" />
                     </div>
                     <div className="sidebar">
                       <div className="ad-container">
                         <ContentAwareAd
-                          slot="1234567890"
+                          slot="9977084442"
                           format="rectangle"
                           width={300}
                           height={250}
@@ -463,7 +463,7 @@ function App() {
                     
                     <div className="ad-container ad-between-sections">
                       <ContentAwareAd
-                        slot="3456789012"
+                        slot="6037839432"
                         format="horizontal"
                         width={728}
                         height={90}
@@ -506,7 +506,7 @@ function App() {
                     
                     <div className="ad-container ad-before-footer">
                       <ContentAwareAd
-                        slot="5678901234"
+                        slot="9103712827"
                         format="horizontal"
                         width={728}
                         height={90}
@@ -537,7 +537,7 @@ function App() {
               </FooterLinks>
               <div className="ad-container ad-in-footer">
                 <ContentAwareAd
-                  slot="6789012345"
+                  slot="2536759880"
                   format="horizontal"
                   width={728}
                   height={90}
