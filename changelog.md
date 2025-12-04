@@ -38,6 +38,7 @@ All notable changes to this project will be documented in this file.
   - Email address now clickable to copy (click anywhere on the address)
   - Text selection with mouse still works (copy only triggers on simple clicks)
   - Visual feedback: icon changes to checkmark and background highlights on copy
+  - Animated toast popup notification appears above email on copy (fades out after 2.5s)
 
 ### Fixed
 - **Fixed race condition in email generation on initial page load** (2025-12-04)
