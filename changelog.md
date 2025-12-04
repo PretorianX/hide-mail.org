@@ -50,6 +50,13 @@ All notable changes to this project will be documented in this file.
   - Added comprehensive unit tests for config module (13 tests)
 
 ### Security
+- **Fixed HTML sanitization bypass vulnerability in MessageView** (2025-12-04)
+  - Replaced vulnerable regex-based sanitization with DOMPurify library
+  - Previous regex approach could be bypassed with nested injection (e.g., `<scr<script>ipt>`)
+  - DOMPurify properly parses DOM and handles all XSS edge cases
+  - Added tests for XSS protection and nested script injection attempts
+  - Fixes GitHub CodeQL alert: Incomplete multi-character sanitization (CWE-1333)
+
 - **Fixed critical vulnerabilities in node-forge** (2025-12-04)
   - Updated `node-forge` from 1.3.1 to 1.3.3
   - Fixed ASN.1 Unbounded Recursion vulnerability (High severity)
