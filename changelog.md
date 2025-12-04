@@ -3,6 +3,11 @@
 All notable changes to this project will be documented in this file.
 
 ### Changed
+- **Updated Content Security Policy for AdSense and Google Fonts** (2025-12-04)
+  - Added Google Fonts domains (fonts.googleapis.com, fonts.gstatic.com) to CSP
+  - Added AdSense domains to script-src, connect-src, and frame-src directives
+  - Resolves CSP violations preventing AdSense ads and Google Fonts from loading
+  - Updated nginx/hide-mail.conf with comprehensive AdSense domain allowlist
 - **Renamed EMAIL_DOMAINS to VALID_DOMAINS** (2025-12-04)
   - Standardized environment variable naming across all configuration files
   - Updated docker-compose.yml, docker-compose-dev.yml, run-docker-compose.sh, env-config.sh
