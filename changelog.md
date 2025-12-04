@@ -57,6 +57,12 @@ All notable changes to this project will be documented in this file.
   - Fixed ASN.1 OID Integer Truncation vulnerability (Moderate severity)
   - All three vulnerabilities require node-forge >= 1.3.2, now resolved
 
+- **Fixed email parsing vulnerability in nodemailer** (2025-12-04)
+  - Updated `nodemailer` from ^6.9.16 to ^7.0.7
+  - Fixed email address parsing vulnerability with quoted local-parts containing @
+  - The parser incorrectly handled addresses like `"user@domain.com x"@internal.domain`
+  - This could lead to misrouting of email recipients to unintended domains
+
 - **Moved AdSense slot IDs to environment variables** (2025-12-04)
   - Removed hardcoded AdSense slot IDs from source files (App.js, Blog.js, BlogPost.js)
   - Created `src/utils/adsenseSlots.js` utility for configuration-based slot management
