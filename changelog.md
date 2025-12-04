@@ -32,6 +32,13 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+### Added
+- **Copy-to-clipboard improvements for email display** (2025-12-04)
+  - Added clipboard icon button in top right corner of email address box
+  - Email address now clickable to copy (click anywhere on the address)
+  - Text selection with mouse still works (copy only triggers on simple clicks)
+  - Visual feedback: icon changes to checkmark and background highlights on copy
+
 ### Fixed
 - **Fixed race condition in email generation on initial page load** (2025-12-04)
   - EmailService.generateEmail() now calls initialize() to ensure domains are loaded
