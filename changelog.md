@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 ## [2.0.1] - 2025-12-04
 
+### Added
+- **PWA manifest for mobile installability** (2025-12-04)
+  - Created `manifest.json` with app metadata and icons
+  - Added iOS-specific meta tags for "Add to Home Screen" support
+  - Generated icon files: logo192.png, logo512.png, apple-touch-icon.png, favicon.ico
+  - Users can now install Hide Mail as a standalone app on iPhone and Android
+
 ### Changed
 - **Consolidated CI/CD workflows into single pipeline** (2025-12-04)
   - Merged 4 separate workflows (ci.yml, test.yml, build-and-test.yml, build-push-container.yml)

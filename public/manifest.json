@@ -1,0 +1,34 @@
+{
+  "short_name": "Hide Mail",
+  "name": "Hide Mail - Temporary Email Service",
+  "description": "Your friendly temporary email service. Create disposable email addresses to protect your privacy.",
+  "icons": [
+    {
+      "src": "favicon.ico",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "logo192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "logo512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#f7941d",
+  "background_color": "#f5f7fa",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "categories": ["utilities", "productivity"],
+  "lang": "en",
+  "dir": "ltr"
+}
+
