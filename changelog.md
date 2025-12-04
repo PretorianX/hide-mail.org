@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 ## [2.0.1] - 2025-12-04
 
 ### Added
+- **PayPal donate button** (2025-12-04)
+  - Added DonateButton component with PayPal SDK integration
+  - Button appears below "Why Use Hide Mail?" section in sidebar
+  - Button also appears in footer with compact styling
+  - Supports dark mode with appropriate color scheme
+  - SDK loads asynchronously to avoid blocking page load
+
 - **Click-to-copy functionality for email display** (2025-12-04)
   - Email address is now clickable/tappable to copy to clipboard
   - Works on desktop (click) and mobile/tablet (tap)

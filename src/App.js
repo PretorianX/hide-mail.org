@@ -23,6 +23,7 @@ import ContentAwareAd from './components/ContentAwareAd.js';
 import PageAds from './components/PageAds.js';
 import CookieConsent from './components/CookieConsent.js';
 import MessageList from './components/MessageList.js';
+import DonateButton from './components/DonateButton.js';
 
 const AppContainer = styled.div`
   max-width: 1200px;
@@ -437,6 +438,7 @@ function App() {
                           <li>🦆 Perfect for one-time signups</li>
                         </ul>
                       </div>
+                      <DonateButton />
                     </div>
                   </div>
                   
@@ -583,6 +585,7 @@ function App() {
                 <FooterLink to="/contact-us" onClick={(e) => e.currentTarget.blur()}>Contact Us</FooterLink>
                 <FooterLink to="/blog" onClick={(e) => e.currentTarget.blur()}>Blog</FooterLink>
               </FooterLinks>
+              <DonateButton className="footer-donate" />
               <div className="ad-container ad-in-footer">
                 <ContentAwareAd
                   slot="2536759880"
