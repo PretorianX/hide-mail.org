@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 ## [2.0.1] - 2025-12-04
 
 ### Added
+- **Click-to-copy functionality for email display** (2025-12-04)
+  - Email address is now clickable/tappable to copy to clipboard
+  - Works on desktop (click) and mobile/tablet (tap)
+  - Visual feedback: "Tap to copy" hint below email, checkmark and green background on success
+  - Added fallback clipboard methods for older browsers and mobile Safari
+  - Keyboard accessible: press Enter to copy when focused
+  - Prompt fallback for devices where clipboard API is unavailable
+
 - **PWA manifest for mobile installability** (2025-12-04)
   - Created `manifest.json` with app metadata and icons
   - Added iOS-specific meta tags for "Add to Home Screen" support

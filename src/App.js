@@ -218,17 +218,39 @@ function App() {
     }
   };
 
-  const handleCopyClick = () => {
-    if (email) {
-      navigator.clipboard.writeText(email)
-        .then(() => {
-          setCopied(true);
-          setTimeout(() => setCopied(false), 2000);
-        })
-        .catch(err => {
-          console.error('Failed to copy email:', err);
-          setError('Failed to copy email to clipboard');
-        });
+  const handleCopyClick = async () => {
+    if (!email) return;
+    
+    try {
+      // Modern clipboard API (works in secure contexts)
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(email);
+      } else {
+        // Fallback for older browsers and some mobile devices
+        const textArea = document.createElement('textarea');
+        textArea.value = email;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-9999px';
+        textArea.style.top = '0';
+        textArea.setAttribute('readonly', '');
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        
+        const successful = document.execCommand('copy');
+        document.body.removeChild(textArea);
+        
+        if (!successful) {
+          throw new Error('execCommand copy failed');
+        }
+      }
+      
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy email:', err);
+      // Try one more fallback - prompt the user to copy manually
+      window.prompt('Copy this email address:', email);
     }
   };
 
@@ -330,8 +352,34 @@ function App() {
                             </div>
                             {email ? (
                               <>
-                                <div className="email-display">
-                                  {email}
+                                <div 
+                                  className={`email-display ${copied ? 'copied' : ''}`}
+                                  onClick={handleCopyClick}
+                                  role="button"
+                                  tabIndex={0}
+                                  onKeyDown={(e) => e.key === 'Enter' && handleCopyClick()}
+                                  aria-label="Click to copy email address"
+                                  title="Click to copy"
+                                >
+                                  <span className="email-text">{email}</span>
+                                  <span className="copy-hint">
+                                    {copied ? (
+                                      <>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                          <polyline points="20 6 9 17 4 12"></polyline>
+                                        </svg>
+                                        Copied!
+                                      </>
+                                    ) : (
+                                      <>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                        </svg>
+                                        Tap to copy
+                                      </>
+                                    )}
+                                  </span>
                                 </div>
                                 <MailboxTimer
                                   onExpire={handleMailboxExpired}
