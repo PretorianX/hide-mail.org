@@ -24,6 +24,11 @@ All notable changes to this project will be documented in this file.
   - Only `build-and-push` job gets elevated `packages: write` permission
   - Prevents workflows from having unnecessary write access to repository
 
+- **Fixed js-yaml prototype pollution vulnerability** (2025-12-04)
+  - Updated `js-yaml` from 3.14.1 to 3.14.2 in backend dependencies
+  - Fixes CVE allowing attackers to modify prototype via `__proto__` in parsed yaml documents
+  - All users parsing untrusted yaml documents were potentially impacted
+
 ---
 
 ## [2.0.0] - 2025-12-04
