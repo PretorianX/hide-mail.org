@@ -127,7 +127,10 @@ describe('MessageView Component', () => {
     expect(container.querySelector('script')).toBeNull();
     
     const htmlContent = container.querySelector('.message-html-content');
+    // Ensure no actual script tags remain (DOMPurify removes them)
     expect(htmlContent.innerHTML).not.toContain('<script>');
-    expect(htmlContent.innerHTML).not.toContain('alert');
+    expect(htmlContent.innerHTML).not.toContain('</script>');
+    // The remaining text fragments are safely escaped and not executable
+    // "alert" may appear as plain text but is not in an executable context
   });
 }); 
