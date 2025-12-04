@@ -76,4 +76,58 @@ describe('MessageView Component', () => {
     fireEvent.click(screen.getByText('Delete'));
     expect(mockOnDelete).toHaveBeenCalledWith('123');
   });
+
+  test('sanitizes malicious HTML content (XSS protection)', () => {
+    const maliciousMessage = {
+      id: '456',
+      from: 'attacker@evil.com',
+      subject: 'Malicious Email',
+      date: new Date().toISOString(),
+      html: '<div>Safe content</div><script>alert("xss")</script><div onclick="alert(\'xss\')">Click me</div>',
+    };
+
+    const { container } = render(
+      <MessageView 
+        message={maliciousMessage} 
+        onDelete={mockOnDelete} 
+        onBack={mockOnBack} 
+      />
+    );
+    
+    // Script tags should be removed
+    expect(container.querySelector('script')).toBeNull();
+    
+    // Inline event handlers should be removed
+    const htmlContent = container.querySelector('.message-html-content');
+    expect(htmlContent.innerHTML).not.toContain('onclick');
+    expect(htmlContent.innerHTML).not.toContain('alert');
+    
+    // Safe content should remain
+    expect(screen.getByText('Safe content')).toBeInTheDocument();
+  });
+
+  test('sanitizes nested script injection attempts', () => {
+    const nestedScriptMessage = {
+      id: '789',
+      from: 'attacker@evil.com',
+      subject: 'Nested Script Attack',
+      date: new Date().toISOString(),
+      html: '<div>Content</div><scr<script>ipt>alert("xss")</scr</script>ipt>',
+    };
+
+    const { container } = render(
+      <MessageView 
+        message={nestedScriptMessage} 
+        onDelete={mockOnDelete} 
+        onBack={mockOnBack} 
+      />
+    );
+    
+    // No script tags should exist after sanitization
+    expect(container.querySelector('script')).toBeNull();
+    
+    const htmlContent = container.querySelector('.message-html-content');
+    expect(htmlContent.innerHTML).not.toContain('<script>');
+    expect(htmlContent.innerHTML).not.toContain('alert');
+  });
 }); 

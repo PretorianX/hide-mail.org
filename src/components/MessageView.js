@@ -1,16 +1,16 @@
 import React, { useState } from 'react';
+import DOMPurify from 'dompurify';
 import './MessageView.css';
 
 const MessageView = ({ message, onDelete, onBack }) => {
   const [showImages, setShowImages] = useState(false);
   
-  // Function to sanitize HTML content
+  // Function to sanitize HTML content using DOMPurify
   const sanitizeHtml = (html) => {
-    // This is a simple implementation - in production, use a library like DOMPurify
-    return html
-      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-      .replace(/on\w+="[^"]*"/g, '')
-      .replace(/on\w+='[^']*'/g, '');
+    return DOMPurify.sanitize(html, {
+      FORBID_TAGS: ['script', 'style'],
+      FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover', 'onfocus', 'onblur'],
+    });
   };
   
   // Function to handle image display in HTML content
