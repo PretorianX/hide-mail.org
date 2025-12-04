@@ -140,7 +140,7 @@ cp .env.template .env
 Edit the `.env` file to set your configuration:
 
 ```
-EMAIL_DOMAINS=example.com,mail.example.com
+VALID_DOMAINS=example.com,mail.example.com
 REACT_APP_ADSENSE_CLIENT=your-adsense-client-id
 ```
 

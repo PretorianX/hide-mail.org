@@ -1,7 +1,7 @@
 // Set required environment variables for tests
 process.env.API_BASE_URL = 'https://api.test.com';
 process.env.HIDE_MAIL_API_KEY = 'test-api-key';
-process.env.EMAIL_DOMAINS = 'domain1.com,domain2.com';
+process.env.VALID_DOMAINS = 'domain1.com,domain2.com';
 
 const redisService = require('../../services/redisService');
 const emailController = require('../../controllers/emailController');

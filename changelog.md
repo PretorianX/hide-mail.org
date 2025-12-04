@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+### Changed
+- **Renamed EMAIL_DOMAINS to VALID_DOMAINS** (2025-12-04)
+  - Standardized environment variable naming across all configuration files
+  - Updated docker-compose.yml, docker-compose-dev.yml, run-docker-compose.sh, env-config.sh
+  - Added comprehensive unit tests for config module (13 tests)
+
 ### Security
 - **Fixed critical vulnerabilities in node-forge** (2025-12-04)
   - Updated `node-forge` from 1.3.1 to 1.3.3

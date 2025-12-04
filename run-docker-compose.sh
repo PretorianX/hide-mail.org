@@ -9,7 +9,7 @@ if [ -f .env ]; then
 else
   echo "Warning: .env file not found. Using default environment variables."
   # Set default environment variables
-  export EMAIL_DOMAINS="hide-mail.org,private-mail.org"
+  export VALID_DOMAINS="hide-mail.org,private-mail.org"
   export REACT_APP_ADSENSE_CLIENT="ca-pub-9729692981183751"
 fi
 

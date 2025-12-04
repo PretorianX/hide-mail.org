@@ -2,7 +2,7 @@
 
 # Define required environment variables
 REQUIRED_VARS=(
-  "EMAIL_DOMAINS"
+  "VALID_DOMAINS"
   "CONFIG_EMAIL_EXPIRATIONTIME"
   "CONFIG_EMAIL_EXTENSIONTIME"
   "CONFIG_API_URL"
@@ -24,7 +24,7 @@ if [ ${#MISSING_VARS[@]} -ne 0 ]; then
 fi
 
 # Convert comma-separated domains to JSON array
-DOMAINS_JSON="[$(echo $EMAIL_DOMAINS | sed 's/,/","/g' | sed 's/^/"/' | sed 's/$/"/' )]"
+DOMAINS_JSON="[$(echo $VALID_DOMAINS | sed 's/,/","/g' | sed 's/^/"/' | sed 's/$/"/' )]"
 
 # Define the directory where your JS files are located
 JS_DIR="/usr/share/nginx/html/static/js"

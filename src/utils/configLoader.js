@@ -18,7 +18,7 @@ try {
     // For test environment, use environment variables or default test values
     envConfig = {
       email: {
-        domains: (process.env.EMAIL_DOMAINS || 'test.com,test.org').split(',')
+        domains: (process.env.VALID_DOMAINS || 'test.com,test.org').split(',')
       }
     };
   }

@@ -32,11 +32,11 @@ const fileConfig = loadConfig();
 
 // Get email domains from environment variable
 const getEmailDomains = () => {
-  if (!process.env.EMAIL_DOMAINS) {
-    throw new Error('Email domains not configured. Set EMAIL_DOMAINS environment variable.');
+  if (!process.env.VALID_DOMAINS) {
+    throw new Error('Email domains not configured. Set VALID_DOMAINS environment variable.');
   }
   
-  return process.env.EMAIL_DOMAINS.split(',').map(domain => domain.trim());
+  return process.env.VALID_DOMAINS.split(',').map(domain => domain.trim());
 };
 
 // Final config with environment variables taking precedence

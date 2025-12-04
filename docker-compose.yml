@@ -6,7 +6,7 @@ services:
     depends_on:
       - backend
     environment:
-      - EMAIL_DOMAINS=${EMAIL_DOMAINS}
+      - VALID_DOMAINS=${VALID_DOMAINS}
       - CONFIG_EMAIL_EXPIRATIONTIME=1800
       - CONFIG_EMAIL_EXTENSIONTIME=900
       - CONFIG_API_URL=/api
@@ -25,7 +25,7 @@ services:
       - PORT=3001
       - SMTP_PORT=2525
       - REDIS_URL=redis://redis:6379
-      - EMAIL_DOMAINS=${EMAIL_DOMAINS}
+      - VALID_DOMAINS=${VALID_DOMAINS}
       - EMAIL_EXPIRATION=30
       - EMAIL_EXTENSION_TIME=30
       - LOG_LEVEL=info
