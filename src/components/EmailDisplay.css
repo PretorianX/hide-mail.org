@@ -26,42 +26,64 @@
 }
 
 .email-address {
+  position: relative;
   font-size: 1.2rem;
   font-weight: 500;
   color: var(--duck-black);
   background-color: var(--duck-gray);
-  padding: 15px;
+  padding: 15px 50px 15px 15px;
   border-radius: 8px;
   flex-grow: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   text-align: center;
-}
-
-.copy-button {
-  background-color: var(--duck-orange);
-  color: white;
-  border: none;
-  border-radius: 8px;
-  padding: 12px 20px;
-  font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.3s;
-  min-width: 150px;
+  transition: background-color 0.2s, box-shadow 0.2s;
+  user-select: text;
 }
 
-.copy-button:hover {
-  background-color: var(--duck-orange-light);
+.email-address:hover {
+  background-color: var(--duck-gray-light, #e8e8e8);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.copy-button:disabled {
-  background-color: #cccccc;
+.email-address.copied {
+  background-color: var(--success-color-light, #d4edda);
+}
+
+.email-text {
+  user-select: text;
+}
+
+.copy-icon-button {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  padding: 6px;
+  cursor: pointer;
+  color: var(--duck-orange);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.copy-icon-button:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.copy-icon-button:disabled {
+  color: #999;
   cursor: not-allowed;
 }
 
-.copy-button.copied {
-  background-color: var(--success-color);
+.copy-icon-button.copied {
+  color: var(--success-color, #28a745);
 }
 
 .email-display-info {
@@ -82,9 +104,5 @@
   
   .email-address {
     margin-bottom: 10px;
-  }
-  
-  .copy-button {
-    width: 100%;
   }
 } 
