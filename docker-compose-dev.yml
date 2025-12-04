@@ -60,7 +60,7 @@ services:
       - default
 
   redis:
-    image: redis:alpine
+    image: redis:8-alpine
     volumes:
       - redis-data:/data
     command: redis-server --appendonly yes

@@ -1,6 +1,6 @@
 # Use multi-stage builds to avoid storing credentials in the final image
 # Stage 1: Build stage
-FROM node:20-alpine AS builder
+FROM node:24-alpine AS builder
 
 WORKDIR /app
 

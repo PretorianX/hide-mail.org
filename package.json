@@ -1,30 +1,33 @@
 {
   "name": "temp-mail-service",
-  "version": "0.1.0",
+  "version": "2.0.0",
   "private": true,
+  "engines": {
+    "node": ">=24.0.0"
+  },
   "dependencies": {
-    "@faker-js/faker": "^8.3.1",
-    "@jridgewell/sourcemap-codec": "^1.4.15",
+    "@faker-js/faker": "^9.3.0",
+    "@jridgewell/sourcemap-codec": "^1.5.0",
     "@rollup/plugin-terser": "^0.4.4",
-    "@testing-library/jest-dom": "^6.1.5",
-    "@testing-library/react": "^14.1.2",
-    "@testing-library/user-event": "^14.5.1",
-    "axios": "^1.6.2",
-    "dompurify": "^3.2.4",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "react-router-dom": "^6.20.1",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.1.0",
+    "@testing-library/user-event": "^14.5.2",
+    "axios": "^1.7.9",
+    "dompurify": "^3.2.2",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.28.0",
     "react-scripts": "5.0.1",
-    "styled-components": "^6.1.1",
-    "web-vitals": "^3.5.0"
+    "styled-components": "^6.1.13",
+    "web-vitals": "^4.2.4"
   },
   "devDependencies": {
-    "@babel/plugin-transform-class-properties": "^7.23.3",
-    "@babel/plugin-transform-nullish-coalescing-operator": "^7.23.3",
-    "@babel/plugin-transform-numeric-separator": "^7.23.3",
-    "@babel/plugin-transform-optional-chaining": "^7.23.3",
-    "@babel/plugin-transform-private-methods": "^7.23.3",
-    "@babel/plugin-transform-private-property-in-object": "^7.23.3",
+    "@babel/plugin-transform-class-properties": "^7.25.9",
+    "@babel/plugin-transform-nullish-coalescing-operator": "^7.25.9",
+    "@babel/plugin-transform-numeric-separator": "^7.25.9",
+    "@babel/plugin-transform-optional-chaining": "^7.25.9",
+    "@babel/plugin-transform-private-methods": "^7.25.9",
+    "@babel/plugin-transform-private-property-in-object": "^7.25.9",
     "@craco/craco": "^7.1.0"
   },
   "scripts": {
