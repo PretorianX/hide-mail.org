@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.1] - 2025-12-04
+
+### Changed
+- **Consolidated CI/CD workflows into single pipeline** (2025-12-04)
+  - Merged 4 separate workflows (ci.yml, test.yml, build-and-test.yml, build-push-container.yml)
+  - New unified workflow: test → build → push containers
+  - Push to ghcr.io only happens on main branch (PRs only build)
+  - Added GitHub Actions cache for Docker builds (cache-from/cache-to: gha)
+  - Added npm cache for faster CI runs
+
+- **Improved backend Dockerfile with multistage build** (2025-12-04)
+  - Separated dependency installation into dedicated stage
+  - Removes test files, mocks, and coverage from production image
+  - Uses npm ci for reproducible builds
+  - Results in smaller, cleaner production images
+
+### Security
+- **Added explicit permissions to CI workflow** (2025-12-04)
+  - Set root-level `permissions: contents: read` (principle of least privilege)
+  - Only `build-and-push` job gets elevated `packages: write` permission
+  - Prevents workflows from having unnecessary write access to repository
+
+---
+
 ## [2.0.0] - 2025-12-04
 
 ### Changed

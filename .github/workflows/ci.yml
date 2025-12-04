@@ -1,14 +1,30 @@
-name: CI
+name: Test, Build & Push
 
 on:
   push:
     branches: [ main, master ]
+    tags: [ 'v*' ]
   pull_request:
     branches: [ main, master ]
   workflow_dispatch:
 
+# Default to minimal permissions (principle of least privilege)
+# Individual jobs can request additional permissions as needed
+permissions:
+  contents: read
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  EMAIL_DOMAINS: "example.com,mail.example.com"
+  CONFIG_EMAIL_EXPIRATIONTIME: "1800"
+  CONFIG_EMAIL_EXTENSIONTIME: "900"
+  CONFIG_API_URL: "/api"
+  CONFIG_API_TIMEOUT: "5000"
+
 jobs:
   frontend-tests:
+    name: Frontend Tests
     runs-on: ubuntu-latest
     
     steps:
@@ -18,9 +34,10 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '24'
+        cache: 'npm'
     
     - name: Install dependencies
-      run: npm install
+      run: npm ci
     
     - name: Run frontend tests with coverage
       run: npm test -- --coverage
@@ -32,8 +49,10 @@ jobs:
       with:
         name: frontend-coverage
         path: coverage/
+        retention-days: 7
         
   backend-tests:
+    name: Backend Tests
     runs-on: ubuntu-latest
     
     defaults:
@@ -47,9 +66,11 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '24'
+        cache: 'npm'
+        cache-dependency-path: backend/package-lock.json
     
     - name: Install dependencies
-      run: npm install
+      run: npm ci
       
     - name: Run backend tests with coverage
       run: npm run test:ci
@@ -63,56 +84,83 @@ jobs:
       with:
         name: backend-coverage
         path: backend/coverage/
-  
-  build:
+        retention-days: 7
+
+  build-and-push:
+    name: Build and Push Containers
     needs: [frontend-tests, backend-tests]
     runs-on: ubuntu-latest
-    
+    permissions:
+      contents: read
+      packages: write
+
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '24'
-    
-    - name: Install dependencies
-      run: npm install
-    
-    - name: Build frontend
-      run: npm run build
-      env:
-        CI: false
-        NODE_ENV: production
-        
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: build
-        path: build/
-        
-  docker:
-    needs: [build]
-    runs-on: ubuntu-latest
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-    
-    - name: Build frontend Docker image
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        file: ./Dockerfile
-        push: false
-        tags: hide-mail-frontend:latest
-        
-    - name: Build backend Docker image
-      uses: docker/build-push-action@v5
-      with:
-        context: ./backend
-        file: ./backend/Dockerfile
-        push: false
-        tags: hide-mail-backend:latest 
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Only login if we're going to push (main branch or tags)
+      - name: Log in to the Container registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Frontend Docker metadata
+        id: meta-frontend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+            type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+
+      - name: Build and push Frontend Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta-frontend.outputs.tags }}
+          labels: ${{ steps.meta-frontend.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            EMAIL_DOMAINS=${{ env.EMAIL_DOMAINS }}
+            CONFIG_EMAIL_EXPIRATIONTIME=${{ env.CONFIG_EMAIL_EXPIRATIONTIME }}
+            CONFIG_EMAIL_EXTENSIONTIME=${{ env.CONFIG_EMAIL_EXTENSIONTIME }}
+            CONFIG_API_URL=${{ env.CONFIG_API_URL }}
+            CONFIG_API_TIMEOUT=${{ env.CONFIG_API_TIMEOUT }}
+            NODE_ENV=production
+
+      - name: Extract Backend Docker metadata
+        id: meta-backend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+            type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+
+      - name: Build and push Backend Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta-backend.outputs.tags }}
+          labels: ${{ steps.meta-backend.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            NODE_ENV=production
