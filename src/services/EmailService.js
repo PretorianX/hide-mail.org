@@ -172,6 +172,9 @@ class EmailService {
   }
 
   static async generateEmail(domain = null) {
+    // Ensure service is initialized before generating email
+    await this.initialize();
+    
     try {
       // If we already have an email, deactivate it first
       if (this.currentEmail) {

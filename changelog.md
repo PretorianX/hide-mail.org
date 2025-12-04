@@ -32,6 +32,12 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+### Fixed
+- **Fixed race condition in email generation on initial page load** (2025-12-04)
+  - EmailService.generateEmail() now calls initialize() to ensure domains are loaded
+  - Previously, frontend could attempt to register mailbox with `@undefined` domain
+  - Root cause: EmailGenerator component called generateEmail before domains API response
+
 ### Changed
 - **Updated Content Security Policy for AdSense and Google Fonts** (2025-12-04)
   - Added Google Fonts domains (fonts.googleapis.com, fonts.gstatic.com) to CSP
