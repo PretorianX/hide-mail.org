@@ -142,7 +142,23 @@ Edit the `.env` file to set your configuration:
 ```
 VALID_DOMAINS=example.com,mail.example.com
 REACT_APP_ADSENSE_CLIENT=your-adsense-client-id
+
+# AdSense Slot IDs (optional - see ADSENSE-SLOTS-CONFIG.md for details)
+REACT_APP_ADSENSE_SLOT_TOP_BANNER=your-slot-id
+REACT_APP_ADSENSE_SLOT_TOP_PAGE_AD=your-slot-id
+REACT_APP_ADSENSE_SLOT_BOTTOM_PAGE_AD=your-slot-id
+REACT_APP_ADSENSE_SLOT_SIDEBAR_RECTANGLE=your-slot-id
+REACT_APP_ADSENSE_SLOT_MIDDLE_BANNER=your-slot-id
+REACT_APP_ADSENSE_SLOT_BEFORE_FOOTER=your-slot-id
+REACT_APP_ADSENSE_SLOT_FOOTER=your-slot-id
+REACT_APP_ADSENSE_SLOT_BLOG_TOP=your-slot-id
+REACT_APP_ADSENSE_SLOT_BLOG_BOTTOM=your-slot-id
+REACT_APP_ADSENSE_SLOT_BLOG_POST_TOP=your-slot-id
+REACT_APP_ADSENSE_SLOT_BLOG_POST_MIDDLE=your-slot-id
+REACT_APP_ADSENSE_SLOT_BLOG_POST_BOTTOM=your-slot-id
 ```
+
+**Note:** For detailed AdSense slot configuration, see [ADSENSE-SLOTS-CONFIG.md](./ADSENSE-SLOTS-CONFIG.md)
 
 ## Dependency Management
 

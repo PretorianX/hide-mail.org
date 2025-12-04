@@ -16,3 +16,11 @@ All notable changes to this project will be documented in this file.
   - Fixed ASN.1 OID Integer Truncation vulnerability (Moderate severity)
   - All three vulnerabilities require node-forge >= 1.3.2, now resolved
 
+- **Moved AdSense slot IDs to environment variables** (2025-12-04)
+  - Removed hardcoded AdSense slot IDs from source files (App.js, Blog.js, BlogPost.js)
+  - Created `src/utils/adsenseSlots.js` utility for configuration-based slot management
+  - Updated `env-config.sh` to inject slot IDs into runtime configuration
+  - Added support for 12 AdSense slot IDs via environment variables
+  - Prevents account-specific configuration from being committed to version control
+  - See ADSENSE-SLOTS-CONFIG.md for configuration details
+

@@ -53,6 +53,36 @@ echo "  }," >> $ENV_FILE
 if [ ! -z "$REACT_APP_ADSENSE_CLIENT" ]; then
   echo "  adsense: {" >> $ENV_FILE
   echo "    client: '$REACT_APP_ADSENSE_CLIENT'," >> $ENV_FILE
+  
+  # Add AdSense slot IDs if available
+  if [ ! -z "$REACT_APP_ADSENSE_SLOT_TOP_BANNER" ] || \
+     [ ! -z "$REACT_APP_ADSENSE_SLOT_TOP_PAGE_AD" ] || \
+     [ ! -z "$REACT_APP_ADSENSE_SLOT_BOTTOM_PAGE_AD" ] || \
+     [ ! -z "$REACT_APP_ADSENSE_SLOT_SIDEBAR_RECTANGLE" ] || \
+     [ ! -z "$REACT_APP_ADSENSE_SLOT_MIDDLE_BANNER" ] || \
+     [ ! -z "$REACT_APP_ADSENSE_SLOT_BEFORE_FOOTER" ] || \
+     [ ! -z "$REACT_APP_ADSENSE_SLOT_FOOTER" ] || \
+     [ ! -z "$REACT_APP_ADSENSE_SLOT_BLOG_TOP" ] || \
+     [ ! -z "$REACT_APP_ADSENSE_SLOT_BLOG_BOTTOM" ] || \
+     [ ! -z "$REACT_APP_ADSENSE_SLOT_BLOG_POST_TOP" ] || \
+     [ ! -z "$REACT_APP_ADSENSE_SLOT_BLOG_POST_MIDDLE" ] || \
+     [ ! -z "$REACT_APP_ADSENSE_SLOT_BLOG_POST_BOTTOM" ]; then
+    echo "    slots: {" >> $ENV_FILE
+    [ ! -z "$REACT_APP_ADSENSE_SLOT_TOP_BANNER" ] && echo "      topBanner: '$REACT_APP_ADSENSE_SLOT_TOP_BANNER'," >> $ENV_FILE
+    [ ! -z "$REACT_APP_ADSENSE_SLOT_TOP_PAGE_AD" ] && echo "      topPageAd: '$REACT_APP_ADSENSE_SLOT_TOP_PAGE_AD'," >> $ENV_FILE
+    [ ! -z "$REACT_APP_ADSENSE_SLOT_BOTTOM_PAGE_AD" ] && echo "      bottomPageAd: '$REACT_APP_ADSENSE_SLOT_BOTTOM_PAGE_AD'," >> $ENV_FILE
+    [ ! -z "$REACT_APP_ADSENSE_SLOT_SIDEBAR_RECTANGLE" ] && echo "      sidebarRectangle: '$REACT_APP_ADSENSE_SLOT_SIDEBAR_RECTANGLE'," >> $ENV_FILE
+    [ ! -z "$REACT_APP_ADSENSE_SLOT_MIDDLE_BANNER" ] && echo "      middleBanner: '$REACT_APP_ADSENSE_SLOT_MIDDLE_BANNER'," >> $ENV_FILE
+    [ ! -z "$REACT_APP_ADSENSE_SLOT_BEFORE_FOOTER" ] && echo "      beforeFooter: '$REACT_APP_ADSENSE_SLOT_BEFORE_FOOTER'," >> $ENV_FILE
+    [ ! -z "$REACT_APP_ADSENSE_SLOT_FOOTER" ] && echo "      footer: '$REACT_APP_ADSENSE_SLOT_FOOTER'," >> $ENV_FILE
+    [ ! -z "$REACT_APP_ADSENSE_SLOT_BLOG_TOP" ] && echo "      blogTop: '$REACT_APP_ADSENSE_SLOT_BLOG_TOP'," >> $ENV_FILE
+    [ ! -z "$REACT_APP_ADSENSE_SLOT_BLOG_BOTTOM" ] && echo "      blogBottom: '$REACT_APP_ADSENSE_SLOT_BLOG_BOTTOM'," >> $ENV_FILE
+    [ ! -z "$REACT_APP_ADSENSE_SLOT_BLOG_POST_TOP" ] && echo "      blogPostTop: '$REACT_APP_ADSENSE_SLOT_BLOG_POST_TOP'," >> $ENV_FILE
+    [ ! -z "$REACT_APP_ADSENSE_SLOT_BLOG_POST_MIDDLE" ] && echo "      blogPostMiddle: '$REACT_APP_ADSENSE_SLOT_BLOG_POST_MIDDLE'," >> $ENV_FILE
+    [ ! -z "$REACT_APP_ADSENSE_SLOT_BLOG_POST_BOTTOM" ] && echo "      blogPostBottom: '$REACT_APP_ADSENSE_SLOT_BLOG_POST_BOTTOM'," >> $ENV_FILE
+    echo "    }," >> $ENV_FILE
+  fi
+  
   echo "  }," >> $ENV_FILE
 fi
 

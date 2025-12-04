@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import styled from 'styled-components';
 import ContentAwareAd from '../components/ContentAwareAd';
+import { getAdSenseSlot, AD_SLOTS } from '../utils/adsenseSlots';
 
 const BlogContainer = styled.div`
   max-width: 1000px;
@@ -131,7 +132,7 @@ const Blog = () => {
       
       <AdContainer>
         <ContentAwareAd
-          slot="9781643326"
+          slot={getAdSenseSlot(AD_SLOTS.BLOG_TOP)}
           format="horizontal"
           width={728}
           height={90}
@@ -156,7 +157,7 @@ const Blog = () => {
       
       <AdContainer>
         <ContentAwareAd
-          slot="3985572926"
+          slot={getAdSenseSlot(AD_SLOTS.BLOG_BOTTOM)}
           format="horizontal"
           width={728}
           height={90}
