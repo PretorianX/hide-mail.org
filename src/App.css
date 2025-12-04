@@ -780,7 +780,7 @@ button:disabled {
 
 [data-theme='dark'] button {
   background-color: var(--duck-orange);
-  color: var(--dark-text-color);
+  color: var(--dark-button-text);
 }
 
 [data-theme='dark'] button:hover {
@@ -789,7 +789,7 @@ button:disabled {
 
 [data-theme='dark'] .refresh-button {
   background-color: var(--duck-orange-light);
-  color: var(--dark-text-color);
+  color: var(--dark-button-text);
 }
 
 [data-theme='dark'] .timer-progress-bar {
@@ -947,7 +947,7 @@ footer a:hover {
 
 [data-theme='dark'] .sc-fJVbdy.sc-kwHJyZ {
   background-color: var(--duck-orange);
-  color: var(--dark-text-color);
+  color: var(--dark-button-text);
 }
 
 [data-theme='dark'] .sc-fJVbdy.sc-OeHys {
