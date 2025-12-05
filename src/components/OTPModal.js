@@ -9,6 +9,7 @@
  */
 
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import './OTPModal.css';
 
 const OTPModal = ({ 
@@ -180,7 +181,8 @@ const OTPModal = ({
 
   if (!isOpen) return null;
 
-  return (
+  // Use portal to render modal at document body level to avoid z-index issues
+  return createPortal(
     <div className="otp-modal-overlay" onClick={onClose}>
       <div className="otp-modal" onClick={e => e.stopPropagation()}>
         <button className="otp-modal-close" onClick={onClose} aria-label="Close">
@@ -286,7 +288,8 @@ const OTPModal = ({
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

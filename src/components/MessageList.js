@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import './MessageList.css';
 import EmailModal from './EmailModal';
+import ForwardButton from './ForwardButton';
 
 const MessageList = ({ messages, onSelectMessage, selectedMessageId, tempMailbox }) => {
   const [modalOpen, setModalOpen] = useState(false);
@@ -66,8 +67,18 @@ const MessageList = ({ messages, onSelectMessage, selectedMessageId, tempMailbox
             <div className="message-sender">{message.from}</div>
             <div className="message-subject">{message.subject}</div>
             <div className="message-preview">{formatPreview(message)}</div>
-            <div className="message-date">
-              {new Date(message.date).toLocaleString()}
+            <div className="message-footer">
+              <div className="message-date">
+                {new Date(message.date).toLocaleString()}
+              </div>
+              {tempMailbox && (
+                <div className="message-actions" onClick={(e) => e.stopPropagation()}>
+                  <ForwardButton 
+                    tempMailbox={tempMailbox} 
+                    messageId={message.id}
+                  />
+                </div>
+              )}
             </div>
           </div>
         ))}

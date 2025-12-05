@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [2.1.0] - 2025-12-05
 
+### Fixed
+- **Mailpit relay configuration** - Fixed Mailpit failing to start in production when relay host is not configured
+  - `MP_SMTP_RELAY_ALL` now defaults to `false` instead of being hardcoded to `true`
+  - Added `MAILPIT_RELAY_ALL` environment variable to control auto-relay behavior
+  - Mailpit will now store emails locally when no relay is configured (useful for testing)
+
 ### Added
 - **Forward & Forget Feature** - Privacy-focused email forwarding
   - One-click forwarding of emails to your personal inbox
@@ -24,6 +30,7 @@ All notable changes to this project will be documented in this file.
   - `ForwardButton.js` - One-click forward with state feedback
   - `OTPModal.js` - Destination email verification flow
   - Updated `EmailModal.js` and `MessageList.js` for integration
+  - **Forward button now visible on each message item in the list** (not just in modal)
   
   **API Endpoints:**
   - `POST /api/forwarding/request-otp` - Request verification code

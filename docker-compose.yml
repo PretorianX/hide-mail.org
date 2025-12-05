@@ -73,14 +73,15 @@ services:
     image: axllent/mailpit:latest
     environment:
       # Relay configuration - forwards emails to external SMTP
+      # NOTE: Set MAILPIT_RELAY_HOST and MAILPIT_RELAY_ALL=true to enable relay
       - MP_SMTP_RELAY_HOST=${MAILPIT_RELAY_HOST:-}
       - MP_SMTP_RELAY_PORT=${MAILPIT_RELAY_PORT:-587}
       - MP_SMTP_RELAY_STARTTLS=${MAILPIT_RELAY_STARTTLS:-true}
       - MP_SMTP_RELAY_AUTH=${MAILPIT_RELAY_AUTH:-plain}
       - MP_SMTP_RELAY_USERNAME=${MAILPIT_RELAY_USERNAME:-}
       - MP_SMTP_RELAY_PASSWORD=${MAILPIT_RELAY_PASSWORD:-}
-      # Allow all recipients to be relayed
-      - MP_SMTP_RELAY_ALL=true
+      # Allow all recipients to be relayed (requires MAILPIT_RELAY_HOST to be set)
+      - MP_SMTP_RELAY_ALL=${MAILPIT_RELAY_ALL:-false}
       # Database for message storage
       - MP_DATABASE=/data/mailpit.db
     ports:

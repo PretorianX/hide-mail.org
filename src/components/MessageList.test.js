@@ -14,6 +14,17 @@ jest.mock('./EmailModal', () => {
   };
 });
 
+// Mock the ForwardButton component
+jest.mock('./ForwardButton', () => {
+  return function MockForwardButton({ tempMailbox, messageId }) {
+    return (
+      <button data-testid={`forward-btn-${messageId}`}>
+        Forward & Forget
+      </button>
+    );
+  };
+});
+
 describe('MessageList', () => {
   const mockMessages = [
     {
@@ -96,6 +107,35 @@ describe('MessageList', () => {
     fireEvent.click(screen.getByText('Close Modal'));
     
     // Modal should no longer be visible
+    expect(screen.queryByTestId('email-modal')).not.toBeInTheDocument();
+  });
+
+  test('renders ForwardButton for each message when tempMailbox is provided', () => {
+    render(<MessageList messages={mockMessages} tempMailbox="test@temp.com" />);
+    
+    // Check that forward buttons are rendered for each message
+    expect(screen.getByTestId('forward-btn-msg1')).toBeInTheDocument();
+    expect(screen.getByTestId('forward-btn-msg2')).toBeInTheDocument();
+  });
+
+  test('does not render ForwardButton when tempMailbox is not provided', () => {
+    render(<MessageList messages={mockMessages} />);
+    
+    // Check that forward buttons are not rendered
+    expect(screen.queryByTestId('forward-btn-msg1')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('forward-btn-msg2')).not.toBeInTheDocument();
+  });
+
+  test('clicking ForwardButton does not open the modal', () => {
+    render(<MessageList messages={mockMessages} tempMailbox="test@temp.com" />);
+    
+    // Modal should not be visible initially
+    expect(screen.queryByTestId('email-modal')).not.toBeInTheDocument();
+    
+    // Click the forward button
+    fireEvent.click(screen.getByTestId('forward-btn-msg1'));
+    
+    // Modal should still not be visible (click should be stopped)
     expect(screen.queryByTestId('email-modal')).not.toBeInTheDocument();
   });
 }); 

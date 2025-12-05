@@ -61,9 +61,29 @@
   text-overflow: ellipsis;
 }
 
+.message-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
 .message-date {
   font-size: 0.8rem;
   color: var(--text-secondary);
+}
+
+.message-actions {
+  flex-shrink: 0;
+}
+
+.message-actions .forward-btn {
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+.message-actions .forward-btn-count {
+  display: none;
 }
 
 .empty-inbox {
