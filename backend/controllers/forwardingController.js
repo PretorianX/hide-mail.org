@@ -175,6 +175,26 @@ const forwardMessage = async (req, res, next) => {
       });
     }
 
+    // Handle SMTP/forwarding specific errors with detailed messages
+    // These errors do NOT consume the rate limit (only success increments the counter)
+    if (error.code && error.code.startsWith('SMTP_')) {
+      return res.status(503).json({
+        success: false,
+        error: error.message,
+        code: error.code,
+        detail: error.originalError,
+      });
+    }
+
+    // Handle recipient rejection
+    if (error.code === 'RECIPIENT_REJECTED') {
+      return res.status(400).json({
+        success: false,
+        error: error.message,
+        code: error.code,
+      });
+    }
+
     next(error);
   }
 };

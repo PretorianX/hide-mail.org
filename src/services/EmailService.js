@@ -599,10 +599,12 @@ class EmailService {
       return response.data;
     } catch (error) {
       console.error('Error forwarding message:', error);
-      const errorMessage = error.response?.data?.error || 'Failed to forward message';
-      const errorObj = new Error(errorMessage);
-      errorObj.code = error.response?.data?.code;
-      errorObj.rateLimit = error.response?.data?.rateLimit;
+      const errorData = error.response?.data || {};
+      const errorObj = new Error(errorData.error || 'Failed to forward message');
+      errorObj.code = errorData.code;
+      errorObj.rateLimit = errorData.rateLimit;
+      errorObj.detail = errorData.detail; // Original error detail from backend
+      errorObj.httpStatus = error.response?.status;
       throw errorObj;
     }
   }

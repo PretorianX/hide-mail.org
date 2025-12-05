@@ -81,6 +81,28 @@ const ForwardButton = ({ tempMailbox, messageId, onForwarded }) => {
     setShowToast(true);
   };
 
+  // Get user-friendly error message based on error code
+  const getErrorMessage = (error) => {
+    switch (error.code) {
+      case 'SMTP_NOT_CONFIGURED':
+        return 'Forwarding service is temporarily unavailable';
+      case 'SMTP_CONNECTION_FAILED':
+        return 'Unable to connect to email server';
+      case 'SMTP_AUTH_FAILED':
+        return 'Email server error - please contact support';
+      case 'RECIPIENT_REJECTED':
+        return 'Destination email was rejected';
+      case 'SMTP_TEMPORARY_FAILURE':
+        return 'Email server busy - please retry';
+      case 'SMTP_SEND_FAILED':
+        return 'Failed to send email - please retry';
+      case 'MESSAGE_NOT_FOUND':
+        return 'Email message not found';
+      default:
+        return error.message || 'Failed to forward email';
+    }
+  };
+
   // Perform the actual forward operation
   const performForward = async () => {
     setState(STATES.SENDING);
@@ -103,13 +125,18 @@ const ForwardButton = ({ tempMailbox, messageId, onForwarded }) => {
         setState(STATES.REQUIRES_VALIDATION);
         setShowOTPModal(true);
       } else {
+        // For SMTP errors and other failures, rate limit is NOT consumed
+        // (backend only increments counter on success)
+        const displayMessage = getErrorMessage(error);
         setState(STATES.ERROR);
-        setErrorMessage(error.message || 'Failed to forward email');
-        showNotification(error.message || 'Failed to forward email', 'error');
-        // Reset to ready state after error
+        setErrorMessage(displayMessage);
+        showNotification(displayMessage, 'error');
+        // Reset to ready state after error so user can retry
         setTimeout(() => {
           setState(STATES.READY);
-        }, 2000);
+          // Refresh status to confirm rate limit wasn't consumed
+          fetchStatus();
+        }, 3000);
       }
     }
   };
@@ -233,6 +260,8 @@ const ForwardButton = ({ tempMailbox, messageId, onForwarded }) => {
         return `Limit reached. Resets at ${forwardingStatus?.rateLimit?.resetAt ? new Date(forwardingStatus.rateLimit.resetAt).toLocaleTimeString() : 'next hour'}`;
       case STATES.SENT:
         return 'Email forwarded successfully!';
+      case STATES.ERROR:
+        return errorMessage || 'Click to retry';
       default:
         return 'Forward & Forget';
     }

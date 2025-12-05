@@ -2,6 +2,48 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.1.5] - 2025-12-05
+
+### Fixed
+- **Improved Forward & Forget error handling** - Better error messages when forwarding fails
+  - Added specific error codes for different SMTP failures (`SMTP_NOT_CONFIGURED`, `SMTP_CONNECTION_FAILED`, `SMTP_AUTH_FAILED`, `RECIPIENT_REJECTED`, `SMTP_TEMPORARY_FAILURE`, `SMTP_SEND_FAILED`)
+  - User-friendly error messages explain what went wrong and whether to retry
+  - **Rate limit is NOT consumed on failed forwards** - Counter only increments after successful delivery
+  - Error tooltip shown on button hover when in error state
+  - Frontend refreshes forwarding status after error to confirm rate limit unchanged
+
+## [2.1.4] - 2025-12-05
+
+### Security
+- **Protected debug endpoints from production access** - Debug endpoints (`/api/debug/*`, `/api/test-email`) now return 404 in non-development environments
+  - `/api/debug/redis` - Was exposing internal Redis data
+  - `/api/debug/redis-connection` - Was exposing Redis connection info
+  - `/api/debug/redis-keys` - Was listing all Redis keys
+  - `/api/test-email` - Was allowing anyone to inject fake emails into any active mailbox
+
+- **Added API rate limiting** - Prevents abuse and DoS attacks
+  - Mailbox registration: 10 requests/minute per IP
+  - Mailbox refresh: 30 requests/minute per IP
+  - Email fetching: 60 requests/minute per IP
+  - All other endpoints: 100 requests/minute per IP
+  - Rate limit headers included in all responses (X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset)
+
+- **Blocked forwarding to service domains** - Prevents service from being used as spam relay
+  - Users cannot forward emails to temporary email addresses on the same service
+  - Applies to all configured valid domains
+
+### Added
+- `backend/services/apiRateLimiter.js` - Redis-based rate limiting middleware
+- `backend/tests/security.test.js` - Security-focused unit tests
+
+## [2.1.3] - 2025-12-05
+
+### Fixed
+- **Forward & Forget now includes attachments and inline images** - Forwarded emails now preserve all attachments and inline images from the original email
+  - Attachments stored in base64 format for JSON serialization in Redis
+  - Inline images preserve their Content-ID (cid) for proper HTML rendering
+  - Both regular attachments and embedded images are included when forwarding
+
 ## [2.1.2] - 2025-12-05
 
 ### Added

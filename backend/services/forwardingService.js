@@ -25,6 +25,69 @@ const srsService = require('./srsService');
 const smtpService = require('./smtpService');
 
 /**
+ * Map SMTP errors to user-friendly error codes
+ * @param {Error} error - Original error from SMTP service
+ * @returns {string} - Error code for frontend handling
+ */
+const getSmtpErrorCode = (error) => {
+  const message = error.message?.toLowerCase() || '';
+  const code = error.code?.toLowerCase() || '';
+  const responseCode = error.responseCode;
+
+  // SMTP not initialized
+  if (message.includes('not initialized')) {
+    return 'SMTP_NOT_CONFIGURED';
+  }
+
+  // Connection errors
+  if (code === 'econnrefused' || code === 'enotfound' || code === 'etimedout') {
+    return 'SMTP_CONNECTION_FAILED';
+  }
+
+  // Authentication errors
+  if (responseCode === 535 || message.includes('authentication') || message.includes('auth')) {
+    return 'SMTP_AUTH_FAILED';
+  }
+
+  // Recipient rejected
+  if (responseCode === 550 || responseCode === 551 || responseCode === 552 || responseCode === 553) {
+    return 'RECIPIENT_REJECTED';
+  }
+
+  // Temporary failures (should retry)
+  if (responseCode >= 400 && responseCode < 500) {
+    return 'SMTP_TEMPORARY_FAILURE';
+  }
+
+  // Generic SMTP error
+  return 'SMTP_SEND_FAILED';
+};
+
+/**
+ * Map SMTP errors to user-friendly messages
+ * @param {Error} error - Original error from SMTP service
+ * @returns {string} - User-friendly error message
+ */
+const getSmtpErrorMessage = (error) => {
+  const code = getSmtpErrorCode(error);
+
+  switch (code) {
+    case 'SMTP_NOT_CONFIGURED':
+      return 'Email forwarding service is temporarily unavailable. Please try again later.';
+    case 'SMTP_CONNECTION_FAILED':
+      return 'Unable to connect to email server. Please try again in a few moments.';
+    case 'SMTP_AUTH_FAILED':
+      return 'Email server authentication error. Please contact support.';
+    case 'RECIPIENT_REJECTED':
+      return 'The destination email address was rejected. Please verify the email address is correct.';
+    case 'SMTP_TEMPORARY_FAILURE':
+      return 'Email server is temporarily busy. Please try again in a few moments.';
+    default:
+      return 'Failed to forward email. Please try again.';
+  }
+};
+
+/**
  * Request OTP for a destination email
  * @param {string} tempMailbox - Temporary mailbox
  * @param {string} destinationEmail - Destination email to validate
@@ -35,6 +98,14 @@ const requestOTP = async (tempMailbox, destinationEmail) => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(destinationEmail)) {
     throw new Error('Invalid email address format');
+  }
+
+  // SECURITY: Prevent forwarding to the same service domains (anti-spam relay)
+  const destinationDomain = destinationEmail.split('@')[1].toLowerCase();
+  const serviceDomains = config.validDomains.map(d => d.toLowerCase());
+  if (serviceDomains.includes(destinationDomain)) {
+    logger.warn(`Forwarding Service: Blocked forwarding to service domain: ${destinationDomain}`);
+    throw new Error('Cannot forward to temporary email addresses. Please use a permanent email address.');
   }
 
   // Check if mailbox is active
@@ -141,7 +212,7 @@ const forwardEmail = async (tempMailbox, messageId) => {
       tempMailbox,
     });
 
-    // Increment rate limit counter after successful forward
+    // Increment rate limit counter ONLY after successful forward
     await rateLimiter.incrementForwardCount(tempMailbox);
 
     logger.info(`Forwarding Service: Email ${messageId} forwarded to ${destination.destinationEmail}`);
@@ -154,7 +225,13 @@ const forwardEmail = async (tempMailbox, messageId) => {
     };
   } catch (error) {
     logger.error('Forwarding Service: Failed to forward email', error);
-    throw new Error('Failed to forward email. Please try again.');
+    
+    // Create error with specific details for better user feedback
+    // Rate limit is NOT incremented on failure (only after success above)
+    const forwardError = new Error(getSmtpErrorMessage(error));
+    forwardError.code = getSmtpErrorCode(error);
+    forwardError.originalError = error.message;
+    throw forwardError;
   }
 };
 
