@@ -37,6 +37,7 @@ describe('Blog Component', () => {
       </BrowserRouter>
     );
     
+    expect(screen.getByText('Forward & Forget: Real-World Use Cases for Email Forwarding')).toBeInTheDocument();
     expect(screen.getByText('What Are Temporary Email Addresses and How Do They Work?')).toBeInTheDocument();
     expect(screen.getByText('Email Privacy: Why It Matters and How to Protect It')).toBeInTheDocument();
     expect(screen.getByText('Email Security Best Practices')).toBeInTheDocument();
@@ -51,13 +52,14 @@ describe('Blog Component', () => {
     );
     
     const readMoreLinks = screen.getAllByText('Read More →');
-    expect(readMoreLinks).toHaveLength(4);
+    expect(readMoreLinks).toHaveLength(5);
     
     // Check that links point to the correct routes
-    expect(readMoreLinks[0].closest('a')).toHaveAttribute('href', '/blog/temporary-email-guide');
-    expect(readMoreLinks[1].closest('a')).toHaveAttribute('href', '/blog/email-privacy');
-    expect(readMoreLinks[2].closest('a')).toHaveAttribute('href', '/blog/email-security-best-practices');
-    expect(readMoreLinks[3].closest('a')).toHaveAttribute('href', '/blog/legal-side-of-email-privacy');
+    expect(readMoreLinks[0].closest('a')).toHaveAttribute('href', '/blog/email-forwarding-use-cases');
+    expect(readMoreLinks[1].closest('a')).toHaveAttribute('href', '/blog/temporary-email-guide');
+    expect(readMoreLinks[2].closest('a')).toHaveAttribute('href', '/blog/email-privacy');
+    expect(readMoreLinks[3].closest('a')).toHaveAttribute('href', '/blog/email-security-best-practices');
+    expect(readMoreLinks[4].closest('a')).toHaveAttribute('href', '/blog/legal-side-of-email-privacy');
   });
 
   test('renders ContentAwareAd components', () => {
