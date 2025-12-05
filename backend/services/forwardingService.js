@@ -127,9 +127,9 @@ const forwardEmail = async (tempMailbox, messageId) => {
     const rewritten = srsService.rewriteForForwarding(email);
     srsFrom = rewritten.srsFrom;
   } else {
-    // Fallback: use our domain if SRS not configured
-    srsFrom = `forwarding@${config.validDomains[0] || 'mailduck.io'}`;
-    logger.warn('Forwarding Service: SRS not configured, using fallback from address');
+    // Fallback: use SMTP_FROM_EMAIL if SRS not configured
+    srsFrom = config.smtp.fromEmail;
+    logger.warn('Forwarding Service: SRS not configured, using SMTP_FROM_EMAIL');
   }
 
   // Forward the email

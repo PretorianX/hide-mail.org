@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## [2.1.0] - 2025-12-05
 
+### Fixed
+- **Forwarded emails now use SMTP_FROM_EMAIL** - Fixed hardcoded `forwarding@` prefix in forwardingService.js when SRS is not configured. Now correctly uses `SMTP_FROM_EMAIL` environment variable (e.g., `noreply@hide-mail.org`)
+
 ### Changed
 - **SMTP architecture refactored** - Replaced Mailpit with Postfix for consistent email delivery
   - **Production**: Backend → Postfix → Internet (direct delivery to destination mail servers)
