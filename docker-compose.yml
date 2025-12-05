@@ -95,6 +95,7 @@ services:
     restart: unless-stopped
     networks:
       - internal
+      - default  # Required for external DNS resolution and outbound SMTP
 
   redis:
     image: redis:8-alpine

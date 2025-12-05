@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.1.1] - 2025-12-05
+
+### Fixed
+- **Postfix DNS resolution in production** - Added `default` network to postfix service. The `internal` network is isolated (`internal: true`), preventing DNS resolution for external domains (MX lookups for gmail.com, etc.)
+
 ## [2.1.0] - 2025-12-05
 
 ### Fixed
