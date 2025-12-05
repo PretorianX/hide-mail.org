@@ -267,7 +267,7 @@ const ContactUs = () => {
         <div>
           <h3 className="SectionTitle">How long do temporary emails last?</h3>
           <Paragraph className="Paragraph">
-            Our temporary email addresses automatically expire after 24 hours. After this period, any emails sent to that address will not be received.
+            Our temporary email addresses automatically expire after 30 minutes of inactivity. After this period, any emails sent to that address will not be received.
           </Paragraph>
           
           <h3 className="SectionTitle">Is this service completely free?</h3>
