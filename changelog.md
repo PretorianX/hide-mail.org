@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.1.2] - 2025-12-05
+
+### Added
+- **Forward & Forget marketing content** - Added feature promotion across the website
+  - Updated "Why Use Hide Mail?" sidebar section with Forward & Forget highlight
+  - Added Forward & Forget to Benefits, How It Works, and When to Use sections
+  - New FAQ entry explaining Forward & Forget feature
+  - Updated Best Practices and Privacy Tip sections
+  - New blog post: "Forward & Forget: 10 Smart Ways to Use Email Forwarding with Temporary Addresses"
+  - Updated About Us page with dedicated Forward & Forget section
+  - Added Forward & Forget to How It Works steps on About Us page
+
 ## [2.1.1] - 2025-12-05
 
 ### Fixed

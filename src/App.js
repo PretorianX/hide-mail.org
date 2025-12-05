@@ -437,6 +437,7 @@ function App() {
                           <li>🦆 Protect your privacy</li>
                           <li>🦆 Avoid spam in your personal inbox</li>
                           <li>🦆 Perfect for one-time signups</li>
+                          <li>🚀 <strong>Forward & Forget:</strong> Save important emails to your real inbox with one click</li>
                         </ul>
                       </div>
                       <DonateButton />
@@ -458,6 +459,7 @@ function App() {
                           <li><strong>No Registration:</strong> Use our service instantly without creating an account or providing personal information.</li>
                           <li><strong>Security:</strong> Protect yourself from phishing attempts by using disposable emails for untrusted websites.</li>
                           <li><strong>Simplicity:</strong> Our user-friendly interface makes it easy to generate and manage temporary email addresses.</li>
+                          <li><strong>Forward & Forget:</strong> Our unique feature lets you save important emails to your real inbox with one click—stay anonymous while never missing what matters.</li>
                         </ul>
                       </div>
                       <div className="info-content-column">
@@ -467,6 +469,7 @@ function App() {
                           <li><strong>Use:</strong> Provide this email address when signing up for services or newsletters.</li>
                           <li><strong>Receive:</strong> All incoming messages appear instantly in your temporary inbox.</li>
                           <li><strong>Read:</strong> View message content directly in our secure interface.</li>
+                          <li><strong>Forward & Forget:</strong> Click to forward important emails to your real inbox—verify once via OTP, no account needed.</li>
                           <li><strong>Expire:</strong> After the set period, the email address expires and all data is deleted.</li>
                         </ol>
                         
@@ -478,6 +481,7 @@ function App() {
                           <li>Downloading content that requires email verification</li>
                           <li>Testing your own email marketing campaigns</li>
                           <li>Protecting your identity when using public Wi-Fi</li>
+                          <li>Receiving confirmation emails and forwarding only what you need to keep</li>
                         </ul>
                       </div>
                     </div>
@@ -496,6 +500,10 @@ function App() {
                         <div className="faq-item">
                           <h4>Can I send emails from my temporary address?</h4>
                           <p>Hide Mail is primarily designed for receiving emails. While some temporary email services offer sending capabilities, our focus is on providing secure, anonymous inboxes for receiving messages.</p>
+                        </div>
+                        <div className="faq-item">
+                          <h4>What is Forward & Forget?</h4>
+                          <p>Forward & Forget is our unique feature that lets you save important emails to your real inbox with one click. Simply verify your real email address via OTP (no account needed), and you can forward any email you want to keep—staying anonymous while never missing what matters.</p>
                         </div>
                         <div className="faq-item">
                           <h4>Is using a temporary email legal?</h4>
@@ -535,6 +543,7 @@ function App() {
                             <li>Free downloads</li>
                             <li>One-time verifications</li>
                             <li>Testing your own applications</li>
+                            <li>Receiving confirmations and forwarding the important ones</li>
                           </ul>
                         </div>
                         <div className="best-practice-item">
@@ -551,7 +560,7 @@ function App() {
                       
                       <div className="privacy-tip">
                         <h4>Privacy Tip</h4>
-                        <p>For maximum privacy protection, consider using a combination of temporary email addresses and a VPN service when signing up for online services. This provides an additional layer of anonymity by masking both your email identity and IP address.</p>
+                        <p>For maximum privacy protection, consider using a combination of temporary email addresses and a VPN service when signing up for online services. This provides an additional layer of anonymity by masking both your email identity and IP address. With Forward & Forget, you can stay completely anonymous yet still save critical emails like confirmations or receipts to your real inbox—best of both worlds!</p>
                       </div>
                     </div>
                     

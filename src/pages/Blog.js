@@ -92,6 +92,13 @@ const AdContainer = styled.div`
 const Blog = () => {
   const blogPosts = [
     {
+      id: 'email-forwarding-use-cases',
+      title: 'Forward & Forget: 10 Smart Ways to Use Email Forwarding with Temporary Addresses',
+      excerpt: 'Discover how Hide Mail\'s unique Forward & Forget feature lets you stay anonymous while saving important emails to your real inbox—no account required.',
+      image: '/images/blog/email-forwarding-use-cases.jpg',
+      date: 'December 5, 2024'
+    },
+    {
       id: 'temporary-email-guide',
       title: 'What Are Temporary Email Addresses and How Do They Work?',
       excerpt: 'A beginner-friendly guide that explains the concept of temporary email addresses and how they function, including step-by-step instructions for using Hide Mail.',

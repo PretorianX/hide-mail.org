@@ -71,7 +71,27 @@ const AboutUs = () => {
           <ListItem className="ListItem">Choose from multiple domain options</ListItem>
           <ListItem className="ListItem">Protect your privacy online</ListItem>
           <ListItem className="ListItem">Avoid spam in your personal inbox</ListItem>
+          <ListItem className="ListItem"><strong>Forward & Forget:</strong> Save important emails to your real inbox with one click</ListItem>
         </List>
+      </Section>
+
+      <Section className="Section">
+        <SectionTitle className="SectionTitle">Forward & Forget: Our Game-Changing Feature</SectionTitle>
+        <Paragraph className="Paragraph">
+          We're proud to introduce <strong>Forward & Forget</strong>—a revolutionary feature that solves the biggest limitation of temporary email services: losing important emails when your inbox expires.
+        </Paragraph>
+        <Paragraph className="Paragraph">
+          With Forward & Forget, you can selectively forward important emails (like order confirmations, tickets, or verification codes) to your real inbox with just one click. Here's what makes it special:
+        </Paragraph>
+        <List className="List">
+          <ListItem className="ListItem"><strong>No Account Required:</strong> Simply verify your email with a one-time code (OTP). No sign-ups, no passwords to remember.</ListItem>
+          <ListItem className="ListItem"><strong>Privacy-First Design:</strong> Verification is tied only to your current temporary mailbox. Each new temp address requires fresh verification—no long-term tracking.</ListItem>
+          <ListItem className="ListItem"><strong>Selective Control:</strong> You choose exactly which emails to forward. No automatic forwarding means complete control over what reaches your real inbox.</ListItem>
+          <ListItem className="ListItem"><strong>Automatic Cleanup:</strong> When your temporary mailbox expires, all forwarding data is automatically deleted.</ListItem>
+        </List>
+        <Paragraph className="Paragraph">
+          Forward & Forget gives you the best of both worlds: the anonymity of a disposable email address combined with the ability to save what actually matters.
+        </Paragraph>
       </Section>
 
       <Section className="Section">
@@ -83,10 +103,11 @@ const AboutUs = () => {
           <ListItem className="ListItem"><strong>Step 1:</strong> Visit our website and get a randomly generated temporary email address</ListItem>
           <ListItem className="ListItem"><strong>Step 2:</strong> Use this email address when signing up for services, downloading resources, or anywhere you need an email but don't want to use your personal one</ListItem>
           <ListItem className="ListItem"><strong>Step 3:</strong> Receive and view emails sent to your temporary address directly on our website</ListItem>
-          <ListItem className="ListItem"><strong>Step 4:</strong> When you're done, simply close the browser or let the email address expire automatically</ListItem>
+          <ListItem className="ListItem"><strong>Step 4:</strong> Use Forward & Forget to save important emails—verify your real email once with a one-time code, then forward any email you want to keep</ListItem>
+          <ListItem className="ListItem"><strong>Step 5:</strong> When you're done, simply close the browser or let the email address expire automatically</ListItem>
         </List>
         <Paragraph className="Paragraph">
-          All emails are automatically deleted after 24 hours, ensuring your privacy and keeping our service clean and efficient.
+          All emails are automatically deleted after 24 hours, ensuring your privacy and keeping our service clean and efficient. But with Forward & Forget, you never have to worry about losing important messages—save them to your real inbox before they expire!
         </Paragraph>
       </Section>
 
