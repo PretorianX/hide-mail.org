@@ -84,6 +84,8 @@ services:
       - ALLOW_EMPTY_SENDER_DOMAINS=true
       - POSTFIX_myhostname=${POSTFIX_HOSTNAME:-mail.hide-mail.org}
       - POSTFIX_mynetworks=10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 127.0.0.0/8
+      # Allow relaying from mynetworks to any destination (safe: all goes to Mailpit)
+      - POSTFIX_smtpd_recipient_restrictions=permit_mynetworks,reject
       - POSTFIX_message_size_limit=26214400
       # Relay all outgoing mail to Mailpit for inspection
       - RELAYHOST=mailpit:1025

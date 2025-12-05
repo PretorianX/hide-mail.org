@@ -79,6 +79,8 @@ services:
       # Accept connections from internal Docker network only
       - POSTFIX_myhostname=${POSTFIX_HOSTNAME:-mail.hide-mail.org}
       - POSTFIX_mynetworks=10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 127.0.0.0/8
+      # Allow relaying from mynetworks to any destination
+      - POSTFIX_smtpd_recipient_restrictions=permit_mynetworks,reject
       # Message size limit (25MB)
       - POSTFIX_message_size_limit=26214400
       # TLS for outgoing connections
