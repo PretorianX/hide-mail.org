@@ -80,7 +80,8 @@ services:
     image: boky/postfix:v4.4.0
     environment:
       - HOSTNAME=${POSTFIX_HOSTNAME:-mail.hide-mail.org}
-      - ALLOWED_SENDER_DOMAINS=${VALID_DOMAINS}
+      # In dev mode, allow any sender since all mail goes to Mailpit anyway
+      - ALLOW_EMPTY_SENDER_DOMAINS=true
       - POSTFIX_myhostname=${POSTFIX_HOSTNAME:-mail.hide-mail.org}
       - POSTFIX_mynetworks=10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 127.0.0.0/8
       - POSTFIX_message_size_limit=26214400
