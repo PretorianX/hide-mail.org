@@ -40,11 +40,25 @@ const createTransporter = () => {
     host: config.smtp.host,
     port: config.smtp.port,
     secure: config.smtp.secure,
-    auth: {
+  };
+
+  // Only add auth if credentials are provided
+  if (config.smtp.user && config.smtp.pass) {
+    transportConfig.auth = {
       user: config.smtp.user,
       pass: config.smtp.pass,
-    },
-  };
+    };
+  }
+
+  // For internal Docker network communication (e.g., to Postfix),
+  // we need to handle self-signed certificates
+  // In production, Postfix uses self-signed certs for internal STARTTLS
+  if (!config.smtp.secure) {
+    transportConfig.tls = {
+      // Accept self-signed certificates (safe for internal Docker network)
+      rejectUnauthorized: false,
+    };
+  }
 
   // Add DKIM configuration if available
   const dkimConfig = getDkimConfig();
