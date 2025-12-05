@@ -1,30 +1,7 @@
 /**
- * Configuration loader with strict validation - no fallbacks
+ * Configuration loader - uses runtime config and environment variables only
+ * No JSON fallbacks - all config must be provided via env vars or runtime config
  */
-
-// Import default config directly
-import defaultConfig from '../config/default.json';
-
-// Try to import environment-specific config
-let envConfig = {};
-try {
-  // Dynamic import not supported in Jest tests, use conditional require
-  const env = process.env.NODE_ENV || 'development';
-  if (env === 'development') {
-    envConfig = require('../config/development.json');
-  } else if (env === 'production') {
-    envConfig = require('../config/production.json');
-  } else if (env === 'test') {
-    // For test environment, use environment variables or default test values
-    envConfig = {
-      email: {
-        domains: (process.env.VALID_DOMAINS || 'test.com,test.org').split(',')
-      }
-    };
-  }
-} catch (error) {
-  console.warn(`Failed to load environment config: ${error.message}`);
-}
 
 /**
  * Get configuration value - throws error if not found
@@ -33,9 +10,9 @@ try {
  * @throws {Error} If configuration value is not found
  */
 export function getConfig(path) {
-  // In browser environment
+  // In browser environment - check runtime config first
   if (typeof window !== 'undefined') {
-    // Try to get from runtime config
+    // Try to get from runtime config (injected by env-config.sh)
     if (window.__RUNTIME_CONFIG__) {
       const runtimeValue = getValueByPath(window.__RUNTIME_CONFIG__, path);
       if (runtimeValue !== undefined) {
@@ -43,23 +20,15 @@ export function getConfig(path) {
       }
     }
     
-    // Try to get from process.env (for Create React App)
+    // Try to get from process.env (for Create React App REACT_APP_* vars)
     const envKey = `REACT_APP_${path.toUpperCase().replace(/\./g, '_')}`;
     if (process.env[envKey] !== undefined) {
       return process.env[envKey];
     }
-  } 
+  }
 
-  // Try environment-specific config
-  const envValue = getValueByPath(envConfig, path);
-  if (envValue !== undefined) return envValue;
-  
-  // Try default config
-  const defaultValue = getValueByPath(defaultConfig, path);
-  if (defaultValue !== undefined) return defaultValue;
-  
-  // No fallbacks - throw error
-  throw new Error(`Configuration not found: ${path}`);
+  // No config found - throw error (no fallbacks)
+  throw new Error(`Configuration not found: ${path}. Ensure runtime config is loaded or REACT_APP_${path.toUpperCase().replace(/\./g, '_')} env var is set.`);
 }
 
 /**
@@ -72,4 +41,4 @@ function getValueByPath(obj, path) {
   return path.split('.').reduce((prev, curr) => {
     return prev && prev[curr] !== undefined ? prev[curr] : undefined;
   }, obj);
-} 
+}

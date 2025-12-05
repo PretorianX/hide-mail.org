@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.4] - 2025-12-05
+
+### Removed
+- **Deleted JSON config files** (2025-12-05)
+  - Removed `/config` folder (default.json, development.json, production.json) - was unused
+  - Removed `/src/config` folder (default.json, development.json, production.json)
+  - All configuration now comes exclusively from runtime config (`window.__RUNTIME_CONFIG__`) injected by `env-config.sh` or `REACT_APP_*` environment variables
+  - Simplified `configLoader.js` - no JSON imports, no fallbacks
+  - Fixed incorrect production API URL (`api.tempmail-service.com`) that was never used
+
+---
+
 ## [2.0.3] - 2025-12-05
 
 ### Changed
