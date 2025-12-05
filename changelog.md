@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.1.6] - 2025-12-05
+
+### Security
+- **Fixed ReDoS vulnerability in email validation** - Added input length validation (RFC 5321 max 254 chars) before regex execution in forwarding service to prevent polynomial regex attacks on uncontrolled data
+- **Added rate limiting to debug endpoints** - All development-only endpoints now have rate limiting middleware applied, even though they return 404 in production
+
 ## [2.1.5] - 2025-12-05
 
 ### Fixed

@@ -68,7 +68,7 @@ router.get('/messages', apiRateLimiter.emailFetch, async (req, res) => {
 });
 
 // Debug endpoint to check Redis data - DEVELOPMENT ONLY
-router.get('/debug/redis', async (req, res) => {
+router.get('/debug/redis', apiRateLimiter.default, async (req, res) => {
   if (!isDevelopment()) {
     return res.status(404).json({ error: 'Not found' });
   }
@@ -100,7 +100,7 @@ router.get('/debug/redis', async (req, res) => {
 });
 
 // Redis connection test endpoint - DEVELOPMENT ONLY
-router.get('/debug/redis-connection', async (req, res) => {
+router.get('/debug/redis-connection', apiRateLimiter.default, async (req, res) => {
   if (!isDevelopment()) {
     return res.status(404).json({ error: 'Not found' });
   }
@@ -130,7 +130,7 @@ router.get('/debug/redis-connection', async (req, res) => {
 });
 
 // Test email endpoint - DEVELOPMENT ONLY
-router.post('/test-email', async (req, res) => {
+router.post('/test-email', apiRateLimiter.default, async (req, res) => {
   if (!isDevelopment()) {
     return res.status(404).json({ error: 'Not found' });
   }
@@ -220,7 +220,7 @@ Content-Transfer-Encoding: 8bit
 });
 
 // Test endpoint to check Redis key structure - DEVELOPMENT ONLY
-router.get('/debug/redis-keys', async (req, res) => {
+router.get('/debug/redis-keys', apiRateLimiter.default, async (req, res) => {
   if (!isDevelopment()) {
     return res.status(404).json({ error: 'Not found' });
   }

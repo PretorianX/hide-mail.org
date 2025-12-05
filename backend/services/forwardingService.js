@@ -94,7 +94,14 @@ const getSmtpErrorMessage = (error) => {
  * @returns {Promise<Object>} - Request result
  */
 const requestOTP = async (tempMailbox, destinationEmail) => {
-  // Validate email format
+  // SECURITY: Validate input length before regex to prevent ReDoS attacks
+  // RFC 5321 specifies max email length of 254 characters
+  const MAX_EMAIL_LENGTH = 254;
+  if (!destinationEmail || typeof destinationEmail !== 'string' || destinationEmail.length > MAX_EMAIL_LENGTH) {
+    throw new Error('Invalid email address format');
+  }
+
+  // Validate email format (safe after length check)
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(destinationEmail)) {
     throw new Error('Invalid email address format');
