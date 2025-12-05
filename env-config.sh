@@ -1,106 +1,167 @@
 #!/bin/bash
+set -euo pipefail
 
-# Define required environment variables
-REQUIRED_VARS=(
-  "VALID_DOMAINS"
-  "CONFIG_EMAIL_EXPIRATIONTIME"
-  "CONFIG_EMAIL_EXTENSIONTIME"
-  "CONFIG_API_URL"
-  "CONFIG_API_TIMEOUT"
-)
+# =============================================================================
+# Runtime Environment Configuration Script
+# Generates /usr/share/nginx/html/runtime-env.js from environment variables
+# =============================================================================
 
-# Check for missing variables
-MISSING_VARS=()
-for var in "${REQUIRED_VARS[@]}"; do
-  if [ -z "${!var}" ]; then
-    MISSING_VARS+=("$var")
+readonly ENV_FILE="/usr/share/nginx/html/runtime-env.js"
+readonly JS_DIR="/usr/share/nginx/html/static/js"
+
+# -----------------------------------------------------------------------------
+# Validation Functions
+# -----------------------------------------------------------------------------
+
+validate_required_vars() {
+  local missing_vars=()
+  local required_vars=(
+    "VALID_DOMAINS"
+    "CONFIG_EMAIL_EXPIRATIONTIME"
+    "CONFIG_EMAIL_EXTENSIONTIME"
+    "CONFIG_API_URL"
+    "CONFIG_API_TIMEOUT"
+  )
+
+  for var in "${required_vars[@]}"; do
+    if [[ -z "${!var:-}" ]]; then
+      missing_vars+=("$var")
+    fi
+  done
+
+  if [[ ${#missing_vars[@]} -ne 0 ]]; then
+    echo "ERROR: Missing required environment variables: ${missing_vars[*]}" >&2
+    exit 1
   fi
-done
+}
 
-# If any variables are missing, exit with error
-if [ ${#MISSING_VARS[@]} -ne 0 ]; then
-  echo "ERROR: Missing required environment variables: ${MISSING_VARS[*]}"
-  exit 1
-fi
-
-# Convert comma-separated domains to JSON array
-DOMAINS_JSON="[$(echo $VALID_DOMAINS | sed 's/,/","/g' | sed 's/^/"/' | sed 's/$/"/' )]"
-
-# Define the directory where your JS files are located
-JS_DIR="/usr/share/nginx/html/static/js"
-
-# Create a JavaScript file that will hold the runtime environment variables
-ENV_FILE="/usr/share/nginx/html/runtime-env.js"
-
-# Create or clear the file
-echo "// Runtime environment variables" > $ENV_FILE
-echo "window.__RUNTIME_CONFIG__ = {" >> $ENV_FILE
-
-# Add email configuration
-echo "  email: {" >> $ENV_FILE
-echo "    domains: $DOMAINS_JSON," >> $ENV_FILE
-echo "    expirationTime: $CONFIG_EMAIL_EXPIRATIONTIME," >> $ENV_FILE
-echo "    extensionTime: $CONFIG_EMAIL_EXTENSIONTIME," >> $ENV_FILE
-echo "  }," >> $ENV_FILE
-
-# Add API configuration
-echo "  api: {" >> $ENV_FILE
-echo "    url: '$CONFIG_API_URL'," >> $ENV_FILE
-echo "    timeout: $CONFIG_API_TIMEOUT," >> $ENV_FILE
-echo "  }," >> $ENV_FILE
-
-# Add AdSense configuration if available
-if [ ! -z "$REACT_APP_ADSENSE_CLIENT" ]; then
-  echo "  adsense: {" >> $ENV_FILE
-  echo "    client: '$REACT_APP_ADSENSE_CLIENT'," >> $ENV_FILE
+validate_numeric() {
+  local var_name="$1"
+  local value="${!var_name:-}"
   
-  # Add AdSense slot IDs if available
-  if [ ! -z "$REACT_APP_ADSENSE_SLOT_TOP_BANNER" ] || \
-     [ ! -z "$REACT_APP_ADSENSE_SLOT_TOP_PAGE_AD" ] || \
-     [ ! -z "$REACT_APP_ADSENSE_SLOT_BOTTOM_PAGE_AD" ] || \
-     [ ! -z "$REACT_APP_ADSENSE_SLOT_SIDEBAR_RECTANGLE" ] || \
-     [ ! -z "$REACT_APP_ADSENSE_SLOT_MIDDLE_BANNER" ] || \
-     [ ! -z "$REACT_APP_ADSENSE_SLOT_BEFORE_FOOTER" ] || \
-     [ ! -z "$REACT_APP_ADSENSE_SLOT_FOOTER" ] || \
-     [ ! -z "$REACT_APP_ADSENSE_SLOT_BLOG_TOP" ] || \
-     [ ! -z "$REACT_APP_ADSENSE_SLOT_BLOG_BOTTOM" ] || \
-     [ ! -z "$REACT_APP_ADSENSE_SLOT_BLOG_POST_TOP" ] || \
-     [ ! -z "$REACT_APP_ADSENSE_SLOT_BLOG_POST_MIDDLE" ] || \
-     [ ! -z "$REACT_APP_ADSENSE_SLOT_BLOG_POST_BOTTOM" ]; then
-    echo "    slots: {" >> $ENV_FILE
-    [ ! -z "$REACT_APP_ADSENSE_SLOT_TOP_BANNER" ] && echo "      topBanner: '$REACT_APP_ADSENSE_SLOT_TOP_BANNER'," >> $ENV_FILE
-    [ ! -z "$REACT_APP_ADSENSE_SLOT_TOP_PAGE_AD" ] && echo "      topPageAd: '$REACT_APP_ADSENSE_SLOT_TOP_PAGE_AD'," >> $ENV_FILE
-    [ ! -z "$REACT_APP_ADSENSE_SLOT_BOTTOM_PAGE_AD" ] && echo "      bottomPageAd: '$REACT_APP_ADSENSE_SLOT_BOTTOM_PAGE_AD'," >> $ENV_FILE
-    [ ! -z "$REACT_APP_ADSENSE_SLOT_SIDEBAR_RECTANGLE" ] && echo "      sidebarRectangle: '$REACT_APP_ADSENSE_SLOT_SIDEBAR_RECTANGLE'," >> $ENV_FILE
-    [ ! -z "$REACT_APP_ADSENSE_SLOT_MIDDLE_BANNER" ] && echo "      middleBanner: '$REACT_APP_ADSENSE_SLOT_MIDDLE_BANNER'," >> $ENV_FILE
-    [ ! -z "$REACT_APP_ADSENSE_SLOT_BEFORE_FOOTER" ] && echo "      beforeFooter: '$REACT_APP_ADSENSE_SLOT_BEFORE_FOOTER'," >> $ENV_FILE
-    [ ! -z "$REACT_APP_ADSENSE_SLOT_FOOTER" ] && echo "      footer: '$REACT_APP_ADSENSE_SLOT_FOOTER'," >> $ENV_FILE
-    [ ! -z "$REACT_APP_ADSENSE_SLOT_BLOG_TOP" ] && echo "      blogTop: '$REACT_APP_ADSENSE_SLOT_BLOG_TOP'," >> $ENV_FILE
-    [ ! -z "$REACT_APP_ADSENSE_SLOT_BLOG_BOTTOM" ] && echo "      blogBottom: '$REACT_APP_ADSENSE_SLOT_BLOG_BOTTOM'," >> $ENV_FILE
-    [ ! -z "$REACT_APP_ADSENSE_SLOT_BLOG_POST_TOP" ] && echo "      blogPostTop: '$REACT_APP_ADSENSE_SLOT_BLOG_POST_TOP'," >> $ENV_FILE
-    [ ! -z "$REACT_APP_ADSENSE_SLOT_BLOG_POST_MIDDLE" ] && echo "      blogPostMiddle: '$REACT_APP_ADSENSE_SLOT_BLOG_POST_MIDDLE'," >> $ENV_FILE
-    [ ! -z "$REACT_APP_ADSENSE_SLOT_BLOG_POST_BOTTOM" ] && echo "      blogPostBottom: '$REACT_APP_ADSENSE_SLOT_BLOG_POST_BOTTOM'," >> $ENV_FILE
-    echo "    }," >> $ENV_FILE
+  if [[ -n "$value" ]] && ! [[ "$value" =~ ^[0-9]+$ ]]; then
+    echo "ERROR: $var_name must be a positive integer, got: '$value'" >&2
+    exit 1
   fi
+}
+
+# -----------------------------------------------------------------------------
+# JSON Generation Functions
+# -----------------------------------------------------------------------------
+
+domains_to_json_array() {
+  local domains="$1"
+  echo "$domains" | sed 's/,/","/g; s/^/["/; s/$/"]/'
+}
+
+generate_adsense_slots_json() {
+  local slots=""
+  local slot_mappings=(
+    "REACT_APP_ADSENSE_SLOT_TOP_BANNER:topBanner"
+    "REACT_APP_ADSENSE_SLOT_TOP_PAGE_AD:topPageAd"
+    "REACT_APP_ADSENSE_SLOT_BOTTOM_PAGE_AD:bottomPageAd"
+    "REACT_APP_ADSENSE_SLOT_SIDEBAR_RECTANGLE:sidebarRectangle"
+    "REACT_APP_ADSENSE_SLOT_MIDDLE_BANNER:middleBanner"
+    "REACT_APP_ADSENSE_SLOT_BEFORE_FOOTER:beforeFooter"
+    "REACT_APP_ADSENSE_SLOT_FOOTER:footer"
+    "REACT_APP_ADSENSE_SLOT_BLOG_TOP:blogTop"
+    "REACT_APP_ADSENSE_SLOT_BLOG_BOTTOM:blogBottom"
+    "REACT_APP_ADSENSE_SLOT_BLOG_POST_TOP:blogPostTop"
+    "REACT_APP_ADSENSE_SLOT_BLOG_POST_MIDDLE:blogPostMiddle"
+    "REACT_APP_ADSENSE_SLOT_BLOG_POST_BOTTOM:blogPostBottom"
+  )
+
+  for mapping in "${slot_mappings[@]}"; do
+    local env_var="${mapping%%:*}"
+    local json_key="${mapping##*:}"
+    local value="${!env_var:-}"
+    
+    if [[ -n "$value" ]]; then
+      slots+="      $json_key: '$value',\n"
+    fi
+  done
+
+  echo -e "$slots"
+}
+
+generate_runtime_config() {
+  local domains_json
+  domains_json=$(domains_to_json_array "$VALID_DOMAINS")
+
+  cat > "$ENV_FILE" << EOF
+// Runtime environment variables - generated at container startup
+window.__RUNTIME_CONFIG__ = {
+  email: {
+    domains: $domains_json,
+    expirationTime: $CONFIG_EMAIL_EXPIRATIONTIME,
+    extensionTime: $CONFIG_EMAIL_EXTENSIONTIME,
+  },
+  api: {
+    url: '$CONFIG_API_URL',
+    timeout: $CONFIG_API_TIMEOUT,
+  },
+EOF
+
+  # Add AdSense configuration if client ID is set
+  if [[ -n "${REACT_APP_ADSENSE_CLIENT:-}" ]]; then
+    local slots_json
+    slots_json=$(generate_adsense_slots_json)
+    
+    echo "  adsense: {" >> "$ENV_FILE"
+    echo "    client: '$REACT_APP_ADSENSE_CLIENT'," >> "$ENV_FILE"
+    
+    if [[ -n "$slots_json" ]]; then
+      echo "    slots: {" >> "$ENV_FILE"
+      echo -e "$slots_json" >> "$ENV_FILE"
+      echo "    }," >> "$ENV_FILE"
+    fi
+    
+    echo "  }," >> "$ENV_FILE"
+  fi
+
+  echo "};" >> "$ENV_FILE"
+}
+
+# -----------------------------------------------------------------------------
+# File Patching Functions
+# -----------------------------------------------------------------------------
+
+patch_adsense_client_id() {
+  local client_id="${REACT_APP_ADSENSE_CLIENT:-}"
   
-  echo "  }," >> $ENV_FILE
-fi
+  if [[ -z "$client_id" ]]; then
+    return
+  fi
 
-# Close the config object
-echo "};" >> $ENV_FILE
-
-# Update the adsense-config.js file with the correct client ID if needed
-if [ ! -z "$REACT_APP_ADSENSE_CLIENT" ]; then
   echo "Updating AdSense configuration..."
-  
-  # Update any hardcoded client IDs in JS files
-  find $JS_DIR -type f -name "*.js" -exec sed -i "s|ca-pub-YOURPUBID|$REACT_APP_ADSENSE_CLIENT|g" {} \;
-  find $JS_DIR -type f -name "*.js" -exec sed -i "s|\"ca-pub-YOURPUBID\"|\"$REACT_APP_ADSENSE_CLIENT\"|g" {} \;
-  
-  # Make sure the adsense-config.js file has the correct client ID
-  if [ -f "/usr/share/nginx/html/adsense-config.js" ]; then
-    sed -i "s|ca-pub-YOURPUBID|$REACT_APP_ADSENSE_CLIENT|g" /usr/share/nginx/html/adsense-config.js
-  fi
-fi
 
-echo "Environment variables injected to $ENV_FILE" 
+  # Update hardcoded client IDs in JS files
+  find "$JS_DIR" -type f -name "*.js" -exec \
+    sed -i "s|ca-pub-YOURPUBID|$client_id|g" {} \;
+
+  # Update adsense-config.js if it exists
+  local adsense_config="/usr/share/nginx/html/adsense-config.js"
+  if [[ -f "$adsense_config" ]]; then
+    sed -i "s|ca-pub-YOURPUBID|$client_id|g" "$adsense_config"
+  fi
+}
+
+# -----------------------------------------------------------------------------
+# Main
+# -----------------------------------------------------------------------------
+
+main() {
+  echo "Generating runtime environment configuration..."
+
+  validate_required_vars
+  validate_numeric "CONFIG_EMAIL_EXPIRATIONTIME"
+  validate_numeric "CONFIG_EMAIL_EXTENSIONTIME"
+  validate_numeric "CONFIG_API_TIMEOUT"
+
+  generate_runtime_config
+  patch_adsense_client_id
+
+  echo "Environment variables injected to $ENV_FILE"
+}
+
+main "$@"

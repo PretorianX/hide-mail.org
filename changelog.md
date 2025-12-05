@@ -2,6 +2,33 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.2] - 2025-12-05
+
+### Changed
+- **Refactored env-config.sh for maintainability** (2025-12-05)
+  - Separated validation, JSON generation, and file patching into distinct functions
+  - Added numeric validation for CONFIG_EMAIL_EXPIRATIONTIME, CONFIG_EMAIL_EXTENSIONTIME, CONFIG_API_TIMEOUT
+  - Replaced 12 repetitive AdSense slot conditionals with declarative mapping array
+  - Added strict mode (`set -euo pipefail`) for fail-fast behavior
+  - Used heredoc for cleaner multi-line JSON template generation
+  - Fixed docker-entrypoint.sh to use correct script path directly
+  - Removed unnecessary sed patch command from Dockerfile
+
+- **Centralized configuration in .env file** (2025-12-05)
+  - Created `.env.example` with all configurable variables and documentation
+  - Updated `docker-compose.yml` and `docker-compose-dev.yml` to use .env variables
+  - All hardcoded values now have defaults via `${VAR:-default}` syntax
+  - Single source of truth for all environment configuration
+
+### Removed
+- **Deleted unnecessary shell scripts** (2025-12-05)
+  - `env.sh` - legacy script superseded by env-config.sh
+  - `extract-styled-components.sh` - one-time dev utility, already used
+  - `fix-imports.sh` - one-time migration script, no longer needed
+  - `run-docker-compose.sh` - unnecessary wrapper, use `docker compose up -d` directly
+
+---
+
 ## [2.0.1] - 2025-12-04
 
 ### Added

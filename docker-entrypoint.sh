@@ -1,8 +1,8 @@
-#!/bin/sh
+#!/bin/bash
 set -e
 
 # Run the environment configuration script
-/usr/share/nginx/html/env-config.sh
+/env-config.sh
 
 # Start nginx
-nginx -g "daemon off;" 
+exec nginx -g "daemon off;"

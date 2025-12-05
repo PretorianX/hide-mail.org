@@ -36,9 +36,6 @@ RUN chmod +x /env-config.sh
 COPY ./docker-entrypoint.sh /
 RUN chmod +x /docker-entrypoint.sh
 
-# Update the docker-entrypoint.sh to use the env-config.sh from the root directory
-RUN sed -i 's|/usr/share/nginx/html/env-config.sh|/env-config.sh|g' /docker-entrypoint.sh
-
 # Add metadata labels following OCI image spec
 LABEL org.opencontainers.image.source="https://github.com/${GITHUB_REPOSITORY}"
 LABEL org.opencontainers.image.description="Hide Mail - disposable email service frontend"
