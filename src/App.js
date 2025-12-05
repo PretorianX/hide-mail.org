@@ -408,6 +408,7 @@ function App() {
                               messages={messages}
                               onSelectMessage={handleSelectMessage}
                               selectedMessageId={selectedMessageId}
+                              tempMailbox={email}
                             />
                           ) : (
                             <p>Your inbox is empty. Messages will appear here when you receive them.</p>

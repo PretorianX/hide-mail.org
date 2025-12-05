@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import './MessageList.css';
 import EmailModal from './EmailModal';
 
-const MessageList = ({ messages, onSelectMessage, selectedMessageId }) => {
+const MessageList = ({ messages, onSelectMessage, selectedMessageId, tempMailbox }) => {
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState(null);
 
@@ -78,6 +78,7 @@ const MessageList = ({ messages, onSelectMessage, selectedMessageId }) => {
         message={selectedMessage}
         isOpen={modalOpen}
         onClose={handleCloseModal}
+        tempMailbox={tempMailbox}
       />
     </div>
   );

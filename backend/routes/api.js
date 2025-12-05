@@ -1,5 +1,6 @@
 const express = require('express');
 const emailController = require('../controllers/emailController');
+const forwardingController = require('../controllers/forwardingController');
 const redisService = require('../services/redisService');
 const logger = require('../utils/logger');
 const { v4: uuidv4 } = require('uuid');
@@ -230,5 +231,32 @@ router.get('/debug/redis-keys', async (req, res) => {
     });
   }
 });
+
+// ============================================================================
+// Forward & Forget Routes
+// Privacy-focused email forwarding with OTP validation
+// ============================================================================
+
+// Request OTP for destination email validation
+// POST /api/forwarding/request-otp
+// Body: { tempMailbox: "user@domain.com", destinationEmail: "real@email.com" }
+router.post('/forwarding/request-otp', forwardingController.requestOTP);
+
+// Verify OTP and activate forwarding
+// POST /api/forwarding/verify-otp
+// Body: { tempMailbox: "user@domain.com", destinationEmail: "real@email.com", otp: "123456" }
+router.post('/forwarding/verify-otp', forwardingController.verifyOTP);
+
+// Forward a specific message to validated destination
+// POST /api/forwarding/forward/:email/:messageId
+router.post('/forwarding/forward/:email/:messageId', forwardingController.forwardMessage);
+
+// Get forwarding status (destination, rate limit, etc.)
+// GET /api/forwarding/status/:email
+router.get('/forwarding/status/:email', forwardingController.getForwardingStatus);
+
+// Clear forwarding configuration
+// DELETE /api/forwarding/:email
+router.delete('/forwarding/:email', forwardingController.clearForwarding);
 
 module.exports = router; 

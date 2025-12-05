@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import SafeEmailViewer from './SafeEmailViewer';
 import EmailService from '../services/EmailService';
+import ForwardButton from './ForwardButton';
 
 const ModalOverlay = styled.div`
   position: fixed;
@@ -47,6 +48,15 @@ const ModalDetails = styled.div`
   color: #666;
 `;
 
+const ModalActions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #eee;
+`;
+
 const ModalBody = styled.div`
   padding: 20px;
   overflow-y: auto;
@@ -83,9 +93,10 @@ const LoadingIndicator = styled.div`
  * @param {Object} props.message - The email message object
  * @param {boolean} props.isOpen - Whether the modal is open
  * @param {Function} props.onClose - Function to call when closing the modal
+ * @param {string} props.tempMailbox - The temporary mailbox address (for Forward & Forget feature)
  * @returns {React.ReactElement|null} - Rendered component or null if not open
  */
-const EmailModal = ({ message, isOpen, onClose }) => {
+const EmailModal = ({ message, isOpen, onClose, tempMailbox }) => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -118,6 +129,15 @@ const EmailModal = ({ message, isOpen, onClose }) => {
             <div>From: {message.from}</div>
             <div>Received: {formatDate(message.date || message.receivedAt || message.timestamp)}</div>
           </ModalDetails>
+          {/* Forward & Forget - Save email to your personal inbox */}
+          {tempMailbox && (
+            <ModalActions>
+              <ForwardButton 
+                tempMailbox={tempMailbox} 
+                messageId={message.id}
+              />
+            </ModalActions>
+          )}
         </ModalHeader>
         
         <ModalBody>

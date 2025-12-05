@@ -5,6 +5,7 @@ const morgan = require('morgan');
 const { SMTPServer } = require('smtp-server');
 const { simpleParser } = require('mailparser');
 const redisService = require('./services/redisService');
+const forwardingService = require('./services/forwardingService');
 const config = require('./config/config');
 const logger = require('./utils/logger');
 const apiRoutes = require('./routes/api');
@@ -13,13 +14,16 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 const SMTP_PORT = process.env.SMTP_PORT || 2525;
 
-// Initialize Redis with domains
+// Initialize Redis with domains and Forward & Forget service
 (async () => {
   try {
     await redisService.initializeDomains(config.validDomains);
     logger.info('Redis initialized with domains');
+    
+    // Initialize Forward & Forget service
+    forwardingService.initialize();
   } catch (error) {
-    logger.error('Failed to initialize Redis with domains:', error);
+    logger.error('Failed to initialize services:', error);
   }
 })();
 

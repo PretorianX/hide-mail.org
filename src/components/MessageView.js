@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import DOMPurify from 'dompurify';
+import ForwardButton from './ForwardButton';
 import './MessageView.css';
 
-const MessageView = ({ message, onDelete, onBack }) => {
+const MessageView = ({ message, onDelete, onBack, tempMailbox }) => {
   const [showImages, setShowImages] = useState(false);
   
   // Function to sanitize HTML content using DOMPurify
@@ -131,9 +132,18 @@ const MessageView = ({ message, onDelete, onBack }) => {
         <button className="back-button" onClick={onBack}>
           ← Back
         </button>
-        <button className="delete-button" onClick={() => onDelete(message.id)}>
-          Delete
-        </button>
+        <div className="message-view-actions">
+          {/* Forward & Forget - Save email to your personal inbox */}
+          {tempMailbox && (
+            <ForwardButton 
+              tempMailbox={tempMailbox} 
+              messageId={message.id}
+            />
+          )}
+          <button className="delete-button" onClick={() => onDelete(message.id)}>
+            Delete
+          </button>
+        </div>
       </div>
       
       <div className="message-view-details">

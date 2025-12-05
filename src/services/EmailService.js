@@ -512,6 +512,155 @@ class EmailService {
       throw error;
     }
   }
+
+  // ============================================================================
+  // Forward & Forget Feature - Privacy-focused email forwarding
+  // ============================================================================
+
+  /**
+   * Request OTP for destination email validation
+   * Privacy note: OTP validation is per temporary mailbox
+   * @param {string} tempMailbox - The temporary mailbox address
+   * @param {string} destinationEmail - The user's real email to forward to
+   * @returns {Promise<Object>} - Request result
+   */
+  static async requestOTP(tempMailbox, destinationEmail) {
+    try {
+      const response = await axios.post(`${API_URL}/forwarding/request-otp`, {
+        tempMailbox,
+        destinationEmail,
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      });
+      
+      return response.data;
+    } catch (error) {
+      console.error('Error requesting OTP:', error);
+      const errorMessage = error.response?.data?.error || 'Failed to send verification code';
+      const errorObj = new Error(errorMessage);
+      errorObj.code = error.response?.data?.code;
+      throw errorObj;
+    }
+  }
+
+  /**
+   * Verify OTP and activate forwarding for the mailbox
+   * @param {string} tempMailbox - The temporary mailbox address
+   * @param {string} destinationEmail - The destination email being verified
+   * @param {string} otp - The OTP code entered by user
+   * @returns {Promise<Object>} - Verification result
+   */
+  static async verifyOTP(tempMailbox, destinationEmail, otp) {
+    try {
+      const response = await axios.post(`${API_URL}/forwarding/verify-otp`, {
+        tempMailbox,
+        destinationEmail,
+        otp,
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      });
+      
+      return response.data;
+    } catch (error) {
+      console.error('Error verifying OTP:', error);
+      const errorMessage = error.response?.data?.error || 'Invalid verification code';
+      const errorObj = new Error(errorMessage);
+      errorObj.code = error.response?.data?.code;
+      throw errorObj;
+    }
+  }
+
+  /**
+   * Forward a specific message to the validated destination
+   * Rate limited: 10 forwards per hour per mailbox (free tier)
+   * @param {string} tempMailbox - The temporary mailbox address
+   * @param {string} messageId - The message ID to forward
+   * @returns {Promise<Object>} - Forward result
+   */
+  static async forwardMessage(tempMailbox, messageId) {
+    try {
+      const response = await axios.post(
+        `${API_URL}/forwarding/forward/${encodeURIComponent(tempMailbox)}/${messageId}`,
+        {},
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          }
+        }
+      );
+      
+      return response.data;
+    } catch (error) {
+      console.error('Error forwarding message:', error);
+      const errorMessage = error.response?.data?.error || 'Failed to forward message';
+      const errorObj = new Error(errorMessage);
+      errorObj.code = error.response?.data?.code;
+      errorObj.rateLimit = error.response?.data?.rateLimit;
+      throw errorObj;
+    }
+  }
+
+  /**
+   * Get forwarding status for a temporary mailbox
+   * Returns: validated destination, rate limit status, etc.
+   * @param {string} tempMailbox - The temporary mailbox address
+   * @returns {Promise<Object>} - Forwarding status
+   */
+  static async getForwardingStatus(tempMailbox) {
+    try {
+      const response = await axios.get(
+        `${API_URL}/forwarding/status/${encodeURIComponent(tempMailbox)}`,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          }
+        }
+      );
+      
+      return response.data.data;
+    } catch (error) {
+      console.error('Error getting forwarding status:', error);
+      // Return default status on error (no validation)
+      return {
+        active: true,
+        hasValidatedDestination: false,
+        destinationEmail: null,
+        rateLimit: null,
+      };
+    }
+  }
+
+  /**
+   * Clear forwarding configuration for a mailbox
+   * Allows setting up a new destination
+   * @param {string} tempMailbox - The temporary mailbox address
+   * @returns {Promise<boolean>} - Success status
+   */
+  static async clearForwarding(tempMailbox) {
+    try {
+      await axios.delete(
+        `${API_URL}/forwarding/${encodeURIComponent(tempMailbox)}`,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          }
+        }
+      );
+      return true;
+    } catch (error) {
+      console.error('Error clearing forwarding:', error);
+      throw error;
+    }
+  }
 }
 
 export default EmailService; 

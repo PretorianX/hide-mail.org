@@ -204,27 +204,28 @@ const redisService = {
   },
 
   /**
-   * Get a specific email by index
+   * Get a specific email by ID
    * @param {string} email - Email address
    * @param {string} id - Email ID
    * @returns {Promise<Object|null>} - Email object or null
    */
   async getEmailById(email, id) {
     try {
-      const key = `${KEY_PREFIXES.EMAIL}${email}`;
-      const emails = await redis.lrange(key, 0, -1);
+      // Use the correct key format that matches storeEmail
+      const emailKey = `email:${email}:${id}`;
+      const emailData = await redis.get(emailKey);
       
-      for (const item of emails) {
-        const parsedEmail = JSON.parse(item);
-        if (parsedEmail.id === id) {
+      if (emailData) {
+        try {
+          const parsedEmail = JSON.parse(emailData);
           // Mark as read
           parsedEmail.read = true;
-          
           // Update in Redis
-          const index = emails.indexOf(item);
-          await redis.lset(key, index, JSON.stringify(parsedEmail));
-          
+          await redis.set(emailKey, JSON.stringify(parsedEmail));
           return parsedEmail;
+        } catch (e) {
+          logger.error(`Failed to parse email data: ${e.message}`);
+          return null;
         }
       }
       
@@ -307,5 +308,8 @@ const redisService = {
     }
   }
 };
+
+// Export the redis client for direct access by other services
+redisService.client = redis;
 
 module.exports = redisService; 

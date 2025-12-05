@@ -41,14 +41,56 @@ services:
       - EMAIL_EXPIRATION_SECONDS=${EMAIL_EXPIRATION_SECONDS:-1800}
       - EMAIL_EXTENSION_SECONDS=${EMAIL_EXTENSION_SECONDS:-900}
       - LOG_LEVEL=${LOG_LEVEL:-info}
+      # Forward & Forget - Outgoing SMTP configuration
+      - SMTP_HOST=${SMTP_HOST:-mailpit}
+      - SMTP_OUTGOING_PORT=${SMTP_OUTGOING_PORT:-1025}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASS=${SMTP_PASS:-}
+      - SMTP_SECURE=${SMTP_SECURE:-false}
+      - SMTP_FROM_EMAIL=${SMTP_FROM_EMAIL:-noreply@hide-mail.org}
+      - SMTP_FROM_NAME=${SMTP_FROM_NAME:-Hide Mail}
+      - SRS_DOMAIN=${SRS_DOMAIN:-}
+      - SRS_SECRET=${SRS_SECRET:-}
+      - DKIM_DOMAIN=${DKIM_DOMAIN:-}
+      - DKIM_SELECTOR=${DKIM_SELECTOR:-default}
+      - DKIM_PRIVATE_KEY=${DKIM_PRIVATE_KEY:-}
+      - FORWARDING_RATE_LIMIT=${FORWARDING_RATE_LIMIT:-10}
+      - OTP_EXPIRATION_MINUTES=${OTP_EXPIRATION_MINUTES:-15}
     depends_on:
       - redis
+      - mailpit
     restart: unless-stopped
     volumes:
       - ./backend/logs:/app/logs
     networks:
       - internal
       - default
+
+  # Mailpit - Local SMTP server for outgoing emails (Forward & Forget feature)
+  # Web UI available at http://localhost:8025
+  # SMTP relay on port 1025 (internal) 
+  mailpit:
+    image: axllent/mailpit:latest
+    environment:
+      # Relay configuration - forwards emails to external SMTP
+      - MP_SMTP_RELAY_HOST=${MAILPIT_RELAY_HOST:-}
+      - MP_SMTP_RELAY_PORT=${MAILPIT_RELAY_PORT:-587}
+      - MP_SMTP_RELAY_STARTTLS=${MAILPIT_RELAY_STARTTLS:-true}
+      - MP_SMTP_RELAY_AUTH=${MAILPIT_RELAY_AUTH:-plain}
+      - MP_SMTP_RELAY_USERNAME=${MAILPIT_RELAY_USERNAME:-}
+      - MP_SMTP_RELAY_PASSWORD=${MAILPIT_RELAY_PASSWORD:-}
+      # Allow all recipients to be relayed
+      - MP_SMTP_RELAY_ALL=true
+      # Database for message storage
+      - MP_DATABASE=/data/mailpit.db
+    ports:
+      # Web UI - only accessible locally for debugging
+      - "127.0.0.1:8025:8025"
+    volumes:
+      - mailpit-data:/data
+    restart: unless-stopped
+    networks:
+      - internal
 
   redis:
     image: redis:8-alpine
@@ -73,6 +115,7 @@ services:
 
 volumes:
   redis-data:
+  mailpit-data:
 
 networks:
   internal:

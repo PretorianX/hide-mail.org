@@ -49,7 +49,41 @@ const config = {
   emailExpirationSeconds: parseInt(process.env.EMAIL_EXPIRATION_SECONDS || fileConfig.email?.expirationTime || 1800),
   emailExtensionSeconds: parseInt(process.env.EMAIL_EXTENSION_SECONDS || fileConfig.email?.extensionTime || 900),
   environment: process.env.NODE_ENV || 'development',
-  apiTimeout: parseInt(process.env.API_TIMEOUT || fileConfig.api?.timeout || 5000)
+  apiTimeout: parseInt(process.env.API_TIMEOUT || fileConfig.api?.timeout || 5000),
+
+  // SMTP Configuration for Forward & Forget feature
+  // Used for sending OTP verification emails and forwarding emails
+  smtp: {
+    host: process.env.SMTP_HOST || '',
+    port: parseInt(process.env.SMTP_OUTGOING_PORT || 587),
+    secure: process.env.SMTP_SECURE === 'true',
+    user: process.env.SMTP_USER || '',
+    pass: process.env.SMTP_PASS || '',
+    fromEmail: process.env.SMTP_FROM_EMAIL || 'noreply@mailduck.io',
+    fromName: process.env.SMTP_FROM_NAME || 'Mail Duck',
+  },
+
+  // DKIM Configuration for email signing
+  // Improves deliverability of forwarded emails
+  dkim: {
+    domain: process.env.DKIM_DOMAIN || '',
+    selector: process.env.DKIM_SELECTOR || 'default',
+    privateKey: process.env.DKIM_PRIVATE_KEY || '',
+  },
+
+  // SRS (Sender Rewriting Scheme) Configuration
+  // Required for proper SPF alignment when forwarding emails
+  srs: {
+    domain: process.env.SRS_DOMAIN || '',
+    secret: process.env.SRS_SECRET || '',
+  },
+
+  // Forwarding Configuration
+  forwarding: {
+    rateLimit: parseInt(process.env.FORWARDING_RATE_LIMIT || 10), // Max forwards per hour
+    otpExpirationMinutes: parseInt(process.env.OTP_EXPIRATION_MINUTES || 15),
+    otpLength: parseInt(process.env.OTP_LENGTH || 6),
+  },
 };
 
 module.exports = config; 

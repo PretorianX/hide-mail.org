@@ -2,6 +2,51 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.1.0] - 2025-12-05
+
+### Added
+- **Forward & Forget Feature** - Privacy-focused email forwarding
+  - One-click forwarding of emails to your personal inbox
+  - OTP validation per temporary mailbox (no accounts required)
+  - Rate limiting: 10 forwards per hour per mailbox (configurable)
+  - SRS (Sender Rewriting Scheme) for proper SPF alignment
+  - DKIM signing support for improved deliverability
+  
+  **Backend Services:**
+  - `smtpService.js` - Outgoing email delivery with DKIM signing
+  - `srsService.js` - Sender Rewriting Scheme implementation
+  - `otpService.js` - OTP generation/validation using `otp-generator`
+  - `rateLimiter.js` - Redis-based rate limiting
+  - `forwardingService.js` - Main orchestration service
+  - `forwardingController.js` - API endpoints
+  
+  **Frontend Components:**
+  - `ForwardButton.js` - One-click forward with state feedback
+  - `OTPModal.js` - Destination email verification flow
+  - Updated `EmailModal.js` and `MessageList.js` for integration
+  
+  **API Endpoints:**
+  - `POST /api/forwarding/request-otp` - Request verification code
+  - `POST /api/forwarding/verify-otp` - Verify and activate forwarding
+  - `POST /api/forwarding/forward/:email/:messageId` - Forward message
+  - `GET /api/forwarding/status/:email` - Get forwarding status
+  - `DELETE /api/forwarding/:email` - Clear forwarding config
+  
+  **New Environment Variables:**
+  - `SMTP_HOST`, `SMTP_OUTGOING_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_SECURE`
+  - `SMTP_FROM_EMAIL`, `SMTP_FROM_NAME`
+  - `DKIM_DOMAIN`, `DKIM_SELECTOR`, `DKIM_PRIVATE_KEY`
+  - `SRS_DOMAIN`, `SRS_SECRET`
+  - `FORWARDING_RATE_LIMIT`, `OTP_EXPIRATION_MINUTES`, `OTP_LENGTH`
+  
+  **Privacy Design:**
+  - No persistent user accounts
+  - OTP validation scoped to temporary mailbox
+  - Forwarding state expires with mailbox
+  - All data automatically cleaned up
+
+---
+
 ## [2.0.4] - 2025-12-05
 
 ### Removed
