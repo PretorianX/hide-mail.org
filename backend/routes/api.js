@@ -4,25 +4,30 @@ const forwardingController = require('../controllers/forwardingController');
 const redisService = require('../services/redisService');
 const logger = require('../utils/logger');
 const { v4: uuidv4 } = require('uuid');
+const config = require('../config/config');
+const apiRateLimiter = require('../services/apiRateLimiter');
 
 const router = express.Router();
 
-// Email routes
-router.get('/emails/:email', emailController.getEmails);
-router.get('/emails/:email/:id', emailController.getEmailById);
-router.delete('/emails/:email/:id', emailController.deleteEmail);
-router.delete('/emails/:email', emailController.deleteAllEmails);
+// Environment check for debug endpoints
+const isDevelopment = () => config.environment === 'development';
+
+// Email routes (with rate limiting)
+router.get('/emails/:email', apiRateLimiter.emailFetch, emailController.getEmails);
+router.get('/emails/:email/:id', apiRateLimiter.emailFetch, emailController.getEmailById);
+router.delete('/emails/:email/:id', apiRateLimiter.default, emailController.deleteEmail);
+router.delete('/emails/:email', apiRateLimiter.default, emailController.deleteAllEmails);
 
 // Domain routes
-router.get('/domains', emailController.getDomains);
+router.get('/domains', apiRateLimiter.default, emailController.getDomains);
 
-// Mailbox routes
-router.post('/mailbox/register', emailController.registerMailbox);
-router.post('/mailbox/refresh', emailController.refreshMailbox);
-router.post('/mailbox/deactivate', emailController.deactivateMailbox);
+// Mailbox routes (with rate limiting)
+router.post('/mailbox/register', apiRateLimiter.mailboxRegister, emailController.registerMailbox);
+router.post('/mailbox/refresh', apiRateLimiter.mailboxRefresh, emailController.refreshMailbox);
+router.post('/mailbox/deactivate', apiRateLimiter.default, emailController.deactivateMailbox);
 
-// Add the missing /messages endpoint
-router.get('/messages', async (req, res) => {
+// Add the missing /messages endpoint (with rate limiting)
+router.get('/messages', apiRateLimiter.emailFetch, async (req, res) => {
   try {
     const { email } = req.query;
     
@@ -62,8 +67,12 @@ router.get('/messages', async (req, res) => {
   }
 });
 
-// Debug endpoint to check Redis data (remove in production)
+// Debug endpoint to check Redis data - DEVELOPMENT ONLY
 router.get('/debug/redis', async (req, res) => {
+  if (!isDevelopment()) {
+    return res.status(404).json({ error: 'Not found' });
+  }
+  
   try {
     const { email } = req.query;
     
@@ -90,8 +99,12 @@ router.get('/debug/redis', async (req, res) => {
   }
 });
 
-// Redis connection test endpoint
+// Redis connection test endpoint - DEVELOPMENT ONLY
 router.get('/debug/redis-connection', async (req, res) => {
+  if (!isDevelopment()) {
+    return res.status(404).json({ error: 'Not found' });
+  }
+  
   try {
     // Test Redis connection
     const pingResult = await redisService.client.ping();
@@ -116,8 +129,12 @@ router.get('/debug/redis-connection', async (req, res) => {
   }
 });
 
-// Test email endpoint
+// Test email endpoint - DEVELOPMENT ONLY
 router.post('/test-email', async (req, res) => {
+  if (!isDevelopment()) {
+    return res.status(404).json({ error: 'Not found' });
+  }
+  
   try {
     const { email } = req.body;
     
@@ -202,8 +219,12 @@ Content-Transfer-Encoding: 8bit
   }
 });
 
-// Test endpoint to check Redis key structure
+// Test endpoint to check Redis key structure - DEVELOPMENT ONLY
 router.get('/debug/redis-keys', async (req, res) => {
+  if (!isDevelopment()) {
+    return res.status(404).json({ error: 'Not found' });
+  }
+  
   try {
     // Get all keys in Redis
     const allKeys = await redisService.client.keys('*');
@@ -237,26 +258,26 @@ router.get('/debug/redis-keys', async (req, res) => {
 // Privacy-focused email forwarding with OTP validation
 // ============================================================================
 
-// Request OTP for destination email validation
+// Request OTP for destination email validation (rate limited - critical for email sending)
 // POST /api/forwarding/request-otp
 // Body: { tempMailbox: "user@domain.com", destinationEmail: "real@email.com" }
-router.post('/forwarding/request-otp', forwardingController.requestOTP);
+router.post('/forwarding/request-otp', apiRateLimiter.mailboxRegister, forwardingController.requestOTP);
 
 // Verify OTP and activate forwarding
 // POST /api/forwarding/verify-otp
 // Body: { tempMailbox: "user@domain.com", destinationEmail: "real@email.com", otp: "123456" }
-router.post('/forwarding/verify-otp', forwardingController.verifyOTP);
+router.post('/forwarding/verify-otp', apiRateLimiter.default, forwardingController.verifyOTP);
 
-// Forward a specific message to validated destination
+// Forward a specific message to validated destination (rate limited)
 // POST /api/forwarding/forward/:email/:messageId
-router.post('/forwarding/forward/:email/:messageId', forwardingController.forwardMessage);
+router.post('/forwarding/forward/:email/:messageId', apiRateLimiter.default, forwardingController.forwardMessage);
 
 // Get forwarding status (destination, rate limit, etc.)
 // GET /api/forwarding/status/:email
-router.get('/forwarding/status/:email', forwardingController.getForwardingStatus);
+router.get('/forwarding/status/:email', apiRateLimiter.default, forwardingController.getForwardingStatus);
 
 // Clear forwarding configuration
 // DELETE /api/forwarding/:email
-router.delete('/forwarding/:email', forwardingController.clearForwarding);
+router.delete('/forwarding/:email', apiRateLimiter.default, forwardingController.clearForwarding);
 
 module.exports = router; 
