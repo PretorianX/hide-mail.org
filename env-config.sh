@@ -17,8 +17,8 @@ validate_required_vars() {
   local missing_vars=()
   local required_vars=(
     "VALID_DOMAINS"
-    "CONFIG_EMAIL_EXPIRATIONTIME"
-    "CONFIG_EMAIL_EXTENSIONTIME"
+    "EMAIL_EXPIRATION_SECONDS"
+    "EMAIL_EXTENSION_SECONDS"
     "CONFIG_API_URL"
     "CONFIG_API_TIMEOUT"
   )
@@ -93,8 +93,8 @@ generate_runtime_config() {
 window.__RUNTIME_CONFIG__ = {
   email: {
     domains: $domains_json,
-    expirationTime: $CONFIG_EMAIL_EXPIRATIONTIME,
-    extensionTime: $CONFIG_EMAIL_EXTENSIONTIME,
+    expirationTime: $EMAIL_EXPIRATION_SECONDS,
+    extensionTime: $EMAIL_EXTENSION_SECONDS,
   },
   api: {
     url: '$CONFIG_API_URL',
@@ -154,8 +154,8 @@ main() {
   echo "Generating runtime environment configuration..."
 
   validate_required_vars
-  validate_numeric "CONFIG_EMAIL_EXPIRATIONTIME"
-  validate_numeric "CONFIG_EMAIL_EXTENSIONTIME"
+  validate_numeric "EMAIL_EXPIRATION_SECONDS"
+  validate_numeric "EMAIL_EXTENSION_SECONDS"
   validate_numeric "CONFIG_API_TIMEOUT"
 
   generate_runtime_config

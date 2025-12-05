@@ -104,20 +104,36 @@ describe('config', () => {
       expect(config.redisUrl).toBe('redis://custom:6380');
     });
 
-    it('should use default email expiration of 30 minutes', () => {
-      delete process.env.EMAIL_EXPIRATION;
+    it('should use default email expiration of 1800 seconds', () => {
+      delete process.env.EMAIL_EXPIRATION_SECONDS;
       
       const config = require('../../config/config');
       
-      expect(config.emailExpiration).toBe(30);
+      expect(config.emailExpirationSeconds).toBe(1800);
     });
 
-    it('should use EMAIL_EXPIRATION from environment', () => {
-      process.env.EMAIL_EXPIRATION = '60';
+    it('should use EMAIL_EXPIRATION_SECONDS from environment', () => {
+      process.env.EMAIL_EXPIRATION_SECONDS = '3600';
       
       const config = require('../../config/config');
       
-      expect(config.emailExpiration).toBe(60);
+      expect(config.emailExpirationSeconds).toBe(3600);
+    });
+
+    it('should use default email extension of 900 seconds', () => {
+      delete process.env.EMAIL_EXTENSION_SECONDS;
+      
+      const config = require('../../config/config');
+      
+      expect(config.emailExtensionSeconds).toBe(900);
+    });
+
+    it('should use EMAIL_EXTENSION_SECONDS from environment', () => {
+      process.env.EMAIL_EXTENSION_SECONDS = '1800';
+      
+      const config = require('../../config/config');
+      
+      expect(config.emailExtensionSeconds).toBe(1800);
     });
 
     it('should use default environment as development', () => {

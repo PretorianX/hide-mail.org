@@ -40,13 +40,14 @@ const getEmailDomains = () => {
 };
 
 // Final config with environment variables taking precedence
+// All time values are in seconds for consistency
 const config = {
   port: process.env.PORT || 3001,
   smtpPort: process.env.SMTP_PORT || 2525,
   redisUrl: process.env.REDIS_URL || 'redis://localhost:6379',
   validDomains: getEmailDomains(),
-  emailExpiration: parseInt(process.env.EMAIL_EXPIRATION || (fileConfig.email?.expirationTime / 60) || 30), // Convert seconds to minutes
-  emailExtensionTime: parseInt(process.env.EMAIL_EXTENSION_TIME || (fileConfig.email?.extensionTime / 60) || 30), // Convert seconds to minutes
+  emailExpirationSeconds: parseInt(process.env.EMAIL_EXPIRATION_SECONDS || fileConfig.email?.expirationTime || 1800),
+  emailExtensionSeconds: parseInt(process.env.EMAIL_EXTENSION_SECONDS || fileConfig.email?.extensionTime || 900),
   environment: process.env.NODE_ENV || 'development',
   apiTimeout: parseInt(process.env.API_TIMEOUT || fileConfig.api?.timeout || 5000)
 };

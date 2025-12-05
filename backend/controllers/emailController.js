@@ -1,4 +1,5 @@
 const redisService = require('../services/redisService');
+const config = require('../config/config');
 const logger = require('../utils/logger');
 
 const emailController = {
@@ -178,8 +179,8 @@ const emailController = {
         return res.status(400).json({ error: 'Invalid domain' });
       }
       
-      // Register mailbox
-      await redisService.registerMailbox(email);
+      // Register mailbox with configured expiration time
+      await redisService.registerMailbox(email, config.emailExpirationSeconds);
       
       res.status(200).json({
         success: true,
@@ -207,8 +208,8 @@ const emailController = {
         return res.status(400).json({ error: 'Invalid email address' });
       }
       
-      // Refresh mailbox
-      const success = await redisService.refreshMailbox(email);
+      // Refresh mailbox with configured extension time
+      const success = await redisService.refreshMailbox(email, config.emailExtensionSeconds);
       
       if (!success) {
         return res.status(404).json({ error: 'Mailbox not found or expired' });

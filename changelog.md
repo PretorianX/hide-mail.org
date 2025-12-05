@@ -2,12 +2,30 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.3] - 2025-12-05
+
+### Changed
+- **Unified time settings to use seconds across frontend and backend** (2025-12-05)
+  - Renamed `CONFIG_EMAIL_EXPIRATIONTIME` and `CONFIG_EMAIL_EXTENSIONTIME` to `EMAIL_EXPIRATION_SECONDS` and `EMAIL_EXTENSION_SECONDS`
+  - Removed duplicate backend env vars `EMAIL_EXPIRATION` (minutes) and `EMAIL_EXTENSION_TIME` (minutes)
+  - Backend now uses seconds directly instead of minutes
+  - Updated `backend/config/config.js` to use `emailExpirationSeconds` and `emailExtensionSeconds`
+  - Updated `backend/services/redisService.js` to accept seconds parameter
+  - Fixed bug: config values now properly passed to redisService functions
+
+### Fixed
+- **Backend was ignoring configured expiration times** (2025-12-05)
+  - `emailController.js` now passes config values to `registerMailbox()` and `refreshMailbox()`
+  - Previously used hardcoded 30-minute defaults regardless of configuration
+
+---
+
 ## [2.0.2] - 2025-12-05
 
 ### Changed
 - **Refactored env-config.sh for maintainability** (2025-12-05)
   - Separated validation, JSON generation, and file patching into distinct functions
-  - Added numeric validation for CONFIG_EMAIL_EXPIRATIONTIME, CONFIG_EMAIL_EXTENSIONTIME, CONFIG_API_TIMEOUT
+  - Added numeric validation for EMAIL_EXPIRATION_SECONDS, EMAIL_EXTENSION_SECONDS, CONFIG_API_TIMEOUT
   - Replaced 12 repetitive AdSense slot conditionals with declarative mapping array
   - Added strict mode (`set -euo pipefail`) for fail-fast behavior
   - Used heredoc for cleaner multi-line JSON template generation

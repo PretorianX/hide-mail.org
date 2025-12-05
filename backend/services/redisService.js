@@ -71,13 +71,13 @@ const redisService = {
   /**
    * Register an active mailbox
    * @param {string} email - Email address
-   * @param {number} expirationMinutes - Expiration time in minutes
+   * @param {number} expirationSeconds - Expiration time in seconds
    */
-  async registerMailbox(email, expirationMinutes = 30) {
+  async registerMailbox(email, expirationSeconds = 1800) {
     try {
       const key = `${KEY_PREFIXES.ACTIVE_MAILBOX}${email}`;
       await redis.set(key, Date.now());
-      await redis.expire(key, expirationMinutes * 60); // Set expiration in seconds
+      await redis.expire(key, expirationSeconds);
       logger.info(`Mailbox registered: ${email}`);
     } catch (error) {
       logger.error('Error registering mailbox in Redis:', error);
@@ -103,16 +103,16 @@ const redisService = {
   /**
    * Refresh mailbox expiration time
    * @param {string} email - Email address
-   * @param {number} expirationMinutes - New expiration time in minutes
+   * @param {number} expirationSeconds - New expiration time in seconds
    * @returns {Promise<boolean>} - True if successful
    */
-  async refreshMailbox(email, expirationMinutes = 30) {
+  async refreshMailbox(email, expirationSeconds = 1800) {
     try {
       const key = `${KEY_PREFIXES.ACTIVE_MAILBOX}${email}`;
       const exists = await redis.exists(key);
       
       if (exists) {
-        await redis.expire(key, expirationMinutes * 60);
+        await redis.expire(key, expirationSeconds);
         logger.info(`Mailbox refreshed: ${email}`);
         return true;
       }
