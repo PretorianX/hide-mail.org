@@ -89,7 +89,9 @@ services:
       - MP_SMTP_RELAY_AUTH=${MAILPIT_RELAY_AUTH:-plain}
       - MP_SMTP_RELAY_USERNAME=${MAILPIT_RELAY_USERNAME:-}
       - MP_SMTP_RELAY_PASSWORD=${MAILPIT_RELAY_PASSWORD:-}
-      - MP_SMTP_RELAY_ALL=true
+      # MP_SMTP_RELAY_ALL is only set when MAILPIT_RELAY_HOST is configured
+      # In dev mode without relay host, emails are captured but NOT relayed
+      - MP_SMTP_RELAY_ALL=${MAILPIT_RELAY_HOST:+true}
       - MP_DATABASE=/data/mailpit.db
     ports:
       # Web UI - accessible for debugging in development
@@ -99,6 +101,7 @@ services:
     restart: unless-stopped
     networks:
       - internal
+      - default
 
   redis:
     image: redis:8-alpine
