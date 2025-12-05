@@ -2,6 +2,7 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import Blog from './Blog';
+import blogPosts from '../data/blogPosts';
 
 // Mock the ContentAwareAd component
 jest.mock('../components/ContentAwareAd', () => {
@@ -30,18 +31,17 @@ describe('Blog Component', () => {
     expect(screen.getByText(/Explore our articles about email privacy/i)).toBeInTheDocument();
   });
 
-  test('renders all blog post cards', () => {
+  test('renders all blog post cards dynamically from data', () => {
     render(
       <BrowserRouter>
         <Blog />
       </BrowserRouter>
     );
     
-    expect(screen.getByText('Forward & Forget: Real-World Use Cases for Email Forwarding')).toBeInTheDocument();
-    expect(screen.getByText('What Are Temporary Email Addresses and How Do They Work?')).toBeInTheDocument();
-    expect(screen.getByText('Email Privacy: Why It Matters and How to Protect It')).toBeInTheDocument();
-    expect(screen.getByText('Email Security Best Practices')).toBeInTheDocument();
-    expect(screen.getByText('The Legal Side of Email Privacy: What You Need to Know')).toBeInTheDocument();
+    // Test that all blog posts from the data source are rendered
+    blogPosts.forEach(post => {
+      expect(screen.getByText(post.title)).toBeInTheDocument();
+    });
   });
 
   test('renders read more links for each post', () => {
@@ -52,14 +52,12 @@ describe('Blog Component', () => {
     );
     
     const readMoreLinks = screen.getAllByText('Read More →');
-    expect(readMoreLinks).toHaveLength(5);
+    expect(readMoreLinks).toHaveLength(blogPosts.length);
     
-    // Check that links point to the correct routes
-    expect(readMoreLinks[0].closest('a')).toHaveAttribute('href', '/blog/email-forwarding-use-cases');
-    expect(readMoreLinks[1].closest('a')).toHaveAttribute('href', '/blog/temporary-email-guide');
-    expect(readMoreLinks[2].closest('a')).toHaveAttribute('href', '/blog/email-privacy');
-    expect(readMoreLinks[3].closest('a')).toHaveAttribute('href', '/blog/email-security-best-practices');
-    expect(readMoreLinks[4].closest('a')).toHaveAttribute('href', '/blog/legal-side-of-email-privacy');
+    // Check that each link points to the correct route based on post id
+    blogPosts.forEach((post, index) => {
+      expect(readMoreLinks[index].closest('a')).toHaveAttribute('href', `/blog/${post.id}`);
+    });
   });
 
   test('renders ContentAwareAd components', () => {
