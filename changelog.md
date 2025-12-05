@@ -4,11 +4,13 @@ All notable changes to this project will be documented in this file.
 
 ## [2.1.0] - 2025-12-05
 
-### Fixed
-- **Mailpit relay configuration** - Fixed Mailpit failing to start in production when relay host is not configured
-  - `MP_SMTP_RELAY_ALL` now defaults to `false` instead of being hardcoded to `true`
-  - Added `MAILPIT_RELAY_ALL` environment variable to control auto-relay behavior
-  - Mailpit will now store emails locally when no relay is configured (useful for testing)
+### Changed
+- **SMTP architecture refactored** - Replaced Mailpit with Postfix for consistent email delivery
+  - **Production**: Backend → Postfix → Internet (direct delivery to destination mail servers)
+  - **Development**: Backend → Postfix → Mailpit (emails captured for inspection at http://localhost:8025)
+  - Postfix provides proper MTA functionality with DKIM signing and TLS support
+  - Added `POSTFIX_HOSTNAME` environment variable for HELO/EHLO configuration
+  - Removed Mailpit relay configuration from production (no longer needed)
 
 ### Added
 - **Forward & Forget Feature** - Privacy-focused email forwarding

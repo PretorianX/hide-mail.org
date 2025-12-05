@@ -48,9 +48,9 @@ services:
       - EMAIL_EXPIRATION_SECONDS=${EMAIL_EXPIRATION_SECONDS:-1800}
       - EMAIL_EXTENSION_SECONDS=${EMAIL_EXTENSION_SECONDS:-900}
       - LOG_LEVEL=${LOG_LEVEL:-debug}
-      # Forward & Forget - Outgoing SMTP configuration
-      - SMTP_HOST=${SMTP_HOST:-mailpit}
-      - SMTP_OUTGOING_PORT=${SMTP_OUTGOING_PORT:-1025}
+      # Forward & Forget - Outgoing SMTP configuration (connects to Postfix)
+      - SMTP_HOST=${SMTP_HOST:-postfix}
+      - SMTP_OUTGOING_PORT=${SMTP_OUTGOING_PORT:-587}
       - SMTP_USER=${SMTP_USER:-}
       - SMTP_PASS=${SMTP_PASS:-}
       - SMTP_SECURE=${SMTP_SECURE:-false}
@@ -58,14 +58,12 @@ services:
       - SMTP_FROM_NAME=${SMTP_FROM_NAME:-Hide Mail}
       - SRS_DOMAIN=${SRS_DOMAIN:-}
       - SRS_SECRET=${SRS_SECRET:-}
-      - DKIM_DOMAIN=${DKIM_DOMAIN:-}
-      - DKIM_SELECTOR=${DKIM_SELECTOR:-default}
-      - DKIM_PRIVATE_KEY=${DKIM_PRIVATE_KEY:-}
+      # DKIM signing is handled by Postfix (OpenDKIM) in production
       - FORWARDING_RATE_LIMIT=${FORWARDING_RATE_LIMIT:-10}
       - OTP_EXPIRATION_MINUTES=${OTP_EXPIRATION_MINUTES:-15}
     depends_on:
       - redis
-      - mailpit
+      - postfix
     restart: unless-stopped
     volumes:
       - ./backend:/app
@@ -75,23 +73,33 @@ services:
       - internal
       - default
 
-  # Mailpit - Local SMTP server for outgoing emails (Forward & Forget feature)
+  # Postfix - Outgoing SMTP relay
+  # In dev mode, relays all emails to Mailpit for inspection
+  # Image: https://github.com/bokysan/docker-postfix
+  postfix:
+    image: boky/postfix:v4.4.0
+    environment:
+      - HOSTNAME=${POSTFIX_HOSTNAME:-mail.hide-mail.org}
+      - ALLOWED_SENDER_DOMAINS=${VALID_DOMAINS}
+      - POSTFIX_myhostname=${POSTFIX_HOSTNAME:-mail.hide-mail.org}
+      - POSTFIX_mynetworks=10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 127.0.0.0/8
+      - POSTFIX_message_size_limit=26214400
+      # Relay all outgoing mail to Mailpit for inspection
+      - RELAYHOST=mailpit:1025
+    depends_on:
+      - mailpit
+    volumes:
+      - postfix-spool:/var/spool/postfix
+    restart: unless-stopped
+    networks:
+      - internal
+
+  # Mailpit - Email catcher for development
   # Web UI available at http://localhost:8025 for debugging
-  # In dev mode, emails are captured but NOT relayed (safe for testing)
+  # All emails sent via Postfix are captured here (NOT delivered to real recipients)
   mailpit:
     image: axllent/mailpit:latest
     environment:
-      # In development, do NOT relay emails - just capture them
-      # Set MAILPIT_RELAY_HOST in .env to enable relay for testing
-      - MP_SMTP_RELAY_HOST=${MAILPIT_RELAY_HOST:-}
-      - MP_SMTP_RELAY_PORT=${MAILPIT_RELAY_PORT:-587}
-      - MP_SMTP_RELAY_STARTTLS=${MAILPIT_RELAY_STARTTLS:-true}
-      - MP_SMTP_RELAY_AUTH=${MAILPIT_RELAY_AUTH:-plain}
-      - MP_SMTP_RELAY_USERNAME=${MAILPIT_RELAY_USERNAME:-}
-      - MP_SMTP_RELAY_PASSWORD=${MAILPIT_RELAY_PASSWORD:-}
-      # MP_SMTP_RELAY_ALL is only set when MAILPIT_RELAY_HOST is configured
-      # In dev mode without relay host, emails are captured but NOT relayed
-      - MP_SMTP_RELAY_ALL=${MAILPIT_RELAY_HOST:+true}
       - MP_DATABASE=/data/mailpit.db
     ports:
       # Web UI - accessible for debugging in development
@@ -127,6 +135,7 @@ services:
 volumes:
   redis-data:
   mailpit-data:
+  postfix-spool:
 
 networks:
   internal:

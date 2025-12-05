@@ -41,9 +41,9 @@ services:
       - EMAIL_EXPIRATION_SECONDS=${EMAIL_EXPIRATION_SECONDS:-1800}
       - EMAIL_EXTENSION_SECONDS=${EMAIL_EXTENSION_SECONDS:-900}
       - LOG_LEVEL=${LOG_LEVEL:-info}
-      # Forward & Forget - Outgoing SMTP configuration
-      - SMTP_HOST=${SMTP_HOST:-mailpit}
-      - SMTP_OUTGOING_PORT=${SMTP_OUTGOING_PORT:-1025}
+      # Forward & Forget - Outgoing SMTP configuration (connects to Postfix relay)
+      - SMTP_HOST=${SMTP_HOST:-postfix}
+      - SMTP_OUTGOING_PORT=${SMTP_OUTGOING_PORT:-587}
       - SMTP_USER=${SMTP_USER:-}
       - SMTP_PASS=${SMTP_PASS:-}
       - SMTP_SECURE=${SMTP_SECURE:-false}
@@ -51,14 +51,12 @@ services:
       - SMTP_FROM_NAME=${SMTP_FROM_NAME:-Hide Mail}
       - SRS_DOMAIN=${SRS_DOMAIN:-}
       - SRS_SECRET=${SRS_SECRET:-}
-      - DKIM_DOMAIN=${DKIM_DOMAIN:-}
-      - DKIM_SELECTOR=${DKIM_SELECTOR:-default}
-      - DKIM_PRIVATE_KEY=${DKIM_PRIVATE_KEY:-}
+      # DKIM signing is handled by Postfix (OpenDKIM)
       - FORWARDING_RATE_LIMIT=${FORWARDING_RATE_LIMIT:-10}
       - OTP_EXPIRATION_MINUTES=${OTP_EXPIRATION_MINUTES:-15}
     depends_on:
       - redis
-      - mailpit
+      - postfix
     restart: unless-stopped
     volumes:
       - ./backend/logs:/app/logs
@@ -66,29 +64,32 @@ services:
       - internal
       - default
 
-  # Mailpit - Local SMTP server for outgoing emails (Forward & Forget feature)
-  # Web UI available at http://localhost:8025
-  # SMTP relay on port 1025 (internal) 
-  mailpit:
-    image: axllent/mailpit:latest
+  # Postfix - Outgoing SMTP relay for production
+  # Sends emails directly to destination mail servers
+  # Image: https://github.com/bokysan/docker-postfix (11M+ downloads, OpenDKIM included)
+  postfix:
+    image: boky/postfix:v4.4.0
     environment:
-      # Relay configuration - forwards emails to external SMTP
-      # NOTE: Set MAILPIT_RELAY_HOST and MAILPIT_RELAY_ALL=true to enable relay
-      - MP_SMTP_RELAY_HOST=${MAILPIT_RELAY_HOST:-}
-      - MP_SMTP_RELAY_PORT=${MAILPIT_RELAY_PORT:-587}
-      - MP_SMTP_RELAY_STARTTLS=${MAILPIT_RELAY_STARTTLS:-true}
-      - MP_SMTP_RELAY_AUTH=${MAILPIT_RELAY_AUTH:-plain}
-      - MP_SMTP_RELAY_USERNAME=${MAILPIT_RELAY_USERNAME:-}
-      - MP_SMTP_RELAY_PASSWORD=${MAILPIT_RELAY_PASSWORD:-}
-      # Allow all recipients to be relayed (requires MAILPIT_RELAY_HOST to be set)
-      - MP_SMTP_RELAY_ALL=${MAILPIT_RELAY_ALL:-false}
-      # Database for message storage
-      - MP_DATABASE=/data/mailpit.db
-    ports:
-      # Web UI - only accessible locally for debugging
-      - "127.0.0.1:8025:8025"
+      # Hostname for HELO/EHLO - should match your domain's PTR record
+      - HOSTNAME=${POSTFIX_HOSTNAME:-mail.hide-mail.org}
+      # Allowed sender domains (emails from other domains will be rejected)
+      - ALLOWED_SENDER_DOMAINS=${VALID_DOMAINS}
+      # No relay host - send directly to destination mail servers
+      - RELAYHOST=
+      # Accept connections from internal Docker network only
+      - POSTFIX_myhostname=${POSTFIX_HOSTNAME:-mail.hide-mail.org}
+      - POSTFIX_mynetworks=10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 127.0.0.0/8
+      # Message size limit (25MB)
+      - POSTFIX_message_size_limit=26214400
+      # TLS for outgoing connections
+      - POSTFIX_smtp_tls_security_level=may
+      - POSTFIX_smtp_tls_loglevel=1
+      # DKIM signing - mount keys to /etc/opendkim/keys or set DKIM_AUTOGENERATE=1
+      - DKIM_SELECTOR=${DKIM_SELECTOR:-mail}
     volumes:
-      - mailpit-data:/data
+      - postfix-spool:/var/spool/postfix
+      # Mount DKIM keys for signing (generate with: opendkim-genkey -s mail -d yourdomain.com)
+      - ${DKIM_KEYS_PATH:-./dkim-keys}:/etc/opendkim/keys:ro
     restart: unless-stopped
     networks:
       - internal
@@ -116,7 +117,7 @@ services:
 
 volumes:
   redis-data:
-  mailpit-data:
+  postfix-spool:
 
 networks:
   internal:
