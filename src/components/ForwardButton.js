@@ -81,24 +81,8 @@ const ForwardButton = ({ tempMailbox, messageId, onForwarded }) => {
     setShowToast(true);
   };
 
-  const handleClick = async () => {
-    if (state === STATES.REQUIRES_VALIDATION) {
-      setShowOTPModal(true);
-      return;
-    }
-
-    if (state === STATES.LIMIT_REACHED) {
-      showNotification(
-        `Forwarding limit reached. Resets at ${new Date(forwardingStatus?.rateLimit?.resetAt).toLocaleTimeString()}`,
-        'warning'
-      );
-      return;
-    }
-
-    if (state !== STATES.READY) {
-      return;
-    }
-
+  // Perform the actual forward operation
+  const performForward = async () => {
     setState(STATES.SENDING);
     setErrorMessage('');
 
@@ -107,6 +91,8 @@ const ForwardButton = ({ tempMailbox, messageId, onForwarded }) => {
       setState(STATES.SENT);
       showNotification('Email forwarded successfully!', 'success');
       onForwarded?.();
+      // Refresh status to update remaining forwards count
+      fetchStatus();
     } catch (error) {
       console.error('Failed to forward email:', error);
       
@@ -128,11 +114,38 @@ const ForwardButton = ({ tempMailbox, messageId, onForwarded }) => {
     }
   };
 
+  const handleClick = async () => {
+    if (state === STATES.REQUIRES_VALIDATION) {
+      setShowOTPModal(true);
+      return;
+    }
+
+    if (state === STATES.LIMIT_REACHED) {
+      showNotification(
+        `Forwarding limit reached. Resets at ${new Date(forwardingStatus?.rateLimit?.resetAt).toLocaleTimeString()}`,
+        'warning'
+      );
+      return;
+    }
+
+    if (state !== STATES.READY) {
+      return;
+    }
+
+    performForward();
+  };
+
   const handleOTPVerified = async (destinationEmail) => {
     showNotification(`Forwarding enabled to ${destinationEmail}`, 'success');
-    await fetchStatus();
-    // Automatically trigger forward after verification
-    handleClick();
+    // Update local state immediately since OTP verification succeeded
+    setForwardingStatus(prev => ({
+      ...prev,
+      hasValidatedDestination: true,
+      destinationEmail: destinationEmail
+    }));
+    setState(STATES.READY);
+    // Directly forward without re-checking state (we know OTP just succeeded)
+    performForward();
   };
 
   const handleRequestOTP = async (mailbox, destination) => {
