@@ -123,18 +123,24 @@
 }
 
 .otp-back-btn {
-  background: none;
-  border: none;
-  color: var(--primary-color, #3b82f6);
+  background-color: transparent;
+  border: 2px solid var(--duck-orange, #f7941d);
+  color: var(--duck-orange, #f7941d);
   cursor: pointer;
-  font-size: 14px;
-  padding: 0;
+  font-size: 1rem;
+  font-weight: bold;
+  padding: 10px 15px;
+  border-radius: 6px;
   align-self: flex-start;
   margin-bottom: 8px;
+  transition: background-color 0.3s, color 0.3s, transform 0.1s;
 }
 
 .otp-back-btn:hover {
-  text-decoration: underline;
+  background-color: var(--duck-orange, #f7941d);
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .otp-sent-to {
