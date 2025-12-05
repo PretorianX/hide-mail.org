@@ -141,3 +141,5 @@ Thumbs.db
 
 # MHTML files
 *.mhtml
+
+assets/
