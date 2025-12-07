@@ -153,12 +153,28 @@ const smtpServer = new SMTPServer({
           return callback(new Error(`Invalid domain: ${domain}`));
         }
         
-        // Check if mailbox is active
-        const isMailboxActive = await redisService.isMailboxActive(address.address);
+        // Check if mailbox is known (created by us, within grace period)
+        // We accept emails for any known mailbox to avoid 550 errors
+        // which can lead to domain blocklisting
+        const isMailboxKnown = await redisService.isMailboxKnown(address.address);
         
-        if (!isMailboxActive) {
-          logger.warn(`SMTP: Rejected email to ${address.address}: inactive mailbox`);
-          return callback(new Error(`Mailbox not active: ${address.address}`));
+        if (!isMailboxKnown) {
+          // Handle unknown mailboxes based on configured response code
+          const responseCode = config.smtpUnknownMailboxCode;
+          
+          if (responseCode === 250) {
+            // Accept but mark for silent drop (safest for reputation)
+            session.unknownRecipients = session.unknownRecipients || new Set();
+            session.unknownRecipients.add(address.address);
+            logger.info(`SMTP: Accepting unknown mailbox for silent drop: ${address.address}`);
+            return callback();
+          }
+          
+          // Reject with configured code (450=temp fail, 550=permanent fail)
+          logger.warn(`SMTP: Rejecting unknown mailbox ${address.address} with code ${responseCode}`);
+          const err = new Error(`Unknown recipient: ${address.address}`);
+          err.responseCode = responseCode;
+          return callback(err);
         }
         
         logger.info(`SMTP: Accepted recipient: ${address.address}`);
@@ -183,12 +199,31 @@ const smtpServer = new SMTPServer({
       try {
         logger.info(`SMTP: Finished receiving message data (${mailData.length} bytes)`);
         
-        // Parse email
-        const parsedMail = await simpleParser(mailData);
-        
         // Extract recipient from session
         const recipient = session.envelope.rcptTo[0].address;
         logger.info(`SMTP: Processing email for recipient: ${recipient}`);
+        
+        // Check if recipient was marked as unknown (when SMTP_UNKNOWN_MAILBOX_CODE=250)
+        if (session.unknownRecipients?.has(recipient)) {
+          logger.info(`SMTP: Silently dropping email for unknown mailbox: ${recipient}`);
+          callback(); // Return 250 OK to sender
+          return;
+        }
+        
+        // Check if mailbox is still active (not just known)
+        // If expired but known, we accept the email but silently drop it
+        const isMailboxActive = await redisService.isMailboxActive(recipient);
+        
+        if (!isMailboxActive) {
+          // Silently drop emails for expired mailboxes
+          // We already accepted the email in onRcptTo to avoid 550 errors
+          logger.info(`SMTP: Silently dropping email for expired mailbox: ${recipient}`);
+          callback(); // Return 250 OK to sender
+          return;
+        }
+        
+        // Parse email
+        const parsedMail = await simpleParser(mailData);
         
         // Store the full raw email body for debugging
         const rawBody = mailData;

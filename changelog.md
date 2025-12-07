@@ -2,6 +2,33 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.1.8] - 2025-12-07
+
+### Security
+- **Prevent domain blocklisting from expired mailbox rejections** - SMTP server no longer returns 550 errors for expired mailboxes
+  - Returning 550 "Mailbox not active" for expired mailboxes could lead to domain blocklisting
+  - Now accepts emails for any mailbox we've ever created (within grace period)
+  - Silently drops emails for expired mailboxes (returns 250 OK to sender)
+  - Only rejects truly unknown mailboxes (never created by us)
+
+### Added
+- `known_mailbox:` Redis key prefix to track all mailboxes we've created
+- `isMailboxKnown()` method in redisService to check if mailbox was created by us
+- Configurable grace period after mailbox expiration before full cleanup
+  - `MAILBOX_CLEANUP_GRACE_DAYS` environment variable (default: 7 days)
+  - Mailbox records persist after lease expiration for the configured period
+  - Prevents 550 errors during grace period
+  - Automatic cleanup via Redis TTL
+- Configurable SMTP response code for unknown mailboxes (after grace period)
+  - `SMTP_UNKNOWN_MAILBOX_CODE` environment variable (default: 550)
+  - Options: 550 (permanent fail), 450 (temp fail), 250 (accept & drop)
+
+### Changed
+- `registerMailbox()` now creates both `active_mailbox:` and `known_mailbox:` keys
+- `refreshMailbox()` now refreshes both active and known mailbox TTLs
+- SMTP `onRcptTo` now accepts emails for known (not just active) mailboxes
+- SMTP `onData` silently drops emails for expired-but-known mailboxes
+
 ## [2.1.7] - 2025-12-06
 
 ### Security

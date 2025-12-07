@@ -48,6 +48,11 @@ const config = {
   validDomains: getEmailDomains(),
   emailExpirationSeconds: parseInt(process.env.EMAIL_EXPIRATION_SECONDS || fileConfig.email?.expirationTime || 1800),
   emailExtensionSeconds: parseInt(process.env.EMAIL_EXTENSION_SECONDS || fileConfig.email?.extensionTime || 900),
+  // Grace period before expired mailboxes are fully cleaned up
+  // Emails are silently dropped during this period to avoid 550 errors (prevents blocklisting)
+  mailboxCleanupGraceDays: parseInt(process.env.MAILBOX_CLEANUP_GRACE_DAYS || 7),
+  // SMTP response code for unknown mailboxes (550=reject, 450=temp fail, 250=accept & drop)
+  smtpUnknownMailboxCode: parseInt(process.env.SMTP_UNKNOWN_MAILBOX_CODE || 550),
   environment: process.env.NODE_ENV || 'development',
   apiTimeout: parseInt(process.env.API_TIMEOUT || fileConfig.api?.timeout || 5000),
 

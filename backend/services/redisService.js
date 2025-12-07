@@ -19,6 +19,14 @@ const KEY_PREFIXES = {
   DOMAINS: 'domains',
   EMAIL: 'email:',
   ACTIVE_MAILBOX: 'active_mailbox:',
+  // Known mailboxes persist after lease expiration
+  // to silently drop emails instead of returning 550 errors
+  KNOWN_MAILBOX: 'known_mailbox:',
+};
+
+// Grace period after mailbox expiration before full cleanup (configurable via env)
+const getMailboxCleanupGraceSeconds = () => {
+  return config.mailboxCleanupGraceDays * 24 * 60 * 60;
 };
 
 const redisService = {
@@ -75,10 +83,20 @@ const redisService = {
    */
   async registerMailbox(email, expirationSeconds = 1800) {
     try {
-      const key = `${KEY_PREFIXES.ACTIVE_MAILBOX}${email}`;
-      await redis.set(key, Date.now());
-      await redis.expire(key, expirationSeconds);
-      logger.info(`Mailbox registered: ${email}`);
+      const activeKey = `${KEY_PREFIXES.ACTIVE_MAILBOX}${email}`;
+      const knownKey = `${KEY_PREFIXES.KNOWN_MAILBOX}${email}`;
+      
+      // Set active mailbox with standard expiration
+      await redis.set(activeKey, Date.now());
+      await redis.expire(activeKey, expirationSeconds);
+      
+      // Set known mailbox with extended grace period (configurable, default 7 days after lease expiration)
+      // This prevents 550 errors which can lead to domain blocklisting
+      const knownExpiration = expirationSeconds + getMailboxCleanupGraceSeconds();
+      await redis.set(knownKey, Date.now());
+      await redis.expire(knownKey, knownExpiration);
+      
+      logger.info(`Mailbox registered: ${email} (cleanup in ${knownExpiration}s)`);
     } catch (error) {
       logger.error('Error registering mailbox in Redis:', error);
       throw error;
@@ -101,6 +119,22 @@ const redisService = {
   },
 
   /**
+   * Check if a mailbox was ever created by us (within grace period)
+   * Used to accept emails without 550 errors even after lease expiration
+   * @param {string} email - Email address
+   * @returns {Promise<boolean>} - True if mailbox is known (created by us)
+   */
+  async isMailboxKnown(email) {
+    try {
+      const key = `${KEY_PREFIXES.KNOWN_MAILBOX}${email}`;
+      return await redis.exists(key) === 1;
+    } catch (error) {
+      logger.error('Error checking if mailbox is known in Redis:', error);
+      throw error;
+    }
+  },
+
+  /**
    * Refresh mailbox expiration time
    * @param {string} email - Email address
    * @param {number} expirationSeconds - New expiration time in seconds
@@ -108,11 +142,18 @@ const redisService = {
    */
   async refreshMailbox(email, expirationSeconds = 1800) {
     try {
-      const key = `${KEY_PREFIXES.ACTIVE_MAILBOX}${email}`;
-      const exists = await redis.exists(key);
+      const activeKey = `${KEY_PREFIXES.ACTIVE_MAILBOX}${email}`;
+      const knownKey = `${KEY_PREFIXES.KNOWN_MAILBOX}${email}`;
+      const exists = await redis.exists(activeKey);
       
       if (exists) {
-        await redis.expire(key, expirationSeconds);
+        // Refresh active mailbox TTL
+        await redis.expire(activeKey, expirationSeconds);
+        
+        // Also refresh known mailbox TTL with grace period
+        const knownExpiration = expirationSeconds + getMailboxCleanupGraceSeconds();
+        await redis.expire(knownKey, knownExpiration);
+        
         logger.info(`Mailbox refreshed: ${email}`);
         return true;
       }
