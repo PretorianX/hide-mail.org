@@ -162,5 +162,14 @@ describe('AdContainer', () => {
       const donateMessage = screen.getByTestId('adblock-donate-message-mock');
       expect(donateMessage.className).toContain('compact');
     });
+
+    test('shows AdBlockDonateMessage even when contentAvailable is false', () => {
+      mockAdBlockDetected = true;
+      
+      render(<AdContainer slot="1234567890" contentAvailable={false} />);
+      
+      // Should still show donate message when adblock is detected
+      expect(screen.getByTestId('adblock-donate-message-mock')).toBeInTheDocument();
+    });
   });
 }); 

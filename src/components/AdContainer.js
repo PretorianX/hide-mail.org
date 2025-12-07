@@ -29,17 +29,13 @@ const AdContainer = ({
 }) => {
   const adBlockDetected = useAdBlockDetection();
 
-  // If no content is available, don't render the ad
-  if (!contentAvailable) {
-    return null;
-  }
-
   // Determine if this is a horizontal banner (for styling)
   const isHorizontal = format === 'horizontal';
   const isCompact = !isHorizontal && height < 150;
   const adBlockClassName = isHorizontal ? 'horizontal' : (isCompact ? 'compact' : '');
 
-  // Show donate message if adblock is detected
+  // Show donate message if adblock is detected (regardless of content availability)
+  // The donate button provides value even without other content
   if (adBlockDetected) {
     return (
       <div className={`ad-container ${position ? `ad-${position}` : ''} ${className}`.trim()} data-testid="ad-container">
@@ -50,6 +46,11 @@ const AdContainer = ({
         />
       </div>
     );
+  }
+
+  // If no content is available, don't render the ad (only for actual ads, not donate message)
+  if (!contentAvailable) {
+    return null;
   }
 
   const containerStyle = {
