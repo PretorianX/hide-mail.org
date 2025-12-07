@@ -9,6 +9,7 @@ const forwardingService = require('./services/forwardingService');
 const config = require('./config/config');
 const logger = require('./utils/logger');
 const apiRoutes = require('./routes/api');
+const { createOriginVerifier, parseAllowedOrigins } = require('./services/originVerifier');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -27,12 +28,55 @@ const SMTP_PORT = process.env.SMTP_PORT || 2525;
   }
 })();
 
-// CORS configuration
+// Parse allowed origins from environment
+const allowedOrigins = parseAllowedOrigins();
+const isDev = config.environment === 'development';
+
+// Development localhost origins
+const devOrigins = [
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:3001',
+];
+
+// CORS configuration with origin verification
 const corsOptions = {
-  origin: '*', // Allow all origins
+  origin: (origin, callback) => {
+    // Allow requests with no origin (server-to-server, curl, etc.) only in dev
+    if (!origin) {
+      if (isDev) {
+        return callback(null, true);
+      }
+      // In production, block requests without origin for API routes
+      return callback(null, false);
+    }
+    
+    const normalizedOrigin = origin.toLowerCase();
+    
+    // Check configured origins
+    const isAllowedOrigin = allowedOrigins.some(allowed => {
+      if (allowed === normalizedOrigin) return true;
+      if (allowed.startsWith('*.')) {
+        const baseDomain = allowed.slice(2);
+        return normalizedOrigin.endsWith(baseDomain);
+      }
+      return false;
+    });
+    
+    // Allow development origins
+    const isDevOrigin = isDev && devOrigins.includes(normalizedOrigin);
+    
+    if (isAllowedOrigin || isDevOrigin) {
+      callback(null, true);
+    } else {
+      logger.warn(`CORS blocked origin: ${origin}`);
+      callback(new Error('CORS not allowed'));
+    }
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
-  exposedHeaders: ['Content-Length', 'Content-Type'],
+  exposedHeaders: ['Content-Length', 'Content-Type', 'X-RateLimit-Limit', 'X-RateLimit-Remaining', 'X-RateLimit-Reset'],
   credentials: true,
   preflightContinue: false,
   optionsSuccessStatus: 204,
@@ -42,26 +86,18 @@ const corsOptions = {
 // Middleware
 app.use(cors(corsOptions));
 
-// Add custom CORS middleware for additional control
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  
-  // Handle preflight requests
-  if (req.method === 'OPTIONS') {
-    return res.status(204).end();
-  }
-  
-  next();
-});
-
 app.use(express.json());
 app.use(morgan('dev'));
 
-// Routes
-app.use('/api', apiRoutes);
+// Origin verification middleware for API routes
+// Blocks requests from unauthorized origins
+const originVerifier = createOriginVerifier({ 
+  allowDevelopment: true,
+  strict: !isDev // Only strict in production
+});
+
+// Routes with origin verification
+app.use('/api', originVerifier, apiRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -76,12 +112,6 @@ app.use((err, req, res, next) => {
       message: err.message || 'Internal Server Error'
     }
   });
-});
-
-// Add this to your backend server.js file for debugging
-app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
-  next();
 });
 
 // Start Express server
@@ -163,6 +193,17 @@ const smtpServer = new SMTPServer({
         // Store the full raw email body for debugging
         const rawBody = mailData;
         
+        // Serialize attachments with base64 content for JSON storage
+        const serializableAttachments = (parsedMail.attachments || []).map(att => ({
+          filename: att.filename || 'attachment',
+          contentType: att.contentType || 'application/octet-stream',
+          contentDisposition: att.contentDisposition || 'attachment',
+          cid: att.cid || null, // Content-ID for inline images
+          size: att.size || 0,
+          content: att.content ? att.content.toString('base64') : null,
+          encoding: 'base64', // Mark that content is base64 encoded
+        }));
+        
         // Store email
         const email = {
           id: require('uuid').v4(),
@@ -172,7 +213,7 @@ const smtpServer = new SMTPServer({
           text: parsedMail.text || '',
           html: parsedMail.html || '',
           body: rawBody, // Store the full raw email
-          attachments: parsedMail.attachments || [],
+          attachments: serializableAttachments,
           receivedAt: new Date().toISOString(),
           date: parsedMail.date ? new Date(parsedMail.date).toISOString() : new Date().toISOString(),
           read: false

@@ -194,6 +194,41 @@ If you didn't request this, you can safely ignore this email.
 };
 
 /**
+ * Convert stored attachment (with base64 content) to nodemailer attachment format
+ * @param {Object} att - Stored attachment object
+ * @returns {Object} - Nodemailer-compatible attachment
+ */
+const convertAttachment = (att) => {
+  const attachment = {
+    filename: att.filename || 'attachment',
+    contentType: att.contentType || 'application/octet-stream',
+  };
+
+  // Convert base64 content back to Buffer
+  if (att.content && att.encoding === 'base64') {
+    attachment.content = Buffer.from(att.content, 'base64');
+  } else if (att.content) {
+    // Handle legacy format where content might be a Buffer JSON representation
+    if (typeof att.content === 'object' && att.content.type === 'Buffer' && Array.isArray(att.content.data)) {
+      attachment.content = Buffer.from(att.content.data);
+    } else {
+      attachment.content = att.content;
+    }
+  }
+
+  // Set Content-ID for inline images (preserves cid: references in HTML)
+  if (att.cid) {
+    attachment.cid = att.cid;
+    // Inline images should be marked as inline, not attachment
+    attachment.contentDisposition = 'inline';
+  } else {
+    attachment.contentDisposition = att.contentDisposition || 'attachment';
+  }
+
+  return attachment;
+};
+
+/**
  * Forward an email to a destination
  * @param {Object} options - Forward options
  * @param {string} options.to - Destination email address
@@ -203,6 +238,10 @@ If you didn't request this, you can safely ignore this email.
  * @returns {Promise<Object>} - Send result
  */
 const forwardEmail = async ({ to, originalEmail, srsFrom, tempMailbox }) => {
+  if (!transporter) {
+    throw new Error('SMTP Service not initialized');
+  }
+
   const subject = originalEmail.subject || '(No Subject)';
   
   // Prepare forwarded email content with privacy header
@@ -235,18 +274,37 @@ Original sender: ${originalEmail.from}
 ${originalEmail.text || ''}
   `;
 
-  return sendEmail({
+  // Prepare mail options
+  const mailOptions = {
+    from: srsFrom,
     to,
     subject: `[Forwarded] ${subject}`,
     html: forwardedHtml,
     text: forwardedText,
-    from: srsFrom,
     headers: {
       'X-Forwarded-From': tempMailbox,
       'X-Original-From': originalEmail.from,
       'X-Forward-And-Forget': 'true',
     },
-  });
+  };
+
+  // Process and include attachments (including inline images)
+  if (originalEmail.attachments && originalEmail.attachments.length > 0) {
+    mailOptions.attachments = originalEmail.attachments
+      .filter(att => att.content) // Only include attachments with content
+      .map(convertAttachment);
+    
+    logger.info(`SMTP Service: Forwarding email with ${mailOptions.attachments.length} attachment(s)`);
+  }
+
+  try {
+    const result = await transporter.sendMail(mailOptions);
+    logger.info(`SMTP Service: Email forwarded to ${to}, messageId: ${result.messageId}`);
+    return result;
+  } catch (error) {
+    logger.error(`SMTP Service: Failed to forward email to ${to}`, error);
+    throw error;
+  }
 };
 
 /**

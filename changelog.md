@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.1.7] - 2025-12-06
+
+### Security
+- **Added Origin Verification** - Protects API endpoints from direct access outside allowed frontends
+  - New `originVerifier` middleware validates Origin/Referer headers
+  - CORS now dynamically checks against configured allowed origins instead of allowing all (`*`)
+  - Requests without valid origin are blocked in production (403 ORIGIN_NOT_ALLOWED)
+  - Localhost origins (3000, 3001) automatically allowed in development mode
+  - Configurable via `ALLOWED_ORIGINS` environment variable (comma-separated, supports wildcards like `*.example.com`)
+
+### Added
+- `backend/services/originVerifier.js` - Origin verification middleware with wildcard support
+- `ALLOWED_ORIGINS` environment variable in `.env.example`
+
+### Changed
+- CORS configuration now uses dynamic origin function instead of `origin: '*'`
+- Removed redundant console.log debugging middleware from server.js
+
 ## [2.1.6] - 2025-12-05
 
 ### Security
