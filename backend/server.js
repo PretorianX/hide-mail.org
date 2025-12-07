@@ -153,23 +153,20 @@ const smtpServer = new SMTPServer({
           return callback(new Error(`Invalid domain: ${domain}`));
         }
         
+        // If SMTP_UNKNOWN_MAILBOX_CODE=250, accept ALL emails for valid domains
+        // This is the safest mode for domain reputation (catch-all with silent drop)
+        const responseCode = config.smtpUnknownMailboxCode;
+        if (responseCode === 250) {
+          logger.info(`SMTP: Catch-all mode - accepting all emails for valid domain: ${address.address}`);
+          return callback();
+        }
+        
         // Check if mailbox is known (created by us, within grace period)
         // We accept emails for any known mailbox to avoid 550 errors
         // which can lead to domain blocklisting
         const isMailboxKnown = await redisService.isMailboxKnown(address.address);
         
         if (!isMailboxKnown) {
-          // Handle unknown mailboxes based on configured response code
-          const responseCode = config.smtpUnknownMailboxCode;
-          
-          if (responseCode === 250) {
-            // Accept but mark for silent drop (safest for reputation)
-            session.unknownRecipients = session.unknownRecipients || new Set();
-            session.unknownRecipients.add(address.address);
-            logger.info(`SMTP: Accepting unknown mailbox for silent drop: ${address.address}`);
-            return callback();
-          }
-          
           // Reject with configured code (450=temp fail, 550=permanent fail)
           logger.warn(`SMTP: Rejecting unknown mailbox ${address.address} with code ${responseCode}`);
           const err = new Error(`Unknown recipient: ${address.address}`);
@@ -203,21 +200,16 @@ const smtpServer = new SMTPServer({
         const recipient = session.envelope.rcptTo[0].address;
         logger.info(`SMTP: Processing email for recipient: ${recipient}`);
         
-        // Check if recipient was marked as unknown (when SMTP_UNKNOWN_MAILBOX_CODE=250)
-        if (session.unknownRecipients?.has(recipient)) {
-          logger.info(`SMTP: Silently dropping email for unknown mailbox: ${recipient}`);
-          callback(); // Return 250 OK to sender
-          return;
-        }
-        
-        // Check if mailbox is still active (not just known)
-        // If expired but known, we accept the email but silently drop it
+        // Check if mailbox is active - only store emails for active mailboxes
+        // All other cases (expired, unknown in catch-all mode) are silently dropped
         const isMailboxActive = await redisService.isMailboxActive(recipient);
         
         if (!isMailboxActive) {
-          // Silently drop emails for expired mailboxes
+          // Silently drop emails for inactive/unknown mailboxes
           // We already accepted the email in onRcptTo to avoid 550 errors
-          logger.info(`SMTP: Silently dropping email for expired mailbox: ${recipient}`);
+          const isCatchAll = config.smtpUnknownMailboxCode === 250;
+          const reason = isCatchAll ? 'catch-all mode' : 'expired mailbox';
+          logger.info(`SMTP: Silently dropping email for ${reason}: ${recipient}`);
           callback(); // Return 250 OK to sender
           return;
         }
