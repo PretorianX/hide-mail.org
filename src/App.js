@@ -387,7 +387,7 @@ function App() {
                                   onRefresh={handleRefreshMessages}
                                 />
                                 <div className="email-actions">
-                                  <button onClick={() => handleGenerateEmail()}>Generate New Email</button>
+                                  <button onClick={() => handleGenerateEmail()}>Change Email Address</button>
                                   <button onClick={handleRefreshMessages} disabled={refreshing}>
                                     {refreshing ? 'Checking...' : 'Check Messages'}
                                   </button>
@@ -411,7 +411,7 @@ function App() {
                               tempMailbox={email}
                             />
                           ) : (
-                            <p>Your inbox is empty. Messages will appear here when you receive them.</p>
+                            <p>Your inbox is empty.<br />New emails will appear here automatically.</p>
                           )}
                         </section>
                       </main>

@@ -51,8 +51,8 @@ describe('Domain Selection Tests', () => {
     // Clear previous calls to generateEmail
     EmailService.generateEmail.mockClear();
     
-    // Find and click the Generate New Email button
-    const generateButton = await screen.findByText('Generate New Email');
+    // Find and click the Change Email Address button
+    const generateButton = await screen.findByText('Change Email Address');
     fireEvent.click(generateButton);
     
     // Verify that generateEmail was called with the selected domain
@@ -78,8 +78,8 @@ describe('Domain Selection Tests', () => {
     // Select the random domain option (empty value)
     fireEvent.change(domainSelect, { target: { value: '' } });
     
-    // Find and click the Generate New Email button
-    const generateButton = await screen.findByText('Generate New Email');
+    // Find and click the Change Email Address button
+    const generateButton = await screen.findByText('Change Email Address');
     fireEvent.click(generateButton);
     
     // Verify that generateEmail was called with null

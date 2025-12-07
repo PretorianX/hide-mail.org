@@ -138,7 +138,7 @@ const blogPosts = [
       
       <ol>
         <li><strong>Visit the Hide Mail website:</strong> Simply navigate to our homepage.</li>
-        <li><strong>Generate an email address:</strong> Click the "Generate New Email" button to instantly create a temporary email address.</li>
+        <li><strong>Generate an email address:</strong> Click the "Change Email Address" button to instantly create a temporary email address.</li>
         <li><strong>Use your temporary address:</strong> Copy the generated email address and use it wherever you need.</li>
         <li><strong>Check for messages:</strong> Any emails sent to your temporary address will appear in the inbox section of the Hide Mail interface.</li>
         <li><strong>View message content:</strong> Click on any message to view its full content, including any attachments.</li>

@@ -106,7 +106,7 @@ const MockHomePage = ({
           <div className="step">
             <div className="step-number">1</div>
             <h3>Generate a Temporary Email</h3>
-            <p>Click the "Generate New Email" button to create a disposable email address.</p>
+            <p>Click the "Change Email Address" button to create a disposable email address.</p>
           </div>
           <div className="step">
             <div className="step-number">2</div>
