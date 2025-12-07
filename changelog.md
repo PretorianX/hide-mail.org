@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 ## [2.1.13] - 2025-12-07
 
+### Improved
+- **User-friendly rate limit handling** - When rate limit is exceeded, shows a clear message with countdown timer
+  - Users see exactly how many seconds until they can retry
+  - Button shows countdown and is disabled during rate limit period
+  - Error clears automatically when countdown finishes
+  - Styled warning message with light/dark mode support
+
 ### Removed
 - **Deleted legacy EmailGenerator component** - Removed unused `src/components/EmailGenerator.js` and `src/components/EmailGenerator.test.js`
   - The legacy component was shown when rate limit was hit, causing confusing duplicate UI

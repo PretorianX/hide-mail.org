@@ -81,6 +81,7 @@ function App() {
   const [domains, setDomains] = useState([]);
   const [selectedDomain, setSelectedDomain] = useState('');
   const [selectedMessageId, setSelectedMessageId] = useState(null);
+  const [rateLimitCountdown, setRateLimitCountdown] = useState(0);
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -103,7 +104,14 @@ function App() {
         }
       } catch (err) {
         console.error('Error initializing app:', err);
-        setError(`Failed to initialize: ${err.message}`);
+        
+        // Handle rate limit errors
+        if (err.code === 'RATE_LIMIT_EXCEEDED') {
+          setRateLimitCountdown(err.retryAfter || 60);
+          setError('rate_limit');
+        } else {
+          setError(`Failed to initialize: ${err.message}`);
+        }
         setLoading(false);
       } finally {
         setLoading(false);
@@ -146,6 +154,23 @@ function App() {
       }
     };
   }, [email, autoRefresh]);
+
+  // Rate limit countdown timer
+  useEffect(() => {
+    if (rateLimitCountdown <= 0) return;
+    
+    const timer = setInterval(() => {
+      setRateLimitCountdown(prev => {
+        if (prev <= 1) {
+          setError(null); // Clear error when countdown finishes
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    
+    return () => clearInterval(timer);
+  }, [rateLimitCountdown]);
 
   const fetchMessages = async (emailAddress) => {
     if (!emailAddress) {
@@ -198,6 +223,8 @@ function App() {
   const handleGenerateEmail = async (domainOverride = null) => {
     try {
       setLoading(true);
+      setError(null); // Clear any previous errors
+      setRateLimitCountdown(0); // Clear any previous countdown
       // Use the provided domain override if available, otherwise use the selectedDomain state
       const domainToUse = domainOverride !== null ? domainOverride : selectedDomain;
       // Only pass the domain if it's not empty (not the "Random domain" option)
@@ -206,7 +233,14 @@ function App() {
       setMessages([]);
     } catch (err) {
       console.error('Error generating email:', err);
-      setError('Failed to generate email. Please try again later.');
+      
+      // Handle rate limit errors
+      if (err.code === 'RATE_LIMIT_EXCEEDED') {
+        setRateLimitCountdown(err.retryAfter || 60);
+        setError('rate_limit');
+      } else {
+        setError('Failed to generate email. Please try again later.');
+      }
     } finally {
       setLoading(false);
     }
@@ -394,8 +428,19 @@ function App() {
                               </>
                             ) : (
                               <div className="email-actions">
-                                <button onClick={() => handleGenerateEmail()} disabled={loading}>
-                                  {loading ? 'Generating...' : 'Generate Email'}
+                                {error === 'rate_limit' && rateLimitCountdown > 0 ? (
+                                  <div className="rate-limit-message">
+                                    <span className="rate-limit-icon">⏳</span>
+                                    <span>Too many requests. Please wait {rateLimitCountdown}s before trying again.</span>
+                                  </div>
+                                ) : null}
+                                <button 
+                                  onClick={() => handleGenerateEmail()} 
+                                  disabled={loading || (error === 'rate_limit' && rateLimitCountdown > 0)}
+                                >
+                                  {loading ? 'Generating...' : 
+                                   (error === 'rate_limit' && rateLimitCountdown > 0) ? `Wait ${rateLimitCountdown}s` : 
+                                   'Generate Email'}
                                 </button>
                               </div>
                             )}
@@ -403,7 +448,7 @@ function App() {
                         </section>
                         <section className="messages-section">
                           <h2>Hide Mail Inbox</h2>
-                          {error && <div className="error-message">{error}</div>}
+                          {error && error !== 'rate_limit' && <div className="error-message">{error}</div>}
                           {loading ? (
                             <p>Loading...</p>
                           ) : messages.length > 0 ? (

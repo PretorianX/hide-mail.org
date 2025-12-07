@@ -207,6 +207,7 @@ body {
 
 .email-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   justify-content: center;
   margin-top: 20px;
@@ -214,6 +215,32 @@ body {
 
 .email-actions button {
   min-width: 160px;
+}
+
+.rate-limit-message {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 15px 20px;
+  background-color: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 8px;
+  color: #856404;
+  font-size: 0.95rem;
+  margin-bottom: 15px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.rate-limit-icon {
+  font-size: 1.2rem;
+}
+
+body[data-theme='dark'] .rate-limit-message {
+  background-color: rgba(255, 193, 7, 0.15);
+  border-color: rgba(255, 193, 7, 0.4);
+  color: #ffc107;
 }
 
 button {

@@ -227,6 +227,16 @@ class EmailService {
       return newEmail;
     } catch (error) {
       console.error('Error generating email:', error);
+      
+      // Handle rate limit errors specially
+      if (error.response?.status === 429) {
+        const errorData = error.response.data || {};
+        const rateLimitError = new Error(errorData.error || 'Too many requests. Please try again later.');
+        rateLimitError.code = 'RATE_LIMIT_EXCEEDED';
+        rateLimitError.retryAfter = errorData.retryAfter || 60;
+        throw rateLimitError;
+      }
+      
       throw error;
     }
   }
