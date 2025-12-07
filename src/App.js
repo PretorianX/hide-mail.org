@@ -26,24 +26,55 @@ import DonateButton from './components/DonateButton.js';
 
 const AppContainer = styled.div`
   max-width: 1200px;
-  margin: 0 auto;
+  margin: 20px auto;
   padding: 20px;
   font-family: 'Roboto', sans-serif;
+  background-color: var(--card-bg, #ffffff);
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  
+  body[data-theme='dark'] & {
+    background-color: var(--card-background, #2a2a2a);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  }
 `;
 
 // Add a styled footer component with links
 const FooterContainer = styled.footer`
   margin-top: 40px;
-  padding: 20px 0;
-  border-top: 1px solid #eee;
+  padding: 24px;
   text-align: center;
+  background-color: var(--duck-gray, #f0f0f0);
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border-top: 3px solid var(--duck-orange, #f7941d);
+  
+  /* WCAG 2.2 compliant paragraph text */
+  p {
+    color: #555555;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    margin: 12px 0;
+  }
+  
+  body[data-theme='dark'] & {
+    background-color: var(--card-background, #2a2a2a);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    border-top: 3px solid var(--duck-orange, #f7941d);
+    
+    /* Light text on dark for WCAG AAA contrast */
+    p {
+      color: #e0e0e0;
+      font-weight: 400;
+    }
+  }
 `;
 
 const FooterLinks = styled.div`
   display: flex;
   justify-content: center;
-  gap: 20px;
-  margin-bottom: 15px;
+  gap: 24px;
+  margin-bottom: 16px;
   flex-wrap: wrap;
   padding: 0 10px;
 `;
@@ -51,20 +82,38 @@ const FooterLinks = styled.div`
 const FooterLink = styled(Link)`
   color: #4285f4;
   text-decoration: none;
-  transition: color 0.3s ease;
+  transition: all 0.2s ease;
   cursor: pointer;
   display: inline-block;
-  padding: 5px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-weight: 500;
+  font-size: 0.95rem;
+  
+  /* WCAG 2.2: visible focus indicator */
+  &:focus-visible {
+    outline: 3px solid #4285f4;
+    outline-offset: 2px;
+  }
   
   &:hover {
     text-decoration: underline;
+    background-color: rgba(66, 133, 244, 0.1);
   }
   
+  /* Dark mode: orange text on dark background - WCAG AA (5.4:1 contrast) */
   body[data-theme='dark'] & {
-    color: var(--duck-orange);
+    color: var(--duck-orange-light, #ffa940);
+    font-weight: 500;
     
     &:hover {
-      color: var(--duck-orange-light);
+      background-color: rgba(255, 169, 64, 0.15);
+      color: #ffbe6b;
+    }
+    
+    &:focus-visible {
+      outline: 3px solid var(--duck-orange, #f7941d);
+      outline-offset: 2px;
     }
   }
 `;

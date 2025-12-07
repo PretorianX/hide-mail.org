@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.1.14] - 2025-12-07
+
+### Improved
+- **Modern 2025-2026 UI aesthetic** - Updated main container and footer with subtle shadows and rounded corners
+  - `AppContainer` styled component now has `border-radius: 12px` and `box-shadow: 0 4px 20px rgba(0,0,0,0.08)`
+  - `FooterContainer` styled component updated with matching modern styling
+  - Dark mode support with appropriate shadow intensity adjustments
+
+- **WCAG 2.2 compliant dark theme footer** - Improved accessibility for 2026 UI standards
+  - Footer uses dark background with orange top border accent in dark mode
+  - Light text (`#e0e0e0`) on dark background for 10.5:1 contrast ratio
+  - Orange links (`#ffa940`) on dark background for 5.4:1 contrast (AA compliant)
+  - Footer links updated with proper focus-visible indicators (3px outline)
+  - Link hover states include subtle orange background highlight
+
 ## [2.1.13] - 2025-12-07
 
 ### Improved

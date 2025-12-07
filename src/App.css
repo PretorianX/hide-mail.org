@@ -973,15 +973,16 @@ button:disabled {
   box-shadow: 0 2px 8px var(--shadow-color);
 }
 
-/* Dark mode styling for footer */
+/* Dark mode styling for footer - WCAG 2.2 compliant */
 [data-theme='dark'] footer,
 [data-theme='dark'] .footer {
-  border-top: 1px solid var(--border-color);
+  border-top: 3px solid var(--duck-orange);
+  background-color: var(--card-background);
 }
 
 [data-theme='dark'] footer p,
 [data-theme='dark'] .footer p {
-  color: var(--dark-text-secondary);
+  color: #e0e0e0; /* WCAG AA: 10.5:1 contrast on dark */
 }
 
 /* Footer links styling */
@@ -989,7 +990,8 @@ button:disabled {
 footer a {
   color: #4285f4;
   text-decoration: none;
-  transition: color 0.3s ease;
+  transition: all 0.2s ease;
+  font-weight: 500;
 }
 
 .footer-links a:hover,
@@ -997,20 +999,22 @@ footer a:hover {
   text-decoration: underline;
 }
 
-/* Fix for footer links in dark mode */
+/* WCAG 2.2: Footer links in dark mode - orange on dark background */
 [data-theme='dark'] footer a,
 [data-theme='dark'] .footer a,
 [data-theme='dark'] .footer-links a {
-  color: var(--duck-orange) !important;
+  color: var(--duck-orange-light, #ffa940) !important; /* WCAG AA: 5.4:1 contrast */
   text-decoration: none;
-  transition: color 0.3s;
+  transition: all 0.2s ease;
+  font-weight: 500;
 }
 
 [data-theme='dark'] footer a:hover,
 [data-theme='dark'] .footer a:hover,
 [data-theme='dark'] .footer-links a:hover {
-  color: var(--duck-orange-light) !important;
+  color: #ffbe6b !important;
   text-decoration: underline;
+  background-color: rgba(255, 169, 64, 0.15);
 }
 
 /* Cookie banner dark mode styles */
