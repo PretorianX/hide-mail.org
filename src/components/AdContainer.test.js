@@ -16,6 +16,28 @@ jest.mock('./AdSense', () => {
   };
 });
 
+// Mock the useAdBlockDetection hook
+let mockAdBlockDetected = false;
+jest.mock('../hooks/useAdBlockDetection', () => {
+  return () => mockAdBlockDetected;
+});
+
+// Mock the AdBlockDonateMessage component
+jest.mock('./AdBlockDonateMessage', () => {
+  return function MockAdBlockDonateMessage({ width, height, className }) {
+    return (
+      <div 
+        data-testid="adblock-donate-message-mock"
+        data-width={width}
+        data-height={height}
+        className={className}
+      >
+        AdBlock Donate Message
+      </div>
+    );
+  };
+});
+
 describe('AdContainer', () => {
   let originalNodeEnv;
   
@@ -88,5 +110,57 @@ describe('AdContainer', () => {
     // Check that the ad container is rendered
     const container = screen.getByTestId('ad-container');
     expect(container).toBeInTheDocument();
+  });
+
+  describe('adblock detection', () => {
+    beforeEach(() => {
+      mockAdBlockDetected = false;
+    });
+
+    test('renders AdBlockDonateMessage when adblock is detected', () => {
+      mockAdBlockDetected = true;
+      
+      render(<AdContainer slot="1234567890" />);
+      
+      expect(screen.getByTestId('adblock-donate-message-mock')).toBeInTheDocument();
+    });
+
+    test('renders normal ad when adblock is not detected', () => {
+      mockAdBlockDetected = false;
+      process.env.NODE_ENV = 'development';
+      
+      render(<AdContainer slot="1234567890" />);
+      
+      expect(screen.queryByTestId('adblock-donate-message-mock')).not.toBeInTheDocument();
+      expect(screen.getByText(/Google Ad/i)).toBeInTheDocument();
+    });
+
+    test('passes correct dimensions to AdBlockDonateMessage', () => {
+      mockAdBlockDetected = true;
+      
+      render(<AdContainer slot="1234567890" width={728} height={90} />);
+      
+      const donateMessage = screen.getByTestId('adblock-donate-message-mock');
+      expect(donateMessage.getAttribute('data-width')).toBe('728');
+      expect(donateMessage.getAttribute('data-height')).toBe('90');
+    });
+
+    test('applies horizontal class for wide banners', () => {
+      mockAdBlockDetected = true;
+      
+      render(<AdContainer slot="1234567890" width={728} height={90} format="horizontal" />);
+      
+      const donateMessage = screen.getByTestId('adblock-donate-message-mock');
+      expect(donateMessage.className).toContain('horizontal');
+    });
+
+    test('applies compact class for small height ads', () => {
+      mockAdBlockDetected = true;
+      
+      render(<AdContainer slot="1234567890" width={300} height={100} />);
+      
+      const donateMessage = screen.getByTestId('adblock-donate-message-mock');
+      expect(donateMessage.className).toContain('compact');
+    });
   });
 }); 

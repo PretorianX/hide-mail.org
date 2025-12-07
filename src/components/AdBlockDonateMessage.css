@@ -1,0 +1,112 @@
+.adblock-donate-message {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+  border-radius: 12px;
+  border: 2px dashed #2196f3;
+  padding: 15px;
+  box-sizing: border-box;
+  overflow: hidden;
+  margin: 0 auto;
+  max-width: 100%;
+}
+
+.adblock-donate-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+}
+
+.adblock-icon {
+  font-size: 32px;
+  line-height: 1;
+}
+
+.adblock-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #1565c0;
+}
+
+.adblock-text {
+  margin: 0;
+  font-size: 13px;
+  color: #424242;
+  line-height: 1.4;
+  max-width: 250px;
+}
+
+.adblock-donate-button {
+  margin-top: 5px;
+  background: transparent !important;
+  border: none !important;
+  padding: 5px !important;
+}
+
+.adblock-donate-button .donate-text {
+  display: none;
+}
+
+/* Compact variant for smaller ad slots */
+.adblock-donate-message.compact .adblock-icon {
+  font-size: 24px;
+}
+
+.adblock-donate-message.compact .adblock-title {
+  font-size: 14px;
+}
+
+.adblock-donate-message.compact .adblock-text {
+  font-size: 11px;
+}
+
+/* Horizontal banner variant */
+.adblock-donate-message.horizontal {
+  flex-direction: row;
+}
+
+.adblock-donate-message.horizontal .adblock-donate-content {
+  flex-direction: row;
+  gap: 15px;
+}
+
+.adblock-donate-message.horizontal .adblock-text {
+  max-width: none;
+}
+
+/* Dark mode styles */
+body[data-theme='dark'] .adblock-donate-message {
+  background: linear-gradient(135deg, #1e3a5f 0%, #263238 100%);
+  border-color: var(--duck-orange);
+}
+
+body[data-theme='dark'] .adblock-title {
+  color: var(--duck-orange-light);
+}
+
+body[data-theme='dark'] .adblock-text {
+  color: #b0bec5;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .adblock-donate-message {
+    padding: 10px;
+  }
+
+  .adblock-icon {
+    font-size: 24px;
+  }
+
+  .adblock-title {
+    font-size: 14px;
+  }
+
+  .adblock-text {
+    font-size: 12px;
+  }
+}

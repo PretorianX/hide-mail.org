@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.1.12] - 2025-12-07
+
+### Added
+- **Adblock detection with donation fallback** - When adblock is detected, ad spaces show a friendly donation request
+  - `src/hooks/useAdBlockDetection.js` - Hook to detect adblock using fetch and bait element methods
+  - `src/components/AdBlockDonateMessage.js` - Component shown when adblock is detected
+  - `src/components/AdBlockDonateMessage.css` - Styles with light/dark mode support
+  - Updated `AdContainer.js` to use adblock detection and show donate message
+  - Full test coverage for all new components
+
 ## [2.1.11] - 2025-12-07
 
 ### Security
