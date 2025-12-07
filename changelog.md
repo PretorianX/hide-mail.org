@@ -2,6 +2,34 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.1.9] - 2025-12-07
+
+### Security
+- **Added Proof of Work (PoW) protection** - Prevents automated API abuse by requiring computational work before mailbox registration
+  - CORS and Origin verification only protect browser-based requests; attackers using curl/Postman can bypass them completely
+  - PoW requires clients to solve a SHA256 HashCash-style challenge before registering mailboxes
+  - Each challenge is single-use and expires after 5 minutes (prevents replay attacks)
+  - Default difficulty of 4 leading zeros (~50-100ms on modern browser, but costly at scale for attackers)
+  - Bots/scripts must spend significant CPU time per registration, making mass abuse impractical
+
+### Added
+- `backend/services/powService.js` - Proof of Work challenge generation and verification
+- `src/utils/powSolver.js` - Frontend PoW solver using Web Crypto API
+- `GET /api/challenge` endpoint - Returns a PoW challenge to solve
+- PoW verification middleware for mailbox registration
+- Comprehensive tests for PoW service (`backend/tests/services/powService.test.js`)
+
+### Changed
+- `POST /api/mailbox/register` now requires PoW solution in request body (`{ email, pow: { challenge, nonce } }`)
+- `EmailService.generateEmail()` now solves PoW challenge before registering (transparent to users)
+- PoW is optional in development mode for easier testing (skipped if no `pow` in request body)
+
+### Technical Details
+- Challenge format: 64-character hex string (32 bytes random)
+- Solution: Find nonce where `SHA256(challenge + nonce)` starts with N zeros (N = difficulty)
+- Stored in Redis with TTL for automatic expiration
+- Used challenges tracked separately to prevent replay attacks
+
 ## [2.1.8] - 2025-12-07
 
 ### Security

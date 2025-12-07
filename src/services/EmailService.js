@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { faker } from '@faker-js/faker';
+import { getProofOfWork } from '../utils/powSolver';
 
 // Backend API URL
 const API_URL = process.env.REACT_APP_API_URL || '/api';
@@ -195,9 +196,19 @@ class EmailService {
       
       const newEmail = `${localPart}@${emailDomain}`;
       
-      // Register the new email with the backend
+      // Solve PoW challenge before registering (prevents automated abuse)
+      console.log('Solving PoW challenge...');
+      const pow = await getProofOfWork((progress) => {
+        // Log progress for debugging (every 1000 iterations)
+        if (progress.iterations % 10000 === 0) {
+          console.log(`PoW progress: ${progress.iterations} iterations, ${progress.elapsedMs}ms`);
+        }
+      });
+      console.log('PoW challenge solved');
+      
+      // Register the new email with the backend (including PoW solution)
       await axios.post(`${API_URL}/mailbox/register`, 
-        { email: newEmail },
+        { email: newEmail, pow },
         {
           headers: {
             'Content-Type': 'application/json',

@@ -6,11 +6,18 @@ const logger = require('../utils/logger');
 const { v4: uuidv4 } = require('uuid');
 const config = require('../config/config');
 const apiRateLimiter = require('../services/apiRateLimiter');
+const powService = require('../services/powService');
 
 const router = express.Router();
 
 // Environment check for debug endpoints
 const isDevelopment = () => config.environment === 'development';
+
+// ============================================================================
+// Proof of Work Challenge Endpoint
+// Client must solve a challenge before registering mailboxes
+// ============================================================================
+router.get('/challenge', apiRateLimiter.default, powService.challengeHandler);
 
 // Email routes (with rate limiting)
 router.get('/emails/:email', apiRateLimiter.emailFetch, emailController.getEmails);
@@ -21,8 +28,21 @@ router.delete('/emails/:email', apiRateLimiter.default, emailController.deleteAl
 // Domain routes
 router.get('/domains', apiRateLimiter.default, emailController.getDomains);
 
-// Mailbox routes (with rate limiting)
-router.post('/mailbox/register', apiRateLimiter.mailboxRegister, emailController.registerMailbox);
+// Mailbox routes (with rate limiting and PoW protection)
+// In development: PoW is optional for easier testing
+// In production: PoW is required to prevent automated abuse
+router.post('/mailbox/register', 
+  apiRateLimiter.mailboxRegister, 
+  async (req, res, next) => {
+    // Skip PoW in development if no pow data provided (for testing)
+    if (isDevelopment() && !req.body?.pow) {
+      logger.warn('PoW: Skipped in development mode');
+      return next();
+    }
+    return powService.requireProofOfWork(req, res, next);
+  },
+  emailController.registerMailbox
+);
 router.post('/mailbox/refresh', apiRateLimiter.mailboxRefresh, emailController.refreshMailbox);
 router.post('/mailbox/deactivate', apiRateLimiter.default, emailController.deactivateMailbox);
 
