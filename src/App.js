@@ -495,7 +495,7 @@ function App() {
                         </div>
                         <div className="faq-item">
                           <h4>How long do temporary emails last?</h4>
-                          <p>Our temporary email addresses remain active for 24 hours by default. After this period, all messages and the email address itself are permanently deleted.</p>
+                          <p>Our temporary email addresses remain active for 30 minutes by default. After this period, all messages and the email address itself are permanently deleted.</p>
                         </div>
                         <div className="faq-item">
                           <h4>Can I send emails from my temporary address?</h4>
