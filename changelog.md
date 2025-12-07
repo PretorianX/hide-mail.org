@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.1.10] - 2025-12-07
+
+### Changed
+- **Added CodeQL configuration** - Custom config to suppress false positive rate limiting alerts
+  - CodeQL's static analysis doesn't recognize Express middleware-based rate limiting patterns
+  - All API routes have rate limiting applied via `apiRateLimiter` middleware
+  - Created `.github/codeql-config.yml` to exclude `js/missing-rate-limiting` query
+  - Created dedicated `.github/workflows/codeql.yml` workflow for code scanning
+
 ## [2.1.9] - 2025-12-07
 
 ### Security

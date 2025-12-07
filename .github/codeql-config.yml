@@ -1,0 +1,17 @@
+# CodeQL Configuration
+# https://docs.github.com/en/code-security/code-scanning/creating-an-advanced-setup-for-code-scanning/customizing-your-advanced-setup-for-code-scanning
+
+name: "Hide-Mail CodeQL Config"
+
+# Use the default queries plus security-extended
+queries:
+  - uses: security-extended
+
+# Exclude specific queries that produce false positives
+query-filters:
+  # Exclude js/missing-rate-limiting - false positive
+  # Our Express routes use middleware-based rate limiting (apiRateLimiter)
+  # which CodeQL's static analysis doesn't recognize in middleware chains.
+  # See: backend/routes/api.js - all routes have rate limiting middleware applied
+  - exclude:
+      id: js/missing-rate-limiting
