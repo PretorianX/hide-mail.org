@@ -7,7 +7,6 @@ import { formatDate } from './utils/dateUtils.js';
 import { BrowserRouter as Router, Routes, Route, Link, Navigate } from 'react-router-dom';
 import styled from 'styled-components';
 import Header from './components/Header.js';
-import EmailGenerator from './components/EmailGenerator.js';
 import EmailViewer from './components/EmailViewer.js';
 import ConfigProvider from './components/ConfigProvider.js';
 import GlobalStyle from './styles/GlobalStyle.js';
@@ -394,7 +393,11 @@ function App() {
                                 </div>
                               </>
                             ) : (
-                              <EmailGenerator onGenerate={handleGenerateEmail} />
+                              <div className="email-actions">
+                                <button onClick={() => handleGenerateEmail()} disabled={loading}>
+                                  {loading ? 'Generating...' : 'Generate Email'}
+                                </button>
+                              </div>
                             )}
                           </div>
                         </section>

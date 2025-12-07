@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.1.13] - 2025-12-07
+
+### Removed
+- **Deleted legacy EmailGenerator component** - Removed unused `src/components/EmailGenerator.js` and `src/components/EmailGenerator.test.js`
+  - The legacy component was shown when rate limit was hit, causing confusing duplicate UI
+  - Replaced with simple "Generate Email" button using existing App.js flow
+  - Domain selector is already in main App.js, no need for duplicate in legacy component
+
 ## [2.1.12] - 2025-12-07
 
 ### Added
