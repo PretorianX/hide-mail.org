@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.1.11] - 2025-12-07
+
+### Security
+- **Fixed log injection vulnerabilities (CWE-117)** - All user-controlled input is now sanitized before logging
+  - Created `backend/utils/sanitize.js` with `sanitizeForLog`, `sanitizeEmail`, `sanitizeIP`, `sanitizeMessageId` functions
+  - Control characters (newlines, tabs, etc.) are now escaped to prevent log forging attacks
+  - Applied to: `redisService.js`, `smtpService.js`, `forwardingService.js`, `rateLimiter.js`, `otpService.js`, `powService.js`, `originVerifier.js`, `apiRateLimiter.js`, `api.js`
+
+- **Fixed user-controlled security bypass (CWE-843)** - Added strict type validation in `forwardingController.js`
+  - `verifyOTP` endpoint now validates that `tempMailbox`, `destinationEmail`, and `otp` are strings
+  - Prevents type coercion attacks where arrays or objects could bypass validation
+
+- **Fixed missing regex anchor in test** - `PrivacyPolicy.test.js` regex now uses anchors (`^...$`)
+  - Prevents potential false matches like "fake-mail-duck.com" or "mail-duck.com.malicious.com"
+
+### Added
+- `backend/utils/sanitize.js` - Sanitization utilities for safe logging
+- `backend/tests/utils/sanitize.test.js` - Tests for sanitization utilities (100% coverage)
+
 ## [2.1.10] - 2025-12-07
 
 ### Changed

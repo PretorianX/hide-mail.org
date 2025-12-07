@@ -18,6 +18,7 @@
 
 const logger = require('../utils/logger');
 const config = require('../config/config');
+const { sanitizeEmail, sanitizeMessageId } = require('../utils/sanitize');
 const redisService = require('./redisService');
 const otpService = require('./otpService');
 const rateLimiter = require('./rateLimiter');
@@ -133,7 +134,7 @@ const requestOTP = async (tempMailbox, destinationEmail) => {
   // Send OTP email
   try {
     await smtpService.sendOTPEmail(destinationEmail, otp, tempMailbox);
-    logger.info(`Forwarding Service: OTP sent to ${destinationEmail} for ${tempMailbox}`);
+    logger.info(`Forwarding Service: OTP sent to ${sanitizeEmail(destinationEmail)} for ${sanitizeEmail(tempMailbox)}`);
   } catch (error) {
     logger.error('Forwarding Service: Failed to send OTP email', error);
     throw new Error('Failed to send verification email. Please try again.');
@@ -166,7 +167,7 @@ const verifyOTP = async (tempMailbox, destinationEmail, otp) => {
     throw new Error('Invalid or expired verification code');
   }
 
-  logger.info(`Forwarding Service: Destination verified for ${tempMailbox} -> ${destinationEmail}`);
+  logger.info(`Forwarding Service: Destination verified for ${sanitizeEmail(tempMailbox)} -> ${sanitizeEmail(destinationEmail)}`);
 
   return {
     success: true,
@@ -222,7 +223,7 @@ const forwardEmail = async (tempMailbox, messageId) => {
     // Increment rate limit counter ONLY after successful forward
     await rateLimiter.incrementForwardCount(tempMailbox);
 
-    logger.info(`Forwarding Service: Email ${messageId} forwarded to ${destination.destinationEmail}`);
+    logger.info(`Forwarding Service: Email ${sanitizeMessageId(messageId)} forwarded to ${sanitizeEmail(destination.destinationEmail)}`);
 
     return {
       success: true,
@@ -282,7 +283,7 @@ const getForwardingStatus = async (tempMailbox) => {
  */
 const clearForwarding = async (tempMailbox) => {
   await otpService.removeValidatedDestination(tempMailbox);
-  logger.info(`Forwarding Service: Cleared forwarding for ${tempMailbox}`);
+  logger.info(`Forwarding Service: Cleared forwarding for ${sanitizeEmail(tempMailbox)}`);
 };
 
 /**

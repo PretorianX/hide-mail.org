@@ -20,6 +20,7 @@
 const nodemailer = require('nodemailer');
 const logger = require('../utils/logger');
 const config = require('../config/config');
+const { sanitizeEmail, sanitizeMessageId } = require('../utils/sanitize');
 
 // DKIM configuration (optional)
 const getDkimConfig = () => {
@@ -119,10 +120,10 @@ const sendEmail = async ({ to, subject, html, text, from, headers = {} }) => {
 
   try {
     const result = await transporter.sendMail(mailOptions);
-    logger.info(`SMTP Service: Email sent to ${to}, messageId: ${result.messageId}`);
+    logger.info(`SMTP Service: Email sent to ${sanitizeEmail(to)}, messageId: ${sanitizeMessageId(result.messageId)}`);
     return result;
   } catch (error) {
-    logger.error(`SMTP Service: Failed to send email to ${to}`, error);
+    logger.error(`SMTP Service: Failed to send email to ${sanitizeEmail(to)}`, error);
     throw error;
   }
 };

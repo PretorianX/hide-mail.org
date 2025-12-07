@@ -86,8 +86,17 @@ const verifyOTP = async (req, res, next) => {
   try {
     const { tempMailbox, destinationEmail, otp } = req.body;
 
-    // Validate required fields
-    if (!tempMailbox || !destinationEmail || !otp) {
+    // SECURITY: Validate required fields with strict type checking
+    // This prevents type coercion attacks (CWE-843) and ensures
+    // only properly formatted strings reach downstream services
+    if (
+      typeof tempMailbox !== 'string' ||
+      typeof destinationEmail !== 'string' ||
+      typeof otp !== 'string' ||
+      tempMailbox.trim() === '' ||
+      destinationEmail.trim() === '' ||
+      otp.trim() === ''
+    ) {
       return res.status(400).json({
         success: false,
         error: 'Temporary mailbox, destination email, and OTP are required',

@@ -3,6 +3,7 @@ const emailController = require('../controllers/emailController');
 const forwardingController = require('../controllers/forwardingController');
 const redisService = require('../services/redisService');
 const logger = require('../utils/logger');
+const { sanitizeEmail } = require('../utils/sanitize');
 const { v4: uuidv4 } = require('uuid');
 const config = require('../config/config');
 const apiRateLimiter = require('../services/apiRateLimiter');
@@ -58,12 +59,12 @@ router.get('/messages', apiRateLimiter.emailFetch, async (req, res) => {
       });
     }
     
-    logger.info(`API: Fetching messages for email: ${email}`);
+    logger.info(`API: Fetching messages for email: ${sanitizeEmail(email)}`);
     
     // Check if mailbox exists
     const isMailboxActive = await redisService.isMailboxActive(email);
     if (!isMailboxActive) {
-      logger.warn(`API: Mailbox not active for email: ${email}`);
+      logger.warn(`API: Mailbox not active for email: ${sanitizeEmail(email)}`);
       return res.status(404).json({ 
         success: false, 
         error: 'Mailbox not found or inactive' 
@@ -72,7 +73,7 @@ router.get('/messages', apiRateLimiter.emailFetch, async (req, res) => {
     
     // Get messages from Redis
     const messages = await redisService.getEmails(email);
-    logger.info(`API: Found ${messages.length} messages for email: ${email}`);
+    logger.info(`API: Found ${messages.length} messages for email: ${sanitizeEmail(email)}`);
     
     return res.json({ 
       success: true, 
@@ -165,12 +166,12 @@ router.post('/test-email', apiRateLimiter.default, async (req, res) => {
       });
     }
     
-    logger.info(`API: Sending test email to: ${email}`);
+    logger.info(`API: Sending test email to: ${sanitizeEmail(email)}`);
     
     // Check if mailbox exists
     const isMailboxActive = await redisService.isMailboxActive(email);
     if (!isMailboxActive) {
-      logger.warn(`API: Mailbox not active for email: ${email}`);
+      logger.warn(`API: Mailbox not active for email: ${sanitizeEmail(email)}`);
       return res.status(404).json({ 
         success: false, 
         error: 'Mailbox not found or inactive' 

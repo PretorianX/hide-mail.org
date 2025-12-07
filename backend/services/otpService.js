@@ -17,6 +17,7 @@
 const otpGenerator = require('otp-generator');
 const logger = require('../utils/logger');
 const config = require('../config/config');
+const { sanitizeEmail } = require('../utils/sanitize');
 const redisService = require('./redisService');
 
 // Redis key prefixes
@@ -71,7 +72,7 @@ const createOTP = async (tempMailbox, destinationEmail) => {
   
   await redisService.client.set(key, otp, 'EX', expirationSeconds);
   
-  logger.info(`OTP Service: Created OTP for ${normalizedTempMailbox} -> ${normalizedDestination}`);
+  logger.info(`OTP Service: Created OTP for ${sanitizeEmail(normalizedTempMailbox)} -> ${sanitizeEmail(normalizedDestination)}`);
   
   return otp;
 };
@@ -98,7 +99,7 @@ const verifyOTP = async (tempMailbox, destinationEmail, otp) => {
   const storedOTP = await redisService.client.get(key);
   
   if (!storedOTP) {
-    logger.warn(`OTP Service: No OTP found for ${normalizedTempMailbox} -> ${normalizedDestination}`);
+    logger.warn(`OTP Service: No OTP found for ${sanitizeEmail(normalizedTempMailbox)} -> ${sanitizeEmail(normalizedDestination)}`);
     return false;
   }
   
@@ -112,9 +113,9 @@ const verifyOTP = async (tempMailbox, destinationEmail, otp) => {
     // Store validated destination
     await setValidatedDestination(normalizedTempMailbox, normalizedDestination);
     
-    logger.info(`OTP Service: OTP verified for ${normalizedTempMailbox} -> ${normalizedDestination}`);
+    logger.info(`OTP Service: OTP verified for ${sanitizeEmail(normalizedTempMailbox)} -> ${sanitizeEmail(normalizedDestination)}`);
   } else {
-    logger.warn(`OTP Service: Invalid OTP for ${normalizedTempMailbox} -> ${normalizedDestination}`);
+    logger.warn(`OTP Service: Invalid OTP for ${sanitizeEmail(normalizedTempMailbox)} -> ${sanitizeEmail(normalizedDestination)}`);
   }
   
   return isValid;
@@ -145,7 +146,7 @@ const setValidatedDestination = async (tempMailbox, destinationEmail) => {
     await redisService.client.set(key, data, 'EX', 1800);
   }
   
-  logger.info(`OTP Service: Set validated destination for ${tempMailbox}`);
+  logger.info(`OTP Service: Set validated destination for ${sanitizeEmail(tempMailbox)}`);
 };
 
 /**
@@ -187,7 +188,7 @@ const hasValidatedDestination = async (tempMailbox) => {
 const removeValidatedDestination = async (tempMailbox) => {
   const key = `${KEY_PREFIXES.FORWARDING}${tempMailbox.toLowerCase()}`;
   await redisService.client.del(key);
-  logger.info(`OTP Service: Removed validated destination for ${tempMailbox}`);
+  logger.info(`OTP Service: Removed validated destination for ${sanitizeEmail(tempMailbox)}`);
 };
 
 /**

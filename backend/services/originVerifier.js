@@ -10,6 +10,7 @@
 
 const logger = require('../utils/logger');
 const config = require('../config/config');
+const { sanitizeForLog, sanitizeIP } = require('../utils/sanitize');
 
 /**
  * Parse allowed origins from environment
@@ -132,7 +133,7 @@ const createOriginVerifier = (options = {}) => {
     
     // Block if no origin header and strict mode
     if (!requestOrigin && strict) {
-      logger.warn(`Origin verification failed: no Origin/Referer header from ${req.ip} for ${req.method} ${req.path}`);
+      logger.warn(`Origin verification failed: no Origin/Referer header from ${sanitizeIP(req.ip)} for ${req.method} ${sanitizeForLog(req.path)}`);
       return res.status(403).json({
         success: false,
         error: 'Request origin not provided',
@@ -141,7 +142,7 @@ const createOriginVerifier = (options = {}) => {
     }
     
     if (!isAllowed) {
-      logger.warn(`Origin verification failed: ${requestOrigin} not allowed for ${req.method} ${req.path}`);
+      logger.warn(`Origin verification failed: ${sanitizeForLog(requestOrigin)} not allowed for ${req.method} ${sanitizeForLog(req.path)}`);
       return res.status(403).json({
         success: false,
         error: 'Request origin not allowed',

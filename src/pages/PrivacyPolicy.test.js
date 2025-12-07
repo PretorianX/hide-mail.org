@@ -36,8 +36,8 @@ describe('PrivacyPolicy Component', () => {
     // Find the text that mentions mail-duck.com as a service provider
     expect(screen.getByText(/a service provided by mail-duck.com/i)).toBeInTheDocument();
     
-    // Find the link by role and name
-    const mailDuckLink = screen.getByRole('link', { name: /mail-duck\.com/i });
+    // Find the link by role and name (anchored regex prevents matching unintended strings)
+    const mailDuckLink = screen.getByRole('link', { name: /^mail-duck\.com$/i });
     expect(mailDuckLink).toHaveAttribute('href', 'https://mail-duck.com');
   });
   

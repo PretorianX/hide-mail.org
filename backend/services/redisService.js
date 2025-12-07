@@ -1,6 +1,7 @@
 const Redis = require('ioredis');
 const config = require('../config/config');
 const logger = require('../utils/logger');
+const { sanitizeEmail } = require('../utils/sanitize');
 
 // Create Redis client
 const redis = new Redis(config.redisUrl);
@@ -96,7 +97,7 @@ const redisService = {
       await redis.set(knownKey, Date.now());
       await redis.expire(knownKey, knownExpiration);
       
-      logger.info(`Mailbox registered: ${email} (cleanup in ${knownExpiration}s)`);
+      logger.info(`Mailbox registered: ${sanitizeEmail(email)} (cleanup in ${knownExpiration}s)`);
     } catch (error) {
       logger.error('Error registering mailbox in Redis:', error);
       throw error;
@@ -154,7 +155,7 @@ const redisService = {
         const knownExpiration = expirationSeconds + getMailboxCleanupGraceSeconds();
         await redis.expire(knownKey, knownExpiration);
         
-        logger.info(`Mailbox refreshed: ${email}`);
+        logger.info(`Mailbox refreshed: ${sanitizeEmail(email)}`);
         return true;
       }
       
@@ -174,7 +175,7 @@ const redisService = {
     try {
       // Check if mailbox is active
       if (!(await this.isMailboxActive(recipient))) {
-        logger.warn(`Attempted to store email for inactive mailbox: ${recipient}`);
+        logger.warn(`Attempted to store email for inactive mailbox: ${sanitizeEmail(recipient)}`);
         return false;
       }
       
@@ -197,7 +198,7 @@ const redisService = {
         await redis.expire(emailKey, ttl);
       }
       
-      logger.info(`Email stored for: ${recipient}`);
+      logger.info(`Email stored for: ${sanitizeEmail(recipient)}`);
       return true;
     } catch (error) {
       logger.error('Error storing email in Redis:', error);
@@ -314,7 +315,7 @@ const redisService = {
     try {
       const key = `${KEY_PREFIXES.EMAIL}${email}`;
       await redis.del(key);
-      logger.info(`All emails deleted for: ${email}`);
+      logger.info(`All emails deleted for: ${sanitizeEmail(email)}`);
       return true;
     } catch (error) {
       logger.error('Error deleting all emails from Redis:', error);
@@ -337,9 +338,9 @@ const redisService = {
       if (exists) {
         // Delete the key to deactivate
         await redis.del(key);
-        logger.info(`Mailbox deactivated: ${email}`);
+        logger.info(`Mailbox deactivated: ${sanitizeEmail(email)}`);
       } else {
-        logger.warn(`Attempted to deactivate non-existent mailbox: ${email}`);
+        logger.warn(`Attempted to deactivate non-existent mailbox: ${sanitizeEmail(email)}`);
       }
       
       return true;

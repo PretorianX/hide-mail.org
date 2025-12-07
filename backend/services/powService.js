@@ -20,6 +20,7 @@
 const crypto = require('crypto');
 const redisService = require('./redisService');
 const logger = require('../utils/logger');
+const { sanitizeForLog, sanitizeIP } = require('../utils/sanitize');
 
 // Configuration
 const POW_CONFIG = {
@@ -70,7 +71,7 @@ const createChallenge = async (clientIP, difficulty = POW_CONFIG.defaultDifficul
     JSON.stringify(challengeData)
   );
   
-  logger.debug(`PoW: Created challenge for ${clientIP}, difficulty: ${difficulty}`);
+  logger.debug(`PoW: Created challenge for ${sanitizeIP(clientIP)}, difficulty: ${difficulty}`);
   
   return {
     challenge,
@@ -114,7 +115,7 @@ const verifySolution = async (challenge, nonce) => {
   const usedKey = `${POW_CONFIG.usedPrefix}${challenge}`;
   const wasUsed = await redisService.client.get(usedKey);
   if (wasUsed) {
-    logger.warn(`PoW: Replay attack detected - challenge already used: ${challenge.substring(0, 16)}...`);
+    logger.warn(`PoW: Replay attack detected - challenge already used: ${sanitizeForLog(challenge.substring(0, 16))}...`);
     return { valid: false, error: 'Challenge already used' };
   }
   
@@ -123,7 +124,7 @@ const verifySolution = async (challenge, nonce) => {
   const challengeDataStr = await redisService.client.get(key);
   
   if (!challengeDataStr) {
-    logger.warn(`PoW: Challenge not found or expired: ${challenge.substring(0, 16)}...`);
+    logger.warn(`PoW: Challenge not found or expired: ${sanitizeForLog(challenge.substring(0, 16))}...`);
     return { valid: false, error: 'Challenge not found or expired' };
   }
   

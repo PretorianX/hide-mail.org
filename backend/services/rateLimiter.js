@@ -16,6 +16,7 @@
 
 const logger = require('../utils/logger');
 const config = require('../config/config');
+const { sanitizeEmail } = require('../utils/sanitize');
 const redisService = require('./redisService');
 
 // Redis key prefix
@@ -93,7 +94,7 @@ const incrementForwardCount = async (tempMailbox) => {
     await redisService.client.expire(key, ttl);
   }
   
-  logger.info(`Rate Limiter: Forward count for ${tempMailbox} is now ${newCount}`);
+  logger.info(`Rate Limiter: Forward count for ${sanitizeEmail(tempMailbox)} is now ${newCount}`);
   
   return newCount;
 };

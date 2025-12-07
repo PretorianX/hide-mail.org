@@ -11,6 +11,7 @@
  */
 
 const logger = require('../utils/logger');
+const { sanitizeIP } = require('../utils/sanitize');
 const redisService = require('./redisService');
 
 // Rate limit configurations per endpoint type
@@ -66,7 +67,7 @@ const createRateLimiter = (limitType = 'default') => {
       res.set('X-RateLimit-Reset', Math.ceil(Date.now() / 1000 + ttl).toString());
 
       if (current > config.requests) {
-        logger.warn(`Rate limit exceeded for ${clientIP} on ${limitType}`);
+        logger.warn(`Rate limit exceeded for ${sanitizeIP(clientIP)} on ${limitType}`);
         return res.status(429).json({
           success: false,
           error: 'Too many requests. Please try again later.',
