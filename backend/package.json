@@ -18,11 +18,11 @@
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "ioredis": "^5.4.2",
-    "mailparser": "^3.7.2",
+    "mailparser": "^3.9.1",
     "morgan": "^1.10.0",
     "nodemailer": "^7.0.7",
     "otp-generator": "^4.0.1",
-    "smtp-server": "^3.13.6",
+    "smtp-server": "^3.17.1",
     "uuid": "^11.0.3",
     "winston": "^3.17.0"
   },
