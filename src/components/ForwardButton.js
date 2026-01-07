@@ -11,6 +11,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import OTPModal from './OTPModal';
 import EmailService from '../services/EmailService';
+import { analytics, trackEvent } from '../services/analytics';
 import './ForwardButton.css';
 
 // Button states
@@ -112,6 +113,7 @@ const ForwardButton = ({ tempMailbox, messageId, onForwarded }) => {
       await EmailService.forwardMessage(tempMailbox, messageId);
       setState(STATES.SENT);
       showNotification('Email forwarded successfully!', 'success');
+      analytics.forwardEmail();
       onForwarded?.();
       // Refresh status to update remaining forwards count
       fetchStatus();
@@ -164,6 +166,7 @@ const ForwardButton = ({ tempMailbox, messageId, onForwarded }) => {
 
   const handleOTPVerified = async (destinationEmail) => {
     showNotification(`Forwarding enabled to ${destinationEmail}`, 'success');
+    trackEvent('otp_verified', { destination_set: true });
     // Update local state immediately since OTP verification succeeded
     setForwardingStatus(prev => ({
       ...prev,

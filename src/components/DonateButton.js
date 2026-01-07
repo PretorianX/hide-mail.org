@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import './DonateButton.css';
+import { analytics } from '../services/analytics.js';
 
 const PAYPAL_BUTTON_ID = 'ES5RX8BKH3P5G';
 const PAYPAL_SDK_URL = 'https://www.paypalobjects.com/donate/sdk/donate-sdk.js';
@@ -80,8 +81,12 @@ const DonateButton = ({ className = '' }) => {
     };
   }, []);
   
+  const handleDonateClick = () => {
+    analytics.donateClick();
+  };
+
   return (
-    <div className={`donate-button-container ${className}`}>
+    <div className={`donate-button-container ${className}`} onClick={handleDonateClick}>
       <p className="donate-text">Support Hide Mail</p>
       <div id={buttonId.current} ref={containerRef} className="donate-button"></div>
     </div>

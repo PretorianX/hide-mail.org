@@ -1,6 +1,7 @@
 import React from 'react';
 import styled from 'styled-components';
 import { useTheme } from '../styles/ThemeContext';
+import { analytics } from '../services/analytics';
 
 const ToggleButton = styled.button`
   display: flex;
@@ -27,9 +28,15 @@ const ThemeToggle = () => {
   // Ensure we have a valid theme value
   const currentTheme = theme || 'light';
   
+  const handleToggle = () => {
+    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+    analytics.toggleTheme(newTheme);
+    toggleTheme();
+  };
+  
   return (
     <ToggleButton 
-      onClick={toggleTheme} 
+      onClick={handleToggle} 
       aria-label={`Switch to ${currentTheme === 'light' ? 'dark' : 'light'} mode`}
       title={`Switch to ${currentTheme === 'light' ? 'dark' : 'light'} mode`}
       className="theme-toggle"

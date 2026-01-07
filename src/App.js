@@ -4,7 +4,7 @@ import EmailService from './services/EmailService.js';
 import MailboxTimer from './components/MailboxTimer.js';
 import { parseMultipartMessage } from './utils/messageParser.js';
 import { formatDate } from './utils/dateUtils.js';
-import { BrowserRouter as Router, Routes, Route, Link, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, Navigate, useLocation } from 'react-router-dom';
 import styled from 'styled-components';
 import Header from './components/Header.js';
 import EmailViewer from './components/EmailViewer.js';
@@ -23,6 +23,30 @@ import PageAds from './components/PageAds.js';
 import CookieConsent from './components/CookieConsent.js';
 import MessageList from './components/MessageList.js';
 import DonateButton from './components/DonateButton.js';
+import { trackPageView, analytics } from './services/analytics.js';
+
+// Component to track page views on route changes
+function PageViewTracker() {
+  const location = useLocation();
+  
+  useEffect(() => {
+    const pageTitles = {
+      '/': 'Home',
+      '/privacy-policy': 'Privacy Policy',
+      '/terms-of-service': 'Terms of Service',
+      '/about-us': 'About Us',
+      '/contact-us': 'Contact Us',
+      '/blog': 'Blog',
+    };
+    
+    const title = pageTitles[location.pathname] || 
+      (location.pathname.startsWith('/blog/') ? 'Blog Post' : 'Hide Mail');
+    
+    trackPageView(location.pathname, title);
+  }, [location]);
+  
+  return null;
+}
 
 const AppContainer = styled.div`
   max-width: 1200px;
@@ -269,7 +293,7 @@ function App() {
     }
   };
 
-  const handleGenerateEmail = async (domainOverride = null) => {
+  const handleGenerateEmail = async (domainOverride = null, isChange = false) => {
     try {
       setLoading(true);
       setError(null); // Clear any previous errors
@@ -280,6 +304,12 @@ function App() {
       const newEmail = await EmailService.generateEmail(domainToUse || null);
       setEmail(newEmail);
       setMessages([]);
+      // Track analytics
+      if (isChange) {
+        analytics.changeEmail();
+      } else {
+        analytics.generateEmail();
+      }
     } catch (err) {
       console.error('Error generating email:', err);
       
@@ -297,6 +327,7 @@ function App() {
 
   const handleRefreshMessages = () => {
     if (email) {
+      analytics.checkMessages();
       fetchMessages(email);
     }
   };
@@ -329,6 +360,7 @@ function App() {
       }
       
       setCopied(true);
+      analytics.copyEmail();
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error('Failed to copy email:', err);
@@ -385,12 +417,14 @@ function App() {
   };
 
   const handleSelectMessage = (messageId) => {
+    analytics.selectMessage(messageId);
     setSelectedMessageId(messageId);
   };
 
   return (
     <ThemeProvider>
       <Router>
+        <PageViewTracker />
         <GlobalStyle />
         <DarkModeOverrides />
         <ConfigProvider>
@@ -424,7 +458,12 @@ function App() {
                                 data-testid="domain-select"
                                 className="domain-select"
                                 value={selectedDomain}
-                                onChange={(e) => setSelectedDomain(e.target.value)}
+                                onChange={(e) => {
+                                  setSelectedDomain(e.target.value);
+                                  if (e.target.value) {
+                                    analytics.selectDomain(e.target.value);
+                                  }
+                                }}
                                 aria-label="Choose a domain"
                               >
                                 <option value="">Random domain</option>
@@ -469,7 +508,7 @@ function App() {
                                   onRefresh={handleRefreshMessages}
                                 />
                                 <div className="email-actions">
-                                  <button onClick={() => handleGenerateEmail()}>Change Email Address</button>
+                                  <button onClick={() => handleGenerateEmail(null, true)}>Change Email Address</button>
                                   <button onClick={handleRefreshMessages} disabled={refreshing}>
                                     {refreshing ? 'Checking...' : 'Check Messages'}
                                   </button>
@@ -686,11 +725,11 @@ function App() {
             
             <FooterContainer>
               <FooterLinks className="footer-links">
-                <FooterLink to="/privacy-policy" onClick={(e) => e.currentTarget.blur()}>Privacy Policy</FooterLink>
-                <FooterLink to="/terms-of-service" onClick={(e) => e.currentTarget.blur()}>Terms of Service</FooterLink>
-                <FooterLink to="/about-us" onClick={(e) => e.currentTarget.blur()}>About Us</FooterLink>
-                <FooterLink to="/contact-us" onClick={(e) => e.currentTarget.blur()}>Contact Us</FooterLink>
-                <FooterLink to="/blog" onClick={(e) => e.currentTarget.blur()}>Blog</FooterLink>
+                <FooterLink to="/privacy-policy" onClick={(e) => { e.currentTarget.blur(); analytics.navigateTo('Privacy Policy'); }}>Privacy Policy</FooterLink>
+                <FooterLink to="/terms-of-service" onClick={(e) => { e.currentTarget.blur(); analytics.navigateTo('Terms of Service'); }}>Terms of Service</FooterLink>
+                <FooterLink to="/about-us" onClick={(e) => { e.currentTarget.blur(); analytics.navigateTo('About Us'); }}>About Us</FooterLink>
+                <FooterLink to="/contact-us" onClick={(e) => { e.currentTarget.blur(); analytics.navigateTo('Contact Us'); }}>Contact Us</FooterLink>
+                <FooterLink to="/blog" onClick={(e) => { e.currentTarget.blur(); analytics.navigateTo('Blog'); }}>Blog</FooterLink>
               </FooterLinks>
               <DonateButton className="footer-donate" />
               <div className="ad-container ad-in-footer">

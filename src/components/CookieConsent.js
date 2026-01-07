@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
+import { analytics } from '../services/analytics';
 
 const CookieConsentContainer = styled.div`
   position: fixed;
@@ -309,6 +310,7 @@ const CookieConsent = () => {
     // Update state
     setCookiePreferences(allAccepted);
     setShowBanner(false);
+    analytics.cookieConsent(true);
   };
 
   const handleRejectAll = () => {
@@ -326,6 +328,7 @@ const CookieConsent = () => {
     // Update state
     setCookiePreferences(onlyNecessary);
     setShowBanner(false);
+    analytics.cookieConsent(false);
   };
 
   const handleCustomize = () => {

@@ -18,6 +18,18 @@
     <link rel="apple-touch-icon" sizes="180x180" href="%PUBLIC_URL%/apple-touch-icon.png" />
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
     <title>Hide Mail</title>
+    
+    <!-- Google Analytics - Only included in production -->
+    <% if (process.env.NODE_ENV === 'production') { %>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-46KBN1JF5T"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-46KBN1JF5T');
+    </script>
+    <% } %>
+    
     <!-- Runtime environment variables will be injected here -->
     <script src="%PUBLIC_URL%/runtime-env.js"></script>
     
