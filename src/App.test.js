@@ -54,7 +54,8 @@ jest.mock('react-router-dom', () => {
     Link: ({ children, to }) => <a href={to}>{children}</a>,
     Navigate: ({ to }) => <div data-testid="navigate" data-to={to}>Navigate to {to}</div>,
     useNavigate: () => jest.fn(),
-    useParams: () => ({ postId: 'temporary-email-guide' })
+    useParams: () => ({ postId: 'temporary-email-guide' }),
+    useLocation: () => ({ pathname: '/', search: '', hash: '', state: null, key: 'default' })
   };
 });
 
