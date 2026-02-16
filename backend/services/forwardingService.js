@@ -24,6 +24,7 @@ const otpService = require('./otpService');
 const rateLimiter = require('./rateLimiter');
 const srsService = require('./srsService');
 const smtpService = require('./smtpService');
+const metrics = require('./metricsService');
 
 /**
  * Map SMTP errors to user-friendly error codes
@@ -134,6 +135,7 @@ const requestOTP = async (tempMailbox, destinationEmail) => {
   // Send OTP email
   try {
     await smtpService.sendOTPEmail(destinationEmail, otp, tempMailbox);
+    metrics.forwardingOtpRequestsTotal.inc();
     logger.info(`Forwarding Service: OTP sent to ${sanitizeEmail(destinationEmail)} for ${sanitizeEmail(tempMailbox)}`);
   } catch (error) {
     logger.error('Forwarding Service: Failed to send OTP email', error);
@@ -164,9 +166,11 @@ const verifyOTP = async (tempMailbox, destinationEmail, otp) => {
   const isValid = await otpService.verifyOTP(tempMailbox, destinationEmail, otp);
   
   if (!isValid) {
+    metrics.forwardingOtpVerificationsTotal.inc({ result: 'failed' });
     throw new Error('Invalid or expired verification code');
   }
 
+  metrics.forwardingOtpVerificationsTotal.inc({ result: 'success' });
   logger.info(`Forwarding Service: Destination verified for ${sanitizeEmail(tempMailbox)} -> ${sanitizeEmail(destinationEmail)}`);
 
   return {
@@ -223,6 +227,7 @@ const forwardEmail = async (tempMailbox, messageId) => {
     // Increment rate limit counter ONLY after successful forward
     await rateLimiter.incrementForwardCount(tempMailbox);
 
+    metrics.forwardingEmailsTotal.inc({ result: 'success' });
     logger.info(`Forwarding Service: Email ${sanitizeMessageId(messageId)} forwarded to ${sanitizeEmail(destination.destinationEmail)}`);
 
     return {
@@ -232,10 +237,9 @@ const forwardEmail = async (tempMailbox, messageId) => {
       destinationEmail: destination.destinationEmail,
     };
   } catch (error) {
+    metrics.forwardingEmailsTotal.inc({ result: 'failed' });
     logger.error('Forwarding Service: Failed to forward email', error);
     
-    // Create error with specific details for better user feedback
-    // Rate limit is NOT incremented on failure (only after success above)
     const forwardError = new Error(getSmtpErrorMessage(error));
     forwardError.code = getSmtpErrorCode(error);
     forwardError.originalError = error.message;

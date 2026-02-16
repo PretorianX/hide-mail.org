@@ -6,6 +6,8 @@ const { SMTPServer } = require('smtp-server');
 const { simpleParser } = require('mailparser');
 const redisService = require('./services/redisService');
 const forwardingService = require('./services/forwardingService');
+const metrics = require('./services/metricsService');
+const httpMetricsMiddleware = require('./middleware/httpMetrics');
 const config = require('./config/config');
 const logger = require('./utils/logger');
 const apiRoutes = require('./routes/api');
@@ -85,6 +87,7 @@ const corsOptions = {
 
 // Middleware
 app.use(cors(corsOptions));
+app.use(httpMetricsMiddleware);
 
 app.use(express.json());
 app.use(morgan('dev'));
@@ -119,6 +122,9 @@ const server = app.listen(PORT, () => {
   logger.info(`API server running on port ${PORT}`);
 });
 
+// Start Prometheus metrics server
+metrics.startMetricsServer();
+
 // Setup SMTP server to catch emails
 const smtpServer = new SMTPServer({
   secure: false,
@@ -129,6 +135,7 @@ const smtpServer = new SMTPServer({
   // Log all SMTP events
   onConnect(session, callback) {
     logger.info(`SMTP: New connection from ${session.remoteAddress}`);
+    metrics.smtpConnectionsTotal.inc();
     callback();
   },
   
@@ -150,6 +157,7 @@ const smtpServer = new SMTPServer({
         
         if (!isDomainValid) {
           logger.warn(`SMTP: Rejected email to ${address.address}: invalid domain`);
+          metrics.smtpRecipientsRejectedTotal.inc({ reason: 'invalid_domain' });
           return callback(new Error(`Invalid domain: ${domain}`));
         }
         
@@ -158,6 +166,7 @@ const smtpServer = new SMTPServer({
         const responseCode = config.smtpUnknownMailboxCode;
         if (responseCode === 250) {
           logger.info(`SMTP: Catch-all mode - accepting all emails for valid domain: ${address.address}`);
+          metrics.smtpRecipientsAcceptedTotal.inc();
           return callback();
         }
         
@@ -167,17 +176,19 @@ const smtpServer = new SMTPServer({
         const isMailboxKnown = await redisService.isMailboxKnown(address.address);
         
         if (!isMailboxKnown) {
-          // Reject with configured code (450=temp fail, 550=permanent fail)
           logger.warn(`SMTP: Rejecting unknown mailbox ${address.address} with code ${responseCode}`);
+          metrics.smtpRecipientsRejectedTotal.inc({ reason: 'unknown_mailbox' });
           const err = new Error(`Unknown recipient: ${address.address}`);
           err.responseCode = responseCode;
           return callback(err);
         }
         
         logger.info(`SMTP: Accepted recipient: ${address.address}`);
-        return callback(); // Accept the recipient
+        metrics.smtpRecipientsAcceptedTotal.inc();
+        return callback();
       } catch (error) {
         logger.error(`SMTP: Error in onRcptTo: ${error.message}`, error);
+        metrics.smtpErrorsTotal.inc();
         return callback(new Error(`Error processing recipient: ${error.message}`));
       }
     })();
@@ -195,6 +206,8 @@ const smtpServer = new SMTPServer({
     stream.on('end', async () => {
       try {
         logger.info(`SMTP: Finished receiving message data (${mailData.length} bytes)`);
+        metrics.emailsReceivedTotal.inc();
+        metrics.emailSizeBytes.observe(mailData.length);
         
         // Extract recipient from session
         const recipient = session.envelope.rcptTo[0].address;
@@ -210,7 +223,8 @@ const smtpServer = new SMTPServer({
           const isCatchAll = config.smtpUnknownMailboxCode === 250;
           const reason = isCatchAll ? 'catch-all mode' : 'expired mailbox';
           logger.info(`SMTP: Silently dropping email for ${reason}: ${recipient}`);
-          callback(); // Return 250 OK to sender
+          metrics.emailsDroppedTotal.inc({ reason });
+          callback();
           return;
         }
         
@@ -248,14 +262,15 @@ const smtpServer = new SMTPServer({
         
         logger.debug(`SMTP: Storing email with ID: ${email.id}`);
         await redisService.storeEmail(recipient, email);
+        metrics.emailsStoredTotal.inc();
         
-        // Log success with more details
         logger.info(`SMTP: Email successfully processed and stored for: ${recipient}`);
         logger.info(`SMTP: Email ID: ${email.id}, Subject: ${email.subject}`);
         
         callback();
       } catch (error) {
         logger.error(`SMTP: Error processing email: ${error.message}`, error);
+        metrics.smtpErrorsTotal.inc();
         callback(new Error(`Error processing email: ${error.message}`));
       }
     });
@@ -277,6 +292,7 @@ smtpServer.listen(SMTP_PORT, () => {
 // Handle graceful shutdown
 process.on('SIGTERM', () => {
   logger.info('SIGTERM received, shutting down gracefully');
+  metrics.stopMetricsServer();
   server.close(() => {
     logger.info('HTTP server closed');
   });

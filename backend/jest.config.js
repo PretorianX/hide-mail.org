@@ -13,8 +13,9 @@ module.exports = {
   ],
   coverageReporters: ['text', 'lcov', 'clover'],
   verbose: true,
-  // Mock ioredis module
+  // Mock external modules
   moduleNameMapper: {
-    '^ioredis$': '<rootDir>/__mocks__/ioredis.js'
+    '^ioredis$': '<rootDir>/__mocks__/ioredis.js',
+    '^prom-client$': '<rootDir>/__mocks__/prom-client.js'
   }
 }; 

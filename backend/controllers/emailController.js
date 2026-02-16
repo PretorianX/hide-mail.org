@@ -1,6 +1,7 @@
 const redisService = require('../services/redisService');
 const config = require('../config/config');
 const logger = require('../utils/logger');
+const metrics = require('../services/metricsService');
 
 const emailController = {
   /**
@@ -181,6 +182,7 @@ const emailController = {
       
       // Register mailbox with configured expiration time
       await redisService.registerMailbox(email, config.emailExpirationSeconds);
+      metrics.mailboxesRegisteredTotal.inc();
       
       res.status(200).json({
         success: true,
@@ -215,6 +217,7 @@ const emailController = {
         return res.status(404).json({ error: 'Mailbox not found or expired' });
       }
       
+      metrics.mailboxesRefreshedTotal.inc();
       res.status(200).json({
         success: true,
         message: 'Mailbox refreshed successfully'
@@ -242,6 +245,7 @@ const emailController = {
       
       // Deactivate mailbox
       const success = await redisService.deactivateMailbox(email);
+      metrics.mailboxesDeactivatedTotal.inc();
       
       res.status(200).json({
         success: true,

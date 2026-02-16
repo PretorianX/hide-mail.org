@@ -2,6 +2,7 @@ const Redis = require('ioredis');
 const config = require('../config/config');
 const logger = require('../utils/logger');
 const { sanitizeEmail } = require('../utils/sanitize');
+const metrics = require('./metricsService');
 
 // Create Redis client
 const redis = new Redis(config.redisUrl);
@@ -9,10 +10,20 @@ const redis = new Redis(config.redisUrl);
 // Handle Redis connection events
 redis.on('connect', () => {
   logger.info('Connected to Redis');
+  metrics.redisConnected.set(1);
+});
+
+redis.on('ready', () => {
+  metrics.redisConnected.set(1);
 });
 
 redis.on('error', (err) => {
   logger.error('Redis error:', err);
+  metrics.redisConnected.set(0);
+});
+
+redis.on('close', () => {
+  metrics.redisConnected.set(0);
 });
 
 // Key prefixes for better organization

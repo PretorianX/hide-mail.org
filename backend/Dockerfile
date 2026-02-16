@@ -41,6 +41,7 @@ USER nodejs
 # Expose ports
 EXPOSE 3001
 EXPOSE 2525
+EXPOSE 9001
 
 # Start the application
 CMD ["node", "server.js"]

@@ -39,6 +39,7 @@ services:
     ports:
       - "3002:3001"
       - "25:2525"
+      - "127.0.0.1:9001:9001"
     environment:
       - NODE_ENV=development
       - PORT=${PORT:-3001}
@@ -50,6 +51,7 @@ services:
       - MAILBOX_CLEANUP_GRACE_DAYS=${MAILBOX_CLEANUP_GRACE_DAYS:-7}
       - SMTP_UNKNOWN_MAILBOX_CODE=${SMTP_UNKNOWN_MAILBOX_CODE:-550}
       - LOG_LEVEL=${LOG_LEVEL:-debug}
+      - METRICS_PORT=${METRICS_PORT:-9001}
       # Forward & Forget - Outgoing SMTP configuration (connects to Postfix)
       - SMTP_HOST=${SMTP_HOST:-postfix}
       - SMTP_OUTGOING_PORT=${SMTP_OUTGOING_PORT:-587}
