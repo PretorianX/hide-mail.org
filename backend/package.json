@@ -18,7 +18,7 @@
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "ioredis": "^5.4.2",
-    "mailparser": "^3.9.1",
+    "mailparser": "^3.9.3",
     "morgan": "^1.10.0",
     "nodemailer": "^7.0.7",
     "otp-generator": "^4.0.1",
