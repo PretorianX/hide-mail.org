@@ -45,7 +45,7 @@ jobs:
         CI: true
     
     - name: Upload frontend test coverage
-      uses: actions/upload-artifact@v6
+      uses: actions/upload-artifact@v7
       with:
         name: frontend-coverage
         path: coverage/
@@ -80,7 +80,7 @@ jobs:
         EMAIL_DOMAINS: test.com,test.org
     
     - name: Upload backend test coverage
-      uses: actions/upload-artifact@v6
+      uses: actions/upload-artifact@v7
       with:
         name: backend-coverage
         path: backend/coverage/
