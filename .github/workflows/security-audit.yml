@@ -1,0 +1,147 @@
+name: Security Audit
+
+on:
+  schedule:
+    # Mondays 06:00 UTC — after Dependabot's weekly window
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+  security-events: read
+
+jobs:
+  audit:
+    name: npm audit + Dependabot alerts
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Frontend npm audit
+        id: frontend-audit
+        continue-on-error: true
+        run: npm ci && npm audit --audit-level=high
+
+      - name: Backend npm audit
+        id: backend-audit
+        continue-on-error: true
+        working-directory: backend
+        run: npm ci && npm audit --audit-level=high
+
+      - name: Count open Dependabot alerts
+        id: dependabot
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          COUNT=$(gh api --paginate "repos/${{ github.repository }}/dependabot/alerts" \
+            --jq '[.[] | select(.state=="open")] | length')
+          echo "open_count=${COUNT}" >> "$GITHUB_OUTPUT"
+          echo "Open Dependabot alerts: ${COUNT}"
+          if [ "${COUNT}" -gt 0 ]; then
+            gh api --paginate "repos/${{ github.repository }}/dependabot/alerts" \
+              --jq '.[] | select(.state=="open") | "- #\(.number) \(.security_vulnerability.package.name) (\(.security_advisory.severity))"' \
+              | tee dependabot-open.txt
+            exit 1
+          fi
+          echo "No open Dependabot alerts." > dependabot-open.txt
+
+      - name: Notify on failure via GitHub Issue
+        if: failure()
+        uses: actions/github-script@v8
+        env:
+          FRONTEND_AUDIT: ${{ steps.frontend-audit.outcome }}
+          BACKEND_AUDIT: ${{ steps.backend-audit.outcome }}
+          DEPENDABOT_OUTCOME: ${{ steps.dependabot.outcome }}
+          OPEN_COUNT: ${{ steps.dependabot.outputs.open_count }}
+        with:
+          script: |
+            const fs = require('fs');
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const label = 'security-audit';
+            const title = 'Security audit failed: review vulnerabilities';
+            const runUrl = `${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`;
+
+            let dependabotList = '_none_';
+            try {
+              dependabotList = fs.readFileSync('dependabot-open.txt', 'utf8').trim() || '_none_';
+            } catch (_) {}
+
+            const labels = await github.rest.issues.listLabelsForRepo({ owner, repo, per_page: 100 });
+            if (!labels.data.some((l) => l.name === label)) {
+              await github.rest.issues.createLabel({
+                owner,
+                repo,
+                name: label,
+                color: 'D73A4A',
+                description: 'Weekly security audit found issues',
+              });
+            }
+
+            const body = [
+              `Weekly security audit failed.`,
+              '',
+              '### Results',
+              `| Check | Outcome |`,
+              `| --- | --- |`,
+              `| Frontend \`npm audit --audit-level=high\` | \`${process.env.FRONTEND_AUDIT}\` |`,
+              `| Backend \`npm audit --audit-level=high\` | \`${process.env.BACKEND_AUDIT}\` |`,
+              `| Open Dependabot alerts | \`${process.env.OPEN_COUNT || 'n/a'}\` (\`${process.env.DEPENDABOT_OUTCOME}\`) |`,
+              '',
+              '### Open Dependabot alerts',
+              dependabotList,
+              '',
+              '### Next steps',
+              '1. In Cursor: ask the agent to **run security-maintainer**',
+              '2. Or open https://github.com/' + owner + '/' + repo + '/security/dependabot',
+              '3. After fixes land on `main`, redeploy prod when the redeploy issue appears',
+              '',
+              `CI run: ${runUrl}`,
+            ].join('\n');
+
+            const open = await github.rest.issues.listForRepo({
+              owner,
+              repo,
+              state: 'open',
+              labels: label,
+              per_page: 10,
+            });
+            const existing = open.data.find((i) => !i.pull_request && i.title === title);
+
+            if (existing) {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: existing.number,
+                body,
+              });
+              await github.rest.issues.update({
+                owner,
+                repo,
+                issue_number: existing.number,
+                assignees: [owner],
+              });
+            } else {
+              await github.rest.issues.create({
+                owner,
+                repo,
+                title,
+                body,
+                labels: [label],
+                assignees: [owner],
+              });
+            }
+
+      - name: Fail job if any check failed
+        if: steps.frontend-audit.outcome == 'failure' || steps.backend-audit.outcome == 'failure' || steps.dependabot.outcome == 'failure'
+        run: exit 1

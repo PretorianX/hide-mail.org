@@ -1,0 +1,13 @@
+---
+description: Dependency and security conventions for hide-mail.org
+alwaysApply: true
+---
+
+# Dependencies & security
+
+- Fix transitive vulns with npm `overrides` in root and/or `backend/package.json`.
+- Root: keep separate pins for `js-yaml@3` and `js-yaml@4`.
+- Backend `uuid` stays on 11.x (CommonJS). Reject uuid 12+ / 14 major bumps.
+- After dependency fixes on `main`, CI publishes GHCR images and opens a **Redeploy production** issue. Prod is not updated until `docker compose pull && docker compose up -d` on the host.
+- When checking security, use the **security-maintainer** skill and verify with `gh` Dependabot alerts + `npm audit` in both trees.
+- Do not edit `changelog.md`.
