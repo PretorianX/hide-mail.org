@@ -57,7 +57,7 @@ jobs:
 
       - name: Notify on failure via GitHub Issue
         if: failure()
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         env:
           FRONTEND_AUDIT: ${{ steps.frontend-audit.outcome }}
           BACKEND_AUDIT: ${{ steps.backend-audit.outcome }}

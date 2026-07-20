@@ -223,7 +223,7 @@ jobs:
 
     steps:
       - name: Open or update redeploy issue
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         env:
           FRONTEND_DIGEST: ${{ needs.build-and-push.outputs.frontend_digest }}
           BACKEND_DIGEST: ${{ needs.build-and-push.outputs.backend_digest }}
