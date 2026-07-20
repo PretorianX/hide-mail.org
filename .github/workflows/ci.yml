@@ -28,10 +28,10 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     
     - name: Set up Node.js
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v5
       with:
         node-version: '24'
         cache: 'npm'
@@ -45,7 +45,7 @@ jobs:
         CI: true
     
     - name: Upload frontend test coverage
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: frontend-coverage
         path: coverage/
@@ -60,10 +60,10 @@ jobs:
         working-directory: backend
         
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     
     - name: Set up Node.js
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v5
       with:
         node-version: '24'
         cache: 'npm'
@@ -80,7 +80,7 @@ jobs:
         EMAIL_DOMAINS: test.com,test.org
     
     - name: Upload backend test coverage
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: backend-coverage
         path: backend/coverage/
@@ -93,18 +93,22 @@ jobs:
     permissions:
       contents: read
       packages: write
+    outputs:
+      frontend_digest: ${{ steps.push-frontend.outputs.digest }}
+      backend_digest: ${{ steps.push-backend.outputs.digest }}
+      image_sha_tag: sha-${{ github.sha }}
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       # Only login if we're going to push (main branch or tags)
       - name: Log in to the Container registry
         if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -112,7 +116,7 @@ jobs:
 
       - name: Extract Frontend Docker metadata
         id: meta-frontend
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend
           tags: |
@@ -124,7 +128,8 @@ jobs:
             type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
 
       - name: Build and push Frontend Docker image
-        uses: docker/build-push-action@v5
+        id: push-frontend
+        uses: docker/build-push-action@v6
         with:
           context: .
           push: ${{ github.event_name != 'pull_request' }}
@@ -142,7 +147,7 @@ jobs:
 
       - name: Extract Backend Docker metadata
         id: meta-backend
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend
           tags: |
@@ -154,7 +159,8 @@ jobs:
             type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
 
       - name: Build and push Backend Docker image
-        uses: docker/build-push-action@v5
+        id: push-backend
+        uses: docker/build-push-action@v6
         with:
           context: ./backend
           push: ${{ github.event_name != 'pull_request' }}
@@ -164,3 +170,41 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             NODE_ENV=production
+
+  # Prod compose pulls :latest from GHCR. This job is the CI signal that those
+  # images were published for this commit. It does not SSH into the host —
+  # the server must pull/restart (manual or Watchtower) to run them.
+  publish-ready:
+    name: Production Images Ready
+    needs: [build-and-push]
+    if: github.event_name != 'pull_request' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+
+    steps:
+      - name: Confirm published production tags
+        env:
+          FRONTEND_DIGEST: ${{ needs.build-and-push.outputs.frontend_digest }}
+          BACKEND_DIGEST: ${{ needs.build-and-push.outputs.backend_digest }}
+          SHORT_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          FRONTEND_IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend"
+          BACKEND_IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend"
+          SHA_TAG="sha-${SHORT_SHA:0:7}"
+
+          if [ -z "${FRONTEND_DIGEST}" ] || [ -z "${BACKEND_DIGEST}" ]; then
+            echo "::error::Missing image digests from build-and-push — images were not published."
+            exit 1
+          fi
+
+          echo "Published for commit ${SHORT_SHA}"
+          echo "  ${FRONTEND_IMAGE}:latest @ ${FRONTEND_DIGEST}"
+          echo "  ${FRONTEND_IMAGE}:${SHA_TAG} @ ${FRONTEND_DIGEST}"
+          echo "  ${BACKEND_IMAGE}:latest @ ${BACKEND_DIGEST}"
+          echo "  ${BACKEND_IMAGE}:${SHA_TAG} @ ${BACKEND_DIGEST}"
+          echo ""
+          echo "docker-compose.yml on prod uses these :latest tags."
+          echo "CI does not restart the host; pull/restart there to run this build."
