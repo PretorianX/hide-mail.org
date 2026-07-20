@@ -66,14 +66,10 @@ describe('CRACO Configuration', () => {
 
   // Import the packages we're using to replace deprecated ones
   test('Can import replacement packages', async () => {
-    try {
-      const sourcemapCodec = await import('@jridgewell/sourcemap-codec');
-      expect(sourcemapCodec).toBeDefined();
-      
-      const terserPlugin = await import('@rollup/plugin-terser');
-      expect(terserPlugin).toBeDefined();
-    } catch (error) {
-      fail('Failed to import replacement packages: ' + error.message);
-    }
+    const sourcemapCodec = await import('@jridgewell/sourcemap-codec');
+    expect(sourcemapCodec).toBeDefined();
+
+    const terserPlugin = await import('@rollup/plugin-terser');
+    expect(terserPlugin).toBeDefined();
   });
-}); 
+});

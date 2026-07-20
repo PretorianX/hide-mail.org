@@ -11,14 +11,17 @@ jest.mock('axios');
 const { TextEncoder } = require('util');
 global.TextEncoder = TextEncoder;
 
-// Need to mock crypto.subtle for Node.js environment
+// Need to mock crypto.subtle for Node.js environment while keeping getRandomValues
 const mockDigest = jest.fn();
 Object.defineProperty(global, 'crypto', {
   value: {
+    ...global.crypto,
     subtle: {
       digest: mockDigest,
     },
   },
+  configurable: true,
+  writable: true,
 });
 
 // Import after mocking
