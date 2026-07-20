@@ -37,7 +37,7 @@ COPY ./docker-entrypoint.sh /
 RUN chmod +x /docker-entrypoint.sh
 
 # Add metadata labels following OCI image spec
-LABEL org.opencontainers.image.source="https://github.com/${GITHUB_REPOSITORY}"
+LABEL org.opencontainers.image.source="https://github.com/PretorianX/hide-mail.org"
 LABEL org.opencontainers.image.description="Hide Mail - disposable email service frontend"
 LABEL org.opencontainers.image.licenses="MIT"
 

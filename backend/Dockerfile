@@ -31,7 +31,7 @@ RUN rm -rf tests __mocks__ *.test.js coverage .eslintrc* jest.config.js
 RUN mkdir -p /app/logs && chown -R nodejs:nodejs /app/logs
 
 # Add metadata labels following OCI image spec
-LABEL org.opencontainers.image.source="https://github.com/${GITHUB_REPOSITORY}"
+LABEL org.opencontainers.image.source="https://github.com/PretorianX/hide-mail.org"
 LABEL org.opencontainers.image.description="Hide Mail - disposable email service backend"
 LABEL org.opencontainers.image.licenses="MIT"
 
