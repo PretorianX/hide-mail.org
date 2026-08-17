@@ -9,6 +9,7 @@ const forwardingService = require('./services/forwardingService');
 const metrics = require('./services/metricsService');
 const billingMetricsCollector = require('./services/billingMetricsCollector');
 const httpMetricsMiddleware = require('./middleware/httpMetrics');
+const { applyBodyParsers } = require('./middleware/bodyParsers');
 const config = require('./config/config');
 const logger = require('./utils/logger');
 const apiRoutes = require('./routes/api');
@@ -90,8 +91,7 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(httpMetricsMiddleware);
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+applyBodyParsers(app);
 app.use(morgan('dev'));
 
 // WayForPay server callbacks have no browser Origin — verify HMAC instead.

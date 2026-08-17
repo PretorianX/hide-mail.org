@@ -103,8 +103,16 @@ const createOriginVerifier = (options = {}) => {
   }
   
   return (req, res, next) => {
-    // Skip verification for health checks and machine API keys
-    if (req.path === '/health' || req.path.startsWith('/qa') || req.path === '/billing/webhook') {
+    // Skip verification for health checks and machine API keys. The two billing paths are
+    // entered from WayForPay rather than from our own pages: the webhook is a server call with
+    // no Origin at all, and the return is a cross-site form POST carrying WayForPay's Origin.
+    // Neither hands out anything: the webhook authenticates by HMAC, the return only redirects.
+    if (
+      req.path === '/health'
+      || req.path.startsWith('/qa')
+      || req.path === '/billing/webhook'
+      || req.path === '/billing/return'
+    ) {
       return next();
     }
     

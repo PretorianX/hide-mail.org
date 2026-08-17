@@ -77,7 +77,7 @@ Key configuration options in `.env`:
 | `WAYFORPAY_MERCHANT_ACCOUNT` | WayForPay merchant login; empty disables paid plans |
 | `WAYFORPAY_SECRET_KEY` | WayForPay secret key used to sign and verify payments |
 | `WAYFORPAY_SERVICE_URL` | Public HTTPS URL WayForPay posts payment results to |
-| `WAYFORPAY_RETURN_URL` | Page the browser returns to after payment |
+| `WAYFORPAY_RETURN_URL` | Page the payer is redirected to after payment. WayForPay itself is given `/api/billing/return` on the same origin, because it returns the browser with a POST |
 | `PRO_PRICE_MONTHLY_UAH` / `PRO_PRICE_YEARLY_UAH` | Pro prices charged in UAH |
 | `API_PRICE_MONTHLY_UAH` | API plan price charged in UAH |
 | `PRO_PRICE_*_USD_DISPLAY` / `API_PRICE_MONTHLY_USD_DISPLAY` | Dollar prices shown on the site; display only |
@@ -106,14 +106,18 @@ charged more than the price they were quoted, and review them when the rate move
    Redis with the price for that plan and returns a WayForPay payload signed with HMAC-MD5.
 2. The browser posts that payload to WayForPay, which collects the card details. Card data
    never reaches Hide Mail.
-3. WayForPay posts the result to `POST /api/billing/webhook`. The signature is verified with
-   a timing-safe comparison, and the plan and price are read from the stored order rather
+3. WayForPay posts the result to `POST /api/billing/webhook`. That callback is a JSON document
+   sent with a `application/x-www-form-urlencoded` content type, so the body is read as text
+   and decoded as JSON before the generic parsers see it. The signature is verified with a
+   timing-safe comparison, and the plan and price are read from the stored order rather
    than from the callback, so a caller cannot claim a plan it did not pay for.
 4. The backend issues a license key (`HM-XXXX-XXXX-XXXX-XXXX`) and, for the API plan, an API
    key (`hm_api_...`) valid for `API_KEY_TTL_SECONDS`.
-5. WayForPay returns the browser to `WAYFORPAY_RETURN_URL` with the order reference. The Pro
-   page exchanges it for the license key, saves the key, and strips the reference from the
-   URL. The backend only serves keys for `LICENSE_KEY_HANDOFF_SECONDS` after payment.
+5. WayForPay returns the browser with a POST, which static hosting answers with 405, so the
+   payer lands on `/api/billing/return` and is redirected to `WAYFORPAY_RETURN_URL` with the
+   order reference. The Pro page exchanges it for the license key, saves the key, and strips
+   the reference from the URL. The backend only serves keys for `LICENSE_KEY_HANDOFF_SECONDS`
+   after payment.
 
 ### No accounts
 

@@ -212,6 +212,19 @@ const webhook = async (req, res, next) => {
   }
 };
 
+/**
+ * WayForPay sends the payer back with a POST, which static hosting answers with 405, so the
+ * browser lands here and is redirected to the page that turns the order reference into a key.
+ */
+const customerReturn = (req, res) => {
+  const target = new URL(config.wayforpay.returnUrl);
+  const { orderReference } = req.query || {};
+  if (typeof orderReference === 'string' && orderReference) {
+    target.searchParams.set('orderReference', orderReference);
+  }
+  return res.redirect(302, target.toString());
+};
+
 const validateLicense = async (req, res, next) => {
   try {
     const key = req.body?.key || req.query?.key;
@@ -330,6 +343,7 @@ const listPlans = (req, res) => {
 module.exports = {
   checkout,
   webhook,
+  customerReturn,
   validateLicense,
   issueApiKey,
   getOrder,
