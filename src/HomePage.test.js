@@ -2,9 +2,9 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import App from './App';
 
-// Mock react-router-dom
-jest.mock('react-router-dom', () => {
-  const originalModule = jest.requireActual('react-router-dom');
+// Mock react-router
+jest.mock('react-router', () => {
+  const originalModule = jest.requireActual('react-router');
   
   return {
     ...originalModule,

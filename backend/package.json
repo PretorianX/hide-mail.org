@@ -13,7 +13,8 @@
     "brace-expansion@1": "1.1.18",
     "brace-expansion@2": "2.1.4",
     "brace-expansion@5": "5.0.9",
-    "body-parser": "1.20.6"
+    "body-parser": "1.20.6",
+    "deepmerge-ts": "^8.0.1"
   },
   "scripts": {
     "start": "node server.js",

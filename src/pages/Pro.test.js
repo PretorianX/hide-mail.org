@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter } from 'react-router';
 import Pro from './Pro';
 import { LicenseProvider } from '../context/LicenseContext';
 import LicenseService from '../services/LicenseService';

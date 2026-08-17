@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import styled from 'styled-components';
 import ContentAwareAd from '../components/ContentAwareAd';
 import { getAdSenseSlot, AD_SLOTS } from '../utils/adsenseSlots';

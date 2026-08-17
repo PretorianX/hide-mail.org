@@ -4,7 +4,7 @@ import EmailService from './services/EmailService.js';
 import MailboxTimer from './components/MailboxTimer.js';
 import { parseMultipartMessage } from './utils/messageParser.js';
 import { formatDate } from './utils/dateUtils.js';
-import { BrowserRouter as Router, Routes, Route, Link, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, Navigate, useLocation } from 'react-router';
 import styled from 'styled-components';
 import Header from './components/Header.js';
 import EmailViewer from './components/EmailViewer.js';

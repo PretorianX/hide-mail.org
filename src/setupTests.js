@@ -4,6 +4,7 @@
 // learn more: https://github.com/testing-library/jest-dom
 import '@testing-library/jest-dom';
 import { webcrypto } from 'crypto';
+import { TextEncoder, TextDecoder } from 'util';
 
 // serialize-javascript@7+ calls crypto.getRandomValues at module load.
 // Jest's jsdom environment does not expose the Web Crypto API by default.
@@ -13,6 +14,12 @@ if (!globalThis.crypto?.getRandomValues) {
     configurable: true,
     writable: true,
   });
+}
+
+// react-router@7 reads TextEncoder at module load. Browsers have it; Jest's jsdom does not.
+if (!globalThis.TextEncoder) {
+  globalThis.TextEncoder = TextEncoder;
+  globalThis.TextDecoder = TextDecoder;
 }
 
 // Provide test runtime configuration for all tests

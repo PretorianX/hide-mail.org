@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router';
 import styled from 'styled-components';
 import ContentAwareAd from '../components/ContentAwareAd';
 import blogPosts from '../data/blogPosts';

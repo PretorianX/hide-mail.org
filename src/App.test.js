@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import App from './App';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter } from 'react-router';
 import EmailService from './services/EmailService';
 import { ThemeProvider } from './styles/ThemeContext';
 
@@ -43,9 +43,9 @@ jest.mock('./services/EmailService', () => {
   };
 });
 
-// Mock react-router-dom
-jest.mock('react-router-dom', () => {
-  const originalModule = jest.requireActual('react-router-dom');
+// Mock react-router
+jest.mock('react-router', () => {
+  const originalModule = jest.requireActual('react-router');
   return {
     ...originalModule,
     BrowserRouter: ({ children }) => <div data-testid="browser-router">{children}</div>,
