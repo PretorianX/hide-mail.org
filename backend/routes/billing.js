@@ -8,8 +8,8 @@ const router = express.Router();
 router.post('/checkout', apiRateLimiter.default, billingController.checkout);
 router.get('/pricing', apiRateLimiter.default, billingController.listPlans);
 router.get('/plans', apiRateLimiter.default, billingController.listPlans);
-router.post('/license/validate', apiRateLimiter.default, billingController.validateLicense);
-router.get('/order/:orderReference', apiRateLimiter.default, billingController.getOrder);
+router.post('/license/validate', apiRateLimiter.licenseValidate, billingController.validateLicense);
+router.get('/order/:orderReference', apiRateLimiter.orderLookup, billingController.getOrder);
 router.post('/webhook', billingController.webhook);
 
 module.exports = router;

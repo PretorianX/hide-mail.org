@@ -22,6 +22,11 @@ const RATE_LIMITS = {
   mailboxRefresh: { requests: 30, windowSeconds: 60 },
   // Email fetching: 60 per minute per IP
   emailFetch: { requests: 60, windowSeconds: 60 },
+  // License restore: 10 per 5 minutes per IP (a license key is a bearer credential)
+  licenseValidate: { requests: 10, windowSeconds: 300 },
+  // Order lookup after payment: separate bucket so guessing license keys cannot lock a
+  // paying customer out of collecting the key they just bought
+  orderLookup: { requests: 20, windowSeconds: 300 },
   // Default: 100 per minute per IP
   default: { requests: 100, windowSeconds: 60 },
 };
@@ -91,6 +96,8 @@ module.exports = {
   mailboxRegister: createRateLimiter('mailboxRegister'),
   mailboxRefresh: createRateLimiter('mailboxRefresh'),
   emailFetch: createRateLimiter('emailFetch'),
+  licenseValidate: createRateLimiter('licenseValidate'),
+  orderLookup: createRateLimiter('orderLookup'),
   default: createRateLimiter('default'),
   RATE_LIMITS,
 };

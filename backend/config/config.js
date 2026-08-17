@@ -118,9 +118,13 @@ const config = {
     apiAmount: parseInt(process.env.API_PRICE_MONTHLY_UAH || 799, 10),
     monthlyUsdDisplay: process.env.PRO_PRICE_MONTHLY_USD_DISPLAY || '4.99',
     yearlyUsdDisplay: process.env.PRO_PRICE_YEARLY_USD_DISPLAY || '36',
+    apiUsdDisplay: process.env.API_PRICE_MONTHLY_USD_DISPLAY || '19',
     monthlyTtlSeconds: parseInt(process.env.PRO_LICENSE_MONTHLY_SECONDS || 30 * 24 * 60 * 60, 10),
     yearlyTtlSeconds: parseInt(process.env.PRO_LICENSE_YEARLY_SECONDS || 366 * 24 * 60 * 60, 10),
     apiKeyTtlSeconds: parseInt(process.env.API_KEY_TTL_SECONDS || 30 * 24 * 60 * 60, 10),
+    // The order reference travels in the WayForPay return URL, so the window in which that
+    // reference can hand out the license key is much shorter than the order's own lifetime.
+    keyHandoffSeconds: parseInt(process.env.LICENSE_KEY_HANDOFF_SECONDS || 60 * 60, 10),
   },
 
   pro: {

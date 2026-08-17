@@ -4,6 +4,12 @@ import { useLicense } from '../context/LicenseContext';
 import DonateButton from '../components/DonateButton';
 import './Pro.css';
 
+const PLAN_LABELS = {
+  monthly: 'Monthly',
+  yearly: 'Yearly',
+  api: 'API for QA',
+};
+
 const Pro = () => {
   const { license, activate } = useLicense();
   const [plans, setPlans] = useState([]);
@@ -29,6 +35,9 @@ const Pro = () => {
     if (!orderReference) {
       return undefined;
     }
+    // The reference can hand out the license key, so keep it out of history, referrers and
+    // anything the ad scripts on the page report as the current URL.
+    window.history.replaceState({}, '', window.location.pathname);
     let cancelled = false;
     LicenseService.fetchPaidOrder(orderReference).then((paid) => {
       if (!cancelled && paid?.licenseKey) {
@@ -44,11 +53,11 @@ const Pro = () => {
     };
   }, [activate]);
 
-  const handleCheckout = async (planId) => {
+  const handleCheckout = async (plan) => {
     setError(null);
     setBusy(true);
     try {
-      const checkout = await LicenseService.checkout(planId);
+      const checkout = await LicenseService.checkout(plan.plan, plan.type);
       LicenseService.submitWayforpayCheckout(checkout);
     } catch (err) {
       setError(err.message);
@@ -94,23 +103,27 @@ const Pro = () => {
             </p>
           ) : null}
         </div>
-      ) : (
-        <div className="pro-plans">
-          {plans.filter((plan) => plan.id === 'monthly' || plan.id === 'yearly').map((plan) => (
-            <button
-              key={plan.id}
-              type="button"
-              className={`pro-plan ${plan.id === 'yearly' ? 'pro-plan-featured' : ''}`}
-              disabled={busy}
-              onClick={() => handleCheckout(plan.id)}
-            >
-              <strong>{plan.id === 'api' ? 'API' : plan.id === 'yearly' ? 'Yearly' : 'Monthly'}</strong>
-              <span>{plan.amount} {currency}</span>
-              {plan.usdDisplay ? <small>about ${plan.usdDisplay}</small> : null}
-            </button>
-          ))}
-        </div>
-      )}
+      ) : null}
+
+      <div className="pro-plans">
+        {plans.map((plan) => (
+          <button
+            key={plan.id}
+            type="button"
+            className={`pro-plan ${plan.id === 'yearly' ? 'pro-plan-featured' : ''}`}
+            disabled={busy}
+            onClick={() => handleCheckout(plan)}
+          >
+            <strong>{PLAN_LABELS[plan.id] || plan.id}</strong>
+            <span>{plan.amount} {currency}</span>
+            {plan.usdDisplay ? <small>about ${plan.usdDisplay}</small> : null}
+            <small>{plan.id === 'yearly' ? 'billed once a year' : 'billed every month'}</small>
+          </button>
+        ))}
+      </div>
+      <p className="pro-recurring-note">
+        Plans renew automatically until you cancel. Write to us to cancel or ask for a refund.
+      </p>
 
       <form className="pro-restore" onSubmit={handleRestore}>
         <label htmlFor="license-key">Already paid? Paste your key</label>

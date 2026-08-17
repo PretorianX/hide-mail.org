@@ -85,6 +85,7 @@ describe('wayforpayService', () => {
   describe('buildCheckoutPayload', () => {
     it('returns a signed monthly recurring purchase payload in UAH', () => {
       const payload = wayforpayService.buildCheckoutPayload({
+        type: 'pro',
         plan: 'monthly',
         orderReference: 'pro-monthly-test',
         orderDate: 1700000000,
@@ -112,6 +113,7 @@ describe('wayforpayService', () => {
 
     it('returns a signed yearly recurring purchase payload in UAH', () => {
       const payload = wayforpayService.buildCheckoutPayload({
+        type: 'pro',
         plan: 'yearly',
         orderReference: 'pro-yearly-test',
         orderDate: 1700000000,
@@ -126,12 +128,31 @@ describe('wayforpayService', () => {
     it('rejects an unknown plan instead of substituting another product', () => {
       expect(() =>
         wayforpayService.buildCheckoutPayload({
+          type: 'pro',
           plan: 'lifetime',
           orderReference: 'x',
           orderDate: 1,
           dateNext: '01.01.2027',
         })
-      ).toThrow(/unknown plan/i);
+      ).toThrow(/unsupported pro plan/i);
+    });
+
+    it('prices an API order from the API tariff, not the Pro tariff', () => {
+      const payload = wayforpayService.buildCheckoutPayload({
+        type: 'api',
+        plan: 'monthly',
+        orderReference: 'api-monthly-test',
+        orderDate: 1700000000,
+        dateNext: '18.09.2026',
+      });
+
+      expect(payload.amount).toBe(799);
+      expect(payload.productPrice).toEqual([799]);
+      expect(payload.productName).toEqual(['Hide Mail API Monthly']);
+    });
+
+    it('rejects a yearly API order because the API tariff is monthly only', () => {
+      expect(() => wayforpayService.resolveProduct('api', 'yearly')).toThrow(/unsupported api plan/i);
     });
   });
 

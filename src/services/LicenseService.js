@@ -1,5 +1,6 @@
 const LICENSE_STORAGE_KEY = 'hidemail_license_key';
 const API_URL = process.env.REACT_APP_API_URL || '/api';
+const WAYFORPAY_PAYMENT_PREFIX = 'https://secure.wayforpay.com/';
 
 const jsonHeaders = {
   'Content-Type': 'application/json',
@@ -31,7 +32,9 @@ class LicenseService {
     });
     const payload = await response.json();
     if (!response.ok || !payload.success) {
-      throw new Error(payload.error || 'Unable to restore license');
+      const error = new Error(payload.error || 'Unable to restore license');
+      error.licenseRejected = response.status === 404;
+      throw error;
     }
     const license = payload.license || payload.data;
     this.saveKey(license.key);
@@ -48,8 +51,12 @@ class LicenseService {
     }
     try {
       return await this.restore(key);
-    } catch {
-      this.clearKey();
+    } catch (error) {
+      // Only drop the stored key when the server says the license is gone. A network error
+      // or a rate limit must not delete the one credential a Pro user has.
+      if (error.licenseRejected) {
+        this.clearKey();
+      }
       return null;
     }
   }
@@ -60,25 +67,14 @@ class LicenseService {
     if (!payload.success) {
       throw new Error(payload.error || 'Unable to load plans');
     }
-    if (payload.plans) {
-      return payload;
-    }
-    const pricing = payload.data || {};
-    return {
-      success: true,
-      currency: pricing.currency,
-      plans: [
-        { id: 'monthly', amount: pricing.monthly?.amount, usdDisplay: pricing.monthly?.usdDisplay },
-        { id: 'yearly', amount: pricing.yearly?.amount, usdDisplay: pricing.yearly?.usdDisplay },
-      ],
-    };
+    return payload;
   }
 
-  static async checkout(plan) {
+  static async checkout(plan, type = 'pro') {
     const response = await fetch(`${API_URL}/billing/checkout`, {
       method: 'POST',
       headers: jsonHeaders,
-      body: JSON.stringify({ plan }),
+      body: JSON.stringify({ plan, type }),
     });
     const payload = await response.json();
     if (!response.ok || !payload.success) {
@@ -104,6 +100,10 @@ class LicenseService {
   }
 
   static submitWayforpayCheckout(checkout) {
+    // The payload is already signed, so it must only ever be posted to WayForPay itself.
+    if (!String(checkout.paymentUrl).startsWith(WAYFORPAY_PAYMENT_PREFIX)) {
+      throw new Error('Unexpected payment URL');
+    }
     const form = document.createElement('form');
     form.method = 'POST';
     form.action = checkout.paymentUrl;

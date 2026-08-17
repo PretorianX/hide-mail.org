@@ -26,8 +26,9 @@ describe('Pro page', () => {
       success: true,
       currency: 'UAH',
       plans: [
-        { id: 'monthly', amount: 149, usdDisplay: '4.99' },
-        { id: 'yearly', amount: 1079, usdDisplay: '36' },
+        { id: 'monthly', type: 'pro', plan: 'monthly', amount: 149, usdDisplay: '4.99' },
+        { id: 'yearly', type: 'pro', plan: 'yearly', amount: 1079, usdDisplay: '36' },
+        { id: 'api', type: 'api', plan: 'monthly', amount: 799, usdDisplay: '19' },
       ],
     });
     LicenseService.restoreSaved.mockResolvedValue(null);
@@ -76,6 +77,43 @@ describe('Pro page', () => {
     );
 
     expect(await screen.findByTestId('pro-days-left')).toHaveTextContent('12 days left');
+  });
+
+  test('checks out the API tariff with its own type and plan', async () => {
+    render(
+      <MemoryRouter>
+        <LicenseProvider>
+          <Pro />
+        </LicenseProvider>
+      </MemoryRouter>
+    );
+
+    const apiPlan = await screen.findByText(/api for qa/i);
+    fireEvent.click(apiPlan.closest('button'));
+
+    await waitFor(() => {
+      expect(LicenseService.checkout).toHaveBeenCalledWith('monthly', 'api');
+    });
+  });
+
+  test('removes the order reference from the URL after collecting the license key', async () => {
+    window.history.replaceState({}, '', '/pro?orderReference=pro-monthly-abc');
+    LicenseService.fetchPaidOrder.mockResolvedValue({
+      licenseKey: 'HM-AAAA-BBBB-CCCC-DDDD',
+    });
+
+    render(
+      <MemoryRouter>
+        <LicenseProvider>
+          <Pro />
+        </LicenseProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(LicenseService.fetchPaidOrder).toHaveBeenCalledWith('pro-monthly-abc');
+    });
+    expect(window.location.search).toBe('');
   });
 
   test('restores a pasted license key', async () => {

@@ -16,24 +16,48 @@ const returnUrlWithOrder = (base, orderReference) => {
   return url.toString();
 };
 
-const PLANS = {
-  monthly: {
-    productName: 'Hide Mail Pro Monthly',
-    regularMode: 'monthly',
-    amountKey: 'monthlyAmount',
-  },
-  yearly: {
-    productName: 'Hide Mail Pro Yearly',
-    regularMode: 'yearly',
-    amountKey: 'yearlyAmount',
+// Single source of truth for what a licence type and plan combination costs, so the amount
+// stored on the order always equals the amount inside the signed WayForPay payload.
+const PRODUCTS = {
+  pro: {
+    monthly: {
+      productName: 'Hide Mail Pro Monthly',
+      regularMode: 'monthly',
+      amountKey: 'monthlyAmount',
+      usdKey: 'monthlyUsdDisplay',
+    },
+    yearly: {
+      productName: 'Hide Mail Pro Yearly',
+      regularMode: 'yearly',
+      amountKey: 'yearlyAmount',
+      usdKey: 'yearlyUsdDisplay',
+    },
   },
   api: {
-    productName: 'Hide Mail API Monthly',
-    regularMode: 'monthly',
-    amountKey: 'apiAmount',
+    monthly: {
+      productName: 'Hide Mail API Monthly',
+      regularMode: 'monthly',
+      amountKey: 'apiAmount',
+      usdKey: 'apiUsdDisplay',
+    },
   },
 };
 
+const resolveProduct = (type, plan) => {
+  const product = PRODUCTS[type] && PRODUCTS[type][plan];
+  if (!product) {
+    throw new Error(`Unsupported ${type} plan: ${plan}`);
+  }
+  return {
+    productName: product.productName,
+    regularMode: product.regularMode,
+    amount: config.billing[product.amountKey],
+    usdDisplay: config.billing[product.usdKey],
+  };
+};
+
+// HMAC-MD5 is the only signature algorithm WayForPay accepts, so it cannot be upgraded
+// here. MD5 collisions do not break HMAC authentication, and comparisons are timing safe.
 const hmacMd5 = (secret, value) =>
   crypto.createHmac('md5', secret).update(String(value), 'utf8').digest('hex');
 
@@ -90,13 +114,9 @@ const verifyCallbackSignature = (payload, secretKey) => {
   return timingSafeEqualHex(expected, payload.merchantSignature.toLowerCase());
 };
 
-const buildCheckoutPayload = ({ plan, orderReference, orderDate, dateNext }) => {
-  const planConfig = PLANS[plan];
-  if (!planConfig) {
-    throw new Error(`Unknown plan: ${plan}`);
-  }
-
-  const amount = config.billing[planConfig.amountKey];
+const buildCheckoutPayload = ({ type, plan, orderReference, orderDate, dateNext }) => {
+  const product = resolveProduct(type, plan);
+  const amount = product.amount;
   const payload = {
     merchantAccount: config.wayforpay.merchantAccount,
     merchantAuthType: 'SimpleSignature',
@@ -106,12 +126,12 @@ const buildCheckoutPayload = ({ plan, orderReference, orderDate, dateNext }) => 
     orderDate,
     amount,
     currency: config.billing.currency,
-    productName: [planConfig.productName],
+    productName: [product.productName],
     productCount: [1],
     productPrice: [amount],
     serviceUrl: config.wayforpay.serviceUrl,
     returnUrl: returnUrlWithOrder(config.wayforpay.returnUrl, orderReference),
-    regularMode: planConfig.regularMode,
+    regularMode: product.regularMode,
     regularOn: 1,
     regularBehavior: 'preset',
     dateNext,
@@ -148,26 +168,13 @@ const acknowledgeWebhook = (orderReference, time, secretKey) => ({
   signature: hmacMd5(secretKey, `${orderReference};accept;${time}`),
 });
 
-const parsePlanFromOrderReference = (orderReference) => {
-  if (typeof orderReference !== 'string') {
-    throw new Error('orderReference is required');
-  }
-  if (orderReference.startsWith('pro-yearly-') || orderReference.startsWith('api-yearly-')) {
-    return { type: orderReference.startsWith('api-') ? 'api' : 'pro', plan: 'yearly' };
-  }
-  if (orderReference.startsWith('pro-monthly-') || orderReference.startsWith('api-monthly-')) {
-    return { type: orderReference.startsWith('api-') ? 'api' : 'pro', plan: 'monthly' };
-  }
-  throw new Error(`Unknown orderReference prefix: ${orderReference}`);
-};
-
 module.exports = {
+  resolveProduct,
   signPurchase,
   signCallback,
   verifyCallbackSignature,
   buildCheckoutPayload,
   classifyTransactionStatus,
   acknowledgeWebhook,
-  parsePlanFromOrderReference,
   PAYMENT_URL,
 };

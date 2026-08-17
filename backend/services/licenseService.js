@@ -7,6 +7,7 @@ const crypto = require('crypto');
 const redisService = require('./redisService');
 const logger = require('../utils/logger');
 const config = require('../config/config');
+const { sanitizeForLog } = require('../utils/sanitize');
 
 const LICENSE_PREFIX = 'license:';
 const ORDER_PREFIX = 'billing:order:';
@@ -16,16 +17,21 @@ const API_KEY_PREFIX = 'api_key:';
 const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
 const randomGroup = (length) => {
-  const bytes = crypto.randomBytes(length);
   let out = '';
   for (let i = 0; i < length; i += 1) {
-    out += ALPHABET[bytes[i] % ALPHABET.length];
+    out += ALPHABET[crypto.randomInt(ALPHABET.length)];
   }
   return out;
 };
 
 const generateLicenseKey = () =>
   `HM-${randomGroup(4)}-${randomGroup(4)}-${randomGroup(4)}-${randomGroup(4)}`;
+
+// A license key is the only credential a Pro user has, so logs keep the last group only.
+const maskKey = (key) => {
+  const str = sanitizeForLog(key);
+  return str.length <= 4 ? '****' : `****${str.slice(-4)}`;
+};
 
 const remainingDays = (expiresAt, now = Date.now()) =>
   Math.max(0, Math.ceil((expiresAt - now) / (24 * 60 * 60 * 1000)));
@@ -87,7 +93,7 @@ const createLicense = async ({ type, plan, orderReference, recToken, ttlSeconds 
   };
 
   await persistLicense(license, ttlSeconds);
-  logger.info(`License created type=${type} plan=${plan} order=${orderReference}`);
+  logger.info(`License created type=${type} plan=${plan} order=${sanitizeForLog(orderReference)}`);
   return license;
 };
 
@@ -145,7 +151,7 @@ const renewByPayment = async ({ orderReference, recToken, ttlSeconds }) => {
 
   const redisTtl = Math.max(1, Math.ceil((existing.expiresAt - Date.now()) / 1000));
   await persistLicense(existing, redisTtl);
-  logger.info(`License renewed key=${existing.key} order=${orderReference}`);
+  logger.info(`License renewed key=${maskKey(existing.key)} order=${sanitizeForLog(orderReference)}`);
   return existing;
 };
 
@@ -161,7 +167,7 @@ const revokeLicense = async (key) => {
   if (license.recToken) {
     await redisService.client.del(`${RECTOKEN_PREFIX}${license.recToken}`);
   }
-  logger.info(`License revoked key=${key}`);
+  logger.info(`License revoked key=${maskKey(key)}`);
   return true;
 };
 
@@ -222,6 +228,7 @@ const validateApiKey = async (apiKey) => {
 
 module.exports = {
   generateLicenseKey,
+  maskKey,
   createLicense,
   getLicense,
   isActive,

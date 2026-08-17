@@ -36,6 +36,16 @@
   font-weight: 700;
 }
 
+.pro-plan small {
+  opacity: 0.75;
+}
+
+.pro-recurring-note {
+  margin: -8px 0 20px;
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
+
 .pro-restore {
   display: flex;
   flex-wrap: wrap;

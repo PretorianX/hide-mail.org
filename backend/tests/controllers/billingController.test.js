@@ -50,6 +50,7 @@ jest.mock('../../services/orderService', () => ({
 
 const billingController = require('../../controllers/billingController');
 const licenseService = require('../../services/licenseService');
+const orderService = require('../../services/orderService');
 const wayforpayService = require('../../services/wayforpayService');
 
 const mockRes = () => {
@@ -104,6 +105,30 @@ describe('billingController', () => {
 
       expect(res.status).toHaveBeenCalledWith(400);
     });
+
+    it('charges the API price for an API order instead of the Pro price', async () => {
+      const req = { body: { plan: 'monthly', type: 'api' } };
+      const res = mockRes();
+
+      await billingController.checkout(req, res);
+
+      const payload = res.json.mock.calls[0][0];
+      expect(payload.data.orderReference).toMatch(/^api-monthly-/);
+      expect(payload.data.amount).toBe(799);
+      expect(orderService.createOrder).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'api', amount: 799 })
+      );
+    });
+
+    it('rejects a yearly API order because the API tariff is monthly only', async () => {
+      const req = { body: { plan: 'yearly', type: 'api' } };
+      const res = mockRes();
+
+      await billingController.checkout(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(orderService.createOrder).not.toHaveBeenCalled();
+    });
   });
 
   describe('webhook', () => {
@@ -126,6 +151,13 @@ describe('billingController', () => {
 
       licenseService.findByRecToken.mockResolvedValue(null);
       licenseService.findByOrderReference.mockResolvedValue(null);
+      orderService.getOrder.mockResolvedValue({
+        id: 'pro-monthly-new',
+        type: 'pro',
+        plan: 'monthly',
+        amount: 149,
+        currency: 'UAH',
+      });
       licenseService.createLicense.mockResolvedValue({
         key: 'HM-AAAA-BBBB-CCCC-DDDD',
         type: 'pro',
@@ -202,6 +234,110 @@ describe('billingController', () => {
       expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
         status: 'accept',
       }));
+    });
+
+    const signedApproved = (overrides) => {
+      const callback = {
+        merchantAccount: 'test_merchant',
+        orderReference: 'pro-monthly-new',
+        amount: 149,
+        currency: 'UAH',
+        authCode: '541963',
+        cardPan: '41****8217',
+        transactionStatus: 'Approved',
+        reasonCode: '1100',
+        ...overrides,
+      };
+      callback.merchantSignature = wayforpayService.signCallback(
+        callback,
+        process.env.WAYFORPAY_SECRET_KEY
+      );
+      return callback;
+    };
+
+    it('does not issue a license when no matching order was ever created', async () => {
+      licenseService.findByRecToken.mockResolvedValue(null);
+      licenseService.findByOrderReference.mockResolvedValue(null);
+      orderService.getOrder.mockResolvedValue(null);
+
+      const res = mockRes();
+      await billingController.webhook({ body: signedApproved({}) }, res);
+
+      expect(licenseService.createLicense).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(200);
+    });
+
+    it('does not issue a license when the paid amount differs from the order', async () => {
+      licenseService.findByRecToken.mockResolvedValue(null);
+      licenseService.findByOrderReference.mockResolvedValue(null);
+      orderService.getOrder.mockResolvedValue({
+        id: 'pro-monthly-new',
+        type: 'pro',
+        plan: 'yearly',
+        amount: 1079,
+        currency: 'UAH',
+      });
+
+      const res = mockRes();
+      await billingController.webhook({ body: signedApproved({ amount: 1 }) }, res);
+
+      expect(licenseService.createLicense).not.toHaveBeenCalled();
+    });
+
+    it('takes the plan from the stored order, not from the orderReference', async () => {
+      licenseService.findByRecToken.mockResolvedValue(null);
+      licenseService.findByOrderReference.mockResolvedValue(null);
+      orderService.getOrder.mockResolvedValue({
+        id: 'pro-yearly-spoofed',
+        type: 'pro',
+        plan: 'monthly',
+        amount: 149,
+        currency: 'UAH',
+      });
+      licenseService.createLicense.mockResolvedValue({ key: 'HM-A', type: 'pro' });
+
+      const res = mockRes();
+      await billingController.webhook(
+        { body: signedApproved({ orderReference: 'pro-yearly-spoofed' }) },
+        res
+      );
+
+      expect(licenseService.createLicense).toHaveBeenCalledWith(
+        expect.objectContaining({ plan: 'monthly' })
+      );
+    });
+  });
+
+  describe('getOrder', () => {
+    it('returns the license key right after payment', async () => {
+      orderService.getOrder.mockResolvedValue({
+        id: 'pro-monthly-1',
+        status: 'paid',
+        paidAt: Date.now(),
+        licenseKey: 'HM-AAAA-BBBB-CCCC-DDDD',
+      });
+      const res = mockRes();
+      await billingController.getOrder({ params: { orderReference: 'pro-monthly-1' } }, res);
+
+      expect(res.json.mock.calls[0][0].licenseKey).toBe('HM-AAAA-BBBB-CCCC-DDDD');
+    });
+
+    it('stops handing out the license key once the handoff window closed', async () => {
+      orderService.getOrder.mockResolvedValue({
+        id: 'pro-monthly-1',
+        status: 'paid',
+        paidAt: Date.now() - 25 * 60 * 60 * 1000,
+        licenseKey: 'HM-AAAA-BBBB-CCCC-DDDD',
+        apiKey: 'hm_api_secret',
+      });
+      const res = mockRes();
+      await billingController.getOrder({ params: { orderReference: 'pro-monthly-1' } }, res);
+
+      const payload = res.json.mock.calls[0][0];
+      expect(payload.licenseKey).toBeNull();
+      expect(payload.apiKey).toBeNull();
+      expect(JSON.stringify(payload)).not.toContain('HM-AAAA');
+      expect(JSON.stringify(payload)).not.toContain('hm_api_secret');
     });
   });
 
