@@ -11,6 +11,11 @@ updates:
     labels:
       - dependencies
       - javascript
+    # uuid 12 dropped the CommonJS build that require('uuid') depends on.
+    ignore:
+      - dependency-name: uuid
+        update-types:
+          - version-update:semver-major
     groups:
       production-deps:
         dependency-type: production
@@ -28,6 +33,11 @@ updates:
     labels:
       - dependencies
       - javascript
+    # uuid 12 dropped the CommonJS build that require('uuid') depends on.
+    ignore:
+      - dependency-name: uuid
+        update-types:
+          - version-update:semver-major
     groups:
       production-deps:
         dependency-type: production
