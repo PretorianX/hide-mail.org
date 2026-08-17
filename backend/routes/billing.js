@@ -13,5 +13,7 @@ router.post('/license/validate', apiRateLimiter.licenseValidate, billingControll
 router.post('/license/api-key', apiRateLimiter.licenseValidate, billingController.issueApiKey);
 router.get('/order/:orderReference', apiRateLimiter.orderLookup, billingController.getOrder);
 router.post('/webhook', billingController.webhook);
+// WayForPay returns the payer here with a POST; both methods redirect to the Pro page.
+router.all('/return', billingController.customerReturn);
 
 module.exports = router;

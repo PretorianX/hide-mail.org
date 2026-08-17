@@ -10,8 +10,12 @@ const config = require('../config/config');
 
 const PAYMENT_URL = 'https://secure.wayforpay.com/pay';
 
-const returnUrlWithOrder = (base, orderReference) => {
-  const url = new URL(base);
+// WayForPay POSTs the payer back to returnUrl, and static hosting answers a POST with 405, so
+// the customer returns through the API, which redirects the browser on to the Pro page.
+const CUSTOMER_RETURN_PATH = '/api/billing/return';
+
+const customerReturnUrl = (proPageUrl, orderReference) => {
+  const url = new URL(CUSTOMER_RETURN_PATH, proPageUrl);
   url.searchParams.set('orderReference', orderReference);
   return url.toString();
 };
@@ -132,7 +136,7 @@ const buildCheckoutPayload = ({ type, plan, orderReference, orderDate, dateNext 
     productCount: [1],
     productPrice: [amount],
     serviceUrl: config.wayforpay.serviceUrl,
-    returnUrl: returnUrlWithOrder(config.wayforpay.returnUrl, orderReference),
+    returnUrl: customerReturnUrl(config.wayforpay.returnUrl, orderReference),
     regularMode: product.regularMode,
     regularOn: 1,
     regularBehavior: 'preset',
