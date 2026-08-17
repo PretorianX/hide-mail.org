@@ -74,19 +74,41 @@ describe('WayForPay customer return', () => {
       expect(res.redirect).toHaveBeenCalledWith(302, 'https://hide-mail.org/pro');
     });
 
-    it('is reachable as a POST through the billing router, the way WayForPay sends it', async () => {
+    it('answers a cross-site POST that carries WayForPay Origin, ahead of the CORS check', async () => {
       const express = require('express');
       const request = require('supertest');
-      const { applyBodyParsers } = require('../../middleware/bodyParsers');
+      const billingController = require('../../controllers/billingController');
 
       const app = express();
-      applyBodyParsers(app);
-      app.use('/api/billing', require('../../routes/billing'));
+      // Mounted exactly as server.js does: before a CORS check that rejects foreign origins by
+      // throwing, which is what turned this return into a 500 in production.
+      app.all('/api/billing/return', billingController.customerReturn);
+      app.use(() => {
+        throw new Error('CORS not allowed');
+      });
+
+      const res = await request(app)
+        .post('/api/billing/return?orderReference=pro-monthly-abc')
+        .set('Origin', 'https://secure.wayforpay.com')
+        .set('Content-Type', 'application/x-www-form-urlencoded')
+        .send('transactionStatus=Approved&reasonCode=1100')
+        .expect(302);
+
+      expect(res.headers.location).toBe('https://hide-mail.org/pro?orderReference=pro-monthly-abc');
+    });
+
+    it('needs no parsed body, since it is mounted before the body parsers', async () => {
+      const express = require('express');
+      const request = require('supertest');
+      const billingController = require('../../controllers/billingController');
+
+      const app = express();
+      app.all('/api/billing/return', billingController.customerReturn);
 
       const res = await request(app)
         .post('/api/billing/return?orderReference=pro-monthly-abc')
         .set('Content-Type', 'application/x-www-form-urlencoded')
-        .send('transactionStatus=Approved&reasonCode=1100')
+        .send('transactionStatus=Approved')
         .expect(302);
 
       expect(res.headers.location).toBe('https://hide-mail.org/pro?orderReference=pro-monthly-abc');
