@@ -61,6 +61,23 @@ class LicenseService {
     }
   }
 
+  /**
+   * API keys expire after 30 days while the plan runs longer, so a subscriber needs to be able
+   * to pull a fresh one using the license key they already hold.
+   */
+  static async requestApiKey(key) {
+    const response = await fetch(`${API_URL}/billing/license/api-key`, {
+      method: 'POST',
+      headers: jsonHeaders,
+      body: JSON.stringify({ key }),
+    });
+    const payload = await response.json();
+    if (!response.ok || !payload.success) {
+      throw new Error(payload.error || 'Unable to issue an API key');
+    }
+    return payload;
+  }
+
   static async listPlans() {
     const response = await fetch(`${API_URL}/billing/plans`, { headers: jsonHeaders });
     const payload = await response.json();

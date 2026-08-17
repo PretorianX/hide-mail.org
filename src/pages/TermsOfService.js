@@ -86,6 +86,31 @@ const TermsOfService = () => {
       </Section>
 
       <Section>
+        <SectionTitle>Paid Plans, Renewals and Refunds</SectionTitle>
+        <Paragraph>
+          Hide Mail is free to use with advertising. Hide Mail Pro and the Hide Mail API are optional paid plans. Prices are shown on the Pro page and are charged in Ukrainian hryvnia (UAH); amounts shown in other currencies are approximate and the UAH amount is what you are charged.
+        </Paragraph>
+        <Paragraph>
+          <strong>Payment provider.</strong> Payments are processed by WayForPay. We do not receive or store your card details.
+        </Paragraph>
+        <Paragraph>
+          <strong>Automatic renewal.</strong> Paid plans are subscriptions. The monthly plan renews every month and the yearly plan renews every year, at the price in force at the time of renewal, until you cancel. The API plan is billed monthly.
+        </Paragraph>
+        <Paragraph>
+          <strong>How to cancel.</strong> Write to us at the address below with your order reference or license key and we will stop future charges. Cancelling stops renewals; your plan stays active until the end of the period you already paid for.
+        </Paragraph>
+        <Paragraph>
+          <strong>Refunds.</strong> If the Service does not work as described, contact us within 14 days of the charge and we will refund that payment. Refunds are returned to the card used for the payment. We do not refund periods you have already used, and we do not refund a payment where the plan was used to send abuse, spam or other prohibited content.
+        </Paragraph>
+        <Paragraph>
+          <strong>Your license key.</strong> A paid plan has no account or password: the license key we issue is the only credential. You are responsible for keeping it safe. Anyone who has your key can use your plan, and because we never ask for your email address we cannot resend the key to you automatically. Rate limits apply to key checks to protect against guessing.
+        </Paragraph>
+        <Paragraph>
+          <strong>What a paid plan does not change.</strong> Mailboxes remain temporary and are still deleted when they expire, and the Service remains "as is". A paid plan is not a guarantee that any particular sender, domain or third-party site will accept a Hide Mail address.
+        </Paragraph>
+      </Section>
+
+      <Section>
         <SectionTitle>Intellectual Property</SectionTitle>
         <Paragraph>
           The Service and its original content (excluding content provided by users), features, and functionality are and will remain the exclusive property of Hide Mail and its licensors. The Service is protected by copyright, trademark, and other laws of both the United States and foreign countries. Our trademarks and trade dress may not be used in connection with any product or service without the prior written consent of Hide Mail.

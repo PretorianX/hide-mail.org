@@ -2,6 +2,7 @@ process.env.VALID_DOMAINS = 'hide-mail.org';
 
 const licenseService = require('../../services/licenseService');
 const redisService = require('../../services/redisService');
+const metrics = require('../../services/metricsService');
 
 describe('licenseService', () => {
   beforeEach(async () => {
@@ -143,6 +144,83 @@ describe('licenseService', () => {
 
       const found = await licenseService.findByOrderReference('lookup-me');
       expect(found.key).toBe(created.key);
+    });
+  });
+
+  describe('metrics', () => {
+    beforeEach(() => {
+      metrics.licensesCreatedTotal.inc.mockClear();
+      metrics.licensesRevokedTotal.inc.mockClear();
+      metrics.licenseValidationsTotal.inc.mockClear();
+      metrics.apiKeyValidationsTotal.inc.mockClear();
+    });
+
+    it('counts a created license by type and plan', async () => {
+      await licenseService.createLicense({
+        type: 'api',
+        plan: 'monthly',
+        orderReference: 'api-metrics',
+        ttlSeconds: 3600,
+      });
+
+      expect(metrics.licensesCreatedTotal.inc).toHaveBeenCalledWith({
+        type: 'api',
+        plan: 'monthly',
+      });
+    });
+
+    it('separates a wrong key from an expired one when validating', async () => {
+      const created = await licenseService.createLicense({
+        type: 'pro',
+        plan: 'monthly',
+        orderReference: 'pro-metrics',
+        ttlSeconds: 3600,
+      });
+
+      await licenseService.validateLicense(created.key);
+      expect(metrics.licenseValidationsTotal.inc).toHaveBeenCalledWith({ result: 'active' });
+
+      await licenseService.validateLicense('HM-ZZZZ-ZZZZ-ZZZZ-ZZZZ');
+      expect(metrics.licenseValidationsTotal.inc).toHaveBeenCalledWith({ result: 'not_found' });
+
+      const stored = await licenseService.getLicense(created.key);
+      stored.expiresAt = Date.now() - 1000;
+      redisService.client.data[`license:${created.key}`] = JSON.stringify(stored);
+
+      await licenseService.validateLicense(created.key);
+      expect(metrics.licenseValidationsTotal.inc).toHaveBeenCalledWith({ result: 'expired' });
+    });
+
+    it('counts a revoked license by type', async () => {
+      const created = await licenseService.createLicense({
+        type: 'pro',
+        plan: 'yearly',
+        orderReference: 'pro-revoke-metrics',
+        ttlSeconds: 3600,
+      });
+
+      await licenseService.revokeLicense(created.key);
+
+      expect(metrics.licensesRevokedTotal.inc).toHaveBeenCalledWith({ type: 'pro' });
+    });
+
+    it('counts API key validations by outcome', async () => {
+      const license = await licenseService.createLicense({
+        type: 'api',
+        plan: 'monthly',
+        orderReference: 'api-key-metrics',
+        ttlSeconds: 3600,
+      });
+      const apiKey = await licenseService.createApiKey(license.key);
+
+      await licenseService.validateApiKey(apiKey);
+      expect(metrics.apiKeyValidationsTotal.inc).toHaveBeenCalledWith({ result: 'active' });
+
+      await licenseService.validateApiKey('hm_api_nope');
+      expect(metrics.apiKeyValidationsTotal.inc).toHaveBeenCalledWith({ result: 'not_found' });
+
+      await licenseService.validateApiKey(null);
+      expect(metrics.apiKeyValidationsTotal.inc).toHaveBeenCalledWith({ result: 'missing' });
     });
   });
 });

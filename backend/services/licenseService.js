@@ -5,6 +5,7 @@
 
 const crypto = require('crypto');
 const redisService = require('./redisService');
+const metrics = require('./metricsService');
 const logger = require('../utils/logger');
 const config = require('../config/config');
 const { sanitizeForLog } = require('../utils/sanitize');
@@ -93,6 +94,7 @@ const createLicense = async ({ type, plan, orderReference, recToken, ttlSeconds 
   };
 
   await persistLicense(license, ttlSeconds);
+  metrics.licensesCreatedTotal.inc({ type, plan });
   logger.info(`License created type=${type} plan=${plan} order=${sanitizeForLog(orderReference)}`);
   return license;
 };
@@ -100,8 +102,10 @@ const createLicense = async ({ type, plan, orderReference, recToken, ttlSeconds 
 const validateLicense = async (key) => {
   const license = await getLicense(key);
   if (!isActive(license)) {
+    metrics.licenseValidationsTotal.inc({ result: license ? 'expired' : 'not_found' });
     return { active: false };
   }
+  metrics.licenseValidationsTotal.inc({ result: 'active' });
   return {
     active: true,
     key: license.key,
@@ -151,6 +155,7 @@ const renewByPayment = async ({ orderReference, recToken, ttlSeconds }) => {
 
   const redisTtl = Math.max(1, Math.ceil((existing.expiresAt - Date.now()) / 1000));
   await persistLicense(existing, redisTtl);
+  metrics.licensesRenewedTotal.inc({ type: existing.type, plan: existing.plan });
   logger.info(`License renewed key=${maskKey(existing.key)} order=${sanitizeForLog(orderReference)}`);
   return existing;
 };
@@ -167,6 +172,7 @@ const revokeLicense = async (key) => {
   if (license.recToken) {
     await redisService.client.del(`${RECTOKEN_PREFIX}${license.recToken}`);
   }
+  metrics.licensesRevokedTotal.inc({ type: license.type });
   logger.info(`License revoked key=${maskKey(key)}`);
   return true;
 };
@@ -202,21 +208,26 @@ const createApiKey = async (licenseKey) => {
 
 const validateApiKey = async (apiKey) => {
   if (!apiKey || typeof apiKey !== 'string') {
+    metrics.apiKeyValidationsTotal.inc({ result: 'missing' });
     return null;
   }
   const raw = await redisService.client.get(`${API_KEY_PREFIX}${apiKey}`);
   if (!raw) {
+    metrics.apiKeyValidationsTotal.inc({ result: 'not_found' });
     return null;
   }
   const parsed = JSON.parse(raw);
   const license = await getLicense(parsed.licenseKey);
   if (!isActive(license)) {
+    metrics.apiKeyValidationsTotal.inc({ result: 'license_inactive' });
     return null;
   }
   const expiresAt = parsed.expiresAt || license.expiresAt;
   if (expiresAt <= Date.now()) {
+    metrics.apiKeyValidationsTotal.inc({ result: 'expired' });
     return null;
   }
+  metrics.apiKeyValidationsTotal.inc({ result: 'active' });
   return {
     licenseKey: license.key,
     type: license.type,

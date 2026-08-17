@@ -18,7 +18,7 @@ import AboutUs from './pages/AboutUs.js';
 import ContactUs from './pages/ContactUs.js';
 import Blog from './pages/Blog.js';
 import BlogPost from './pages/BlogPost.js';
-import ContentAwareAd from './components/ContentAwareAd.js';
+import AdSlot from './components/AdSlot.js';
 import PageAds from './components/PageAds.js';
 import CookieConsent from './components/CookieConsent.js';
 import MessageList from './components/MessageList.js';
@@ -472,17 +472,15 @@ function AppContent() {
         <ConfigProvider>
           <AppContainer>
             <Header />
-            <div className="ad-container">
-              <ContentAwareAd
-                slot="2183915405"
-                format="horizontal"
-                width={728}
-                height={90}
-                position="top-of-page"
-                contentSelector=".app-header"
-                minContentLength={100}
-              />
-            </div>
+            <AdSlot
+              slot="2183915405"
+              format="horizontal"
+              width={728}
+              height={90}
+              position="top-of-page"
+              contentSelector=".app-header"
+              minContentLength={100}
+            />
             <Routes>
               <Route path="/" element={
                 <>
@@ -645,17 +643,15 @@ function AppContent() {
                       <PageAds position="bottom" slot="8004708986" />
                     </div>
                     <div className="sidebar">
-                      <div className="ad-container">
-                        <ContentAwareAd
-                          slot="9977084442"
-                          format="rectangle"
-                          width={300}
-                          height={250}
-                          position="sidebar"
-                          contentSelector=".email-section"
-                          minContentLength={100}
-                        />
-                      </div>
+                      <AdSlot
+                        slot="9977084442"
+                        format="rectangle"
+                        width={300}
+                        height={250}
+                        position="sidebar"
+                        contentSelector=".email-section"
+                        minContentLength={100}
+                      />
                       <div className="email-section">
                         <h2>Why Use Hide Mail?</h2>
                         <ul>
@@ -718,19 +714,19 @@ function AppContent() {
                       <div className="faq-grid">
                         <div className="faq-item">
                           <h4>Is Hide Mail completely free?</h4>
-                          <p>The basic inbox is free and supported by ads. Hide Mail Pro adds longer inboxes, custom aliases, premium domains and an ad-free experience — without creating an account.</p>
+                          <p>The inbox is free and paid for by the ads on this page. Hide Mail Pro is optional: it removes the ads, keeps an address for up to 30 days instead of 30 minutes, lets you choose the address yourself and raises the Forward &amp; Forget limit from 2 to 100 per address. There is no account either way. See the <Link to="/pro">full comparison on the Pro page</Link>.</p>
                         </div>
                         <div className="faq-item">
                           <h4>How long do temporary emails last?</h4>
-                          <p>Free addresses stay active for 30 minutes. Hide Mail Pro can keep an address for 24 hours, 7 days or 30 days.</p>
+                          <p>A free address stays active for 30 minutes and you can extend it by 15 minutes at a time. With Hide Mail Pro you pick 24 hours, 7 days or 30 days up front. Either way the address and its emails are deleted when it expires.</p>
                         </div>
                         <div className="faq-item">
                           <h4>Can I send emails from my temporary address?</h4>
                           <p>Hide Mail is primarily designed for receiving emails. While some temporary email services offer sending capabilities, our focus is on providing secure, anonymous inboxes for receiving messages.</p>
                         </div>
                         <div className="faq-item">
-                          <h4>What is Forward & Forget?</h4>
-                          <p>Forward & Forget is our unique feature that lets you save important emails to your real inbox with one click. Simply verify your real email address via OTP (no account needed), and you can forward any email you want to keep—staying anonymous while never missing what matters.</p>
+                          <h4>What is Forward &amp; Forget?</h4>
+                          <p>Forward &amp; Forget is our unique feature that lets you save important emails to your real inbox with one click. Simply verify your real email address via OTP (no account needed), and you can forward any email you want to keep—staying anonymous while never missing what matters. A free address can forward 2 emails; Hide Mail Pro raises that to 100.</p>
                         </div>
                         <div className="faq-item">
                           <h4>Is using a temporary email legal?</h4>
@@ -747,17 +743,16 @@ function AppContent() {
                       </div>
                     </div>
                     
-                    <div className="ad-container ad-between-sections">
-                      <ContentAwareAd
-                        slot="6037839432"
-                        format="horizontal"
-                        width={728}
-                        height={90}
-                        position="middle-of-page"
-                        contentSelector=".faq-section"
-                        minContentLength={300}
-                      />
-                    </div>
+                    <AdSlot
+                      className="ad-between-sections"
+                      slot="6037839432"
+                      format="horizontal"
+                      width={728}
+                      height={90}
+                      position="middle-of-page"
+                      contentSelector=".faq-section"
+                      minContentLength={300}
+                    />
                     
                     <div className="best-practices-section">
                       <h3>Best Practices for Using Temporary Email Services</h3>
@@ -791,17 +786,16 @@ function AppContent() {
                       </div>
                     </div>
                     
-                    <div className="ad-container ad-before-footer">
-                      <ContentAwareAd
-                        slot="9103712827"
-                        format="horizontal"
-                        width={728}
-                        height={90}
-                        position="before-footer"
-                        contentSelector=".best-practices-section"
-                        minContentLength={200}
-                      />
-                    </div>
+                    <AdSlot
+                      className="ad-before-footer"
+                      slot="9103712827"
+                      format="horizontal"
+                      width={728}
+                      height={90}
+                      position="before-footer"
+                      contentSelector=".best-practices-section"
+                      minContentLength={200}
+                    />
                   </div>
                 </>
               } />
@@ -825,17 +819,16 @@ function AppContent() {
                 <FooterLink to="/pro" onClick={(e) => { e.currentTarget.blur(); analytics.navigateTo('Pro'); }}>Pro</FooterLink>
               </FooterLinks>
               <ProCta className="footer-donate" compact />
-              <div className="ad-container ad-in-footer">
-                <ContentAwareAd
-                  slot="2536759880"
-                  format="horizontal"
-                  width={728}
-                  height={90}
-                  position="in-footer"
-                  contentSelector="footer"
-                  minContentLength={50}
-                />
-              </div>
+              <AdSlot
+                className="ad-in-footer"
+                slot="2536759880"
+                format="horizontal"
+                width={728}
+                height={90}
+                position="in-footer"
+                contentSelector="footer"
+                minContentLength={50}
+              />
               <p>&copy; {new Date().getFullYear()} Hide Mail - The friendly temporary email service</p>
               <p>We value your privacy. Hide Mail does not store or share your personal information.</p>
             </FooterContainer>

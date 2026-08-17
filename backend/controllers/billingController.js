@@ -11,6 +11,7 @@ const wayforpayService = require('../services/wayforpayService');
 const licenseService = require('../services/licenseService');
 const orderService = require('../services/orderService');
 const entitlementService = require('../services/entitlementService');
+const metrics = require('../services/metricsService');
 
 const licenseTtlForPlan = (plan) => {
   if (plan === 'yearly') {
@@ -79,6 +80,8 @@ const checkout = async (req, res, next) => {
       displayUsd: product.usdDisplay,
     };
 
+    metrics.billingCheckoutsTotal.inc({ type, plan });
+
     return res.status(200).json({
       success: true,
       checkout,
@@ -96,6 +99,15 @@ const checkout = async (req, res, next) => {
  * checkout stored, and plan, type and price come from that order rather than from the
  * callback, so a caller cannot ask for a plan it did not pay for.
  */
+/**
+ * Revenue is booked from the price we hold server-side, never from the callback, so the
+ * figure on the dashboard matches what we actually charge for the plan.
+ */
+const recordSale = ({ type, plan }) => {
+  const { amount } = wayforpayService.resolveProduct(type, plan);
+  metrics.billingRevenueTotal.inc({ currency: config.billing.currency, type, plan }, amount);
+};
+
 const activateLicense = async ({ orderReference, recToken, amount, currency }) => {
   const existing = (await licenseService.findByRecToken(recToken))
     || (await licenseService.findByOrderReference(orderReference));
@@ -107,15 +119,19 @@ const activateLicense = async ({ orderReference, recToken, amount, currency }) =
       ttlSeconds: licenseTtlForPlan(existing.plan),
     });
     await orderService.markOrderPaid(orderReference, license.key);
+    recordSale(existing);
+    metrics.billingWebhookEventsTotal.inc({ result: 'license_renewed' });
     return;
   }
 
   const order = await orderService.getOrder(orderReference);
   if (!order) {
+    metrics.billingWebhookEventsTotal.inc({ result: 'unknown_order' });
     logger.warn(`WayForPay webhook for unknown order=${sanitizeForLog(orderReference)}`);
     return;
   }
   if (Number(amount) !== Number(order.amount) || currency !== order.currency) {
+    metrics.billingWebhookEventsTotal.inc({ result: 'amount_mismatch' });
     logger.warn(`WayForPay webhook amount mismatch order=${sanitizeForLog(orderReference)}`);
     return;
   }
@@ -136,6 +152,8 @@ const activateLicense = async ({ orderReference, recToken, amount, currency }) =
     extra.apiKeyExpiresAt = issued.expiresAt;
   }
   await orderService.markOrderPaid(orderReference, license.key, extra);
+  recordSale(order);
+  metrics.billingWebhookEventsTotal.inc({ result: 'license_created' });
 };
 
 const webhook = async (req, res, next) => {
@@ -147,6 +165,7 @@ const webhook = async (req, res, next) => {
 
     const valid = wayforpayService.verifyCallbackSignature(callback, config.wayforpay.secretKey);
     if (!valid) {
+      metrics.billingWebhookEventsTotal.inc({ result: 'invalid_signature' });
       logger.warn('WayForPay webhook signature mismatch');
       return res.status(400).json({ error: 'Invalid merchantSignature' });
     }
@@ -155,6 +174,7 @@ const webhook = async (req, res, next) => {
     try {
       action = wayforpayService.classifyTransactionStatus(callback.transactionStatus);
     } catch (error) {
+      metrics.billingWebhookEventsTotal.inc({ result: 'unsupported_status' });
       logger.warn(
         `WayForPay webhook unsupported status=${sanitizeForLog(callback.transactionStatus)}`
       );
@@ -171,9 +191,14 @@ const webhook = async (req, res, next) => {
         currency: callback.currency,
       });
     } else if (action === 'revoke') {
-      await licenseService.revokeByPayment({ orderReference, recToken });
+      const revoked = await licenseService.revokeByPayment({ orderReference, recToken });
+      metrics.billingWebhookEventsTotal.inc({
+        result: revoked ? 'license_revoked' : 'revoke_no_license',
+      });
+    } else {
+      // ignore: Declined / Expired / in-progress — payment is not a completed sale
+      metrics.billingWebhookEventsTotal.inc({ result: 'ignored' });
     }
-    // ignore: Declined / Expired / in-progress — payment is not a completed sale
 
     const ack = wayforpayService.acknowledgeWebhook(
       orderReference,
@@ -210,6 +235,43 @@ const validateLicense = async (req, res, next) => {
     });
   } catch (error) {
     logger.error(`License validate error: ${sanitizeForLog(error.message)}`);
+    return next(error);
+  }
+};
+
+/**
+ * API keys deliberately live for 30 days while the licence runs for a month or a year, and the
+ * post-payment handoff window closes after an hour. Without this route an API subscriber whose
+ * key expired — or who lost it — would have no way back in short of buying again.
+ */
+const issueApiKey = async (req, res, next) => {
+  try {
+    const key = req.body?.key;
+    const license = await licenseService.getLicense(key);
+
+    if (!licenseService.isActive(license)) {
+      return res.status(404).json({ success: false, error: 'License not found' });
+    }
+    if (license.type !== 'api') {
+      return res.status(403).json({
+        success: false,
+        error: 'API keys are only issued for the QA API plan',
+        code: 'API_PLAN_REQUIRED',
+      });
+    }
+
+    const apiKey = await licenseService.createApiKey(license.key);
+    const issued = await licenseService.validateApiKey(apiKey);
+    logger.info(`API key reissued license=${licenseService.maskKey(license.key)}`);
+
+    return res.status(200).json({
+      success: true,
+      apiKey,
+      expiresAt: issued.expiresAt,
+      remainingDays: issued.remainingDays,
+    });
+  } catch (error) {
+    logger.error(`API key reissue error: ${sanitizeForLog(error.message)}`);
     return next(error);
   }
 };
@@ -261,6 +323,7 @@ const listPlans = (req, res) => {
         usdDisplay: product.usdDisplay,
       };
     }),
+    tiers: entitlementService.describeTiers(),
   });
 };
 
@@ -268,6 +331,7 @@ module.exports = {
   checkout,
   webhook,
   validateLicense,
+  issueApiKey,
   getOrder,
   listPlans,
   getPricing: listPlans,

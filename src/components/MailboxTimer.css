@@ -30,6 +30,12 @@
   background-color: var(--duck-orange-light);
 }
 
+.timer-error {
+  margin: 6px 0 0;
+  font-size: 0.85rem;
+  color: var(--danger-color);
+}
+
 .timer-progress-container {
   height: 8px;
   background-color: #e0e0e0;

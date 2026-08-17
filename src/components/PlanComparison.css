@@ -1,0 +1,87 @@
+.plan-comparison {
+  margin: 28px 0;
+}
+
+.plan-comparison h2 {
+  font-size: 1.25rem;
+  margin-bottom: 12px;
+}
+
+.plan-comparison table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+
+.plan-comparison th,
+.plan-comparison td {
+  padding: 10px 12px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.plan-comparison thead th {
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+
+.plan-comparison tbody th {
+  width: 22%;
+  font-weight: 600;
+}
+
+.plan-comparison-note {
+  margin-top: 14px;
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
+
+@media (max-width: 640px) {
+  .plan-comparison table,
+  .plan-comparison thead,
+  .plan-comparison tbody,
+  .plan-comparison tr,
+  .plan-comparison th,
+  .plan-comparison td {
+    display: block;
+  }
+
+  .plan-comparison thead {
+    display: none;
+  }
+
+  .plan-comparison tbody tr {
+    margin-bottom: 16px;
+    border-bottom: 2px solid #e0e0e0;
+  }
+
+  .plan-comparison tbody th {
+    width: auto;
+    border-bottom: none;
+    padding-bottom: 2px;
+  }
+
+  .plan-comparison tbody td {
+    border-bottom: none;
+    padding: 2px 12px;
+  }
+
+  /* Without the header row each cell needs to say which tier it describes. */
+  .plan-comparison tbody td::before {
+    content: attr(data-tier) ': ';
+    font-weight: 600;
+    opacity: 0.75;
+  }
+}
+
+body[data-theme='dark'] .plan-comparison th,
+body[data-theme='dark'] .plan-comparison td {
+  border-color: #444;
+}
+
+body[data-theme='dark'] .plan-comparison tbody tr {
+  border-color: #444;
+}

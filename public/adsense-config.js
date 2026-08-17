@@ -21,8 +21,25 @@
     return false;
   }
   
+  // Paid plans promise no ads at all, so the loader has to bail out before the tag is fetched:
+  // hiding individual slots in React still leaves Google's auto-ads free to place their own.
+  // A stored key is enough of a signal here — the app validates it against the server for
+  // everything that grants a benefit, and skipping ads for a lapsed key is a far better failure
+  // than showing ads to somebody who paid to remove them.
+  function hasLicenseKey() {
+    try {
+      return Boolean(window.localStorage.getItem('hidemail_license_key'));
+    } catch (error) {
+      return false;
+    }
+  }
+
   // Function to inject the correct AdSense script
   function injectAdSenseScript() {
+    if (hasLicenseKey()) {
+      return;
+    }
+
     var clientId = getClientId();
     
     // Only proceed if we have a client ID

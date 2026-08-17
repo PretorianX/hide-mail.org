@@ -8,6 +8,7 @@ const MailboxTimer = ({ onExpire, onExtend }) => {
   const [timeLeft, setTimeLeft] = useState('30:00');
   const [percentLeft, setPercentLeft] = useState(100);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [refreshError, setRefreshError] = useState('');
   const { isPro, entitlements } = useLicense();
 
   useEffect(() => {
@@ -50,18 +51,21 @@ const MailboxTimer = ({ onExpire, onExtend }) => {
     return () => clearInterval(interval);
   }, [onExpire, entitlements]);
 
-  const handleRefreshTimer = () => {
+  const handleRefreshTimer = async () => {
     setIsRefreshing(true);
-    try {
-      EmailService.refreshExpirationTime();
-      if (onExtend) onExtend();
-      // Timer will update automatically in the useEffect
-    } catch (error) {
-      console.error('Error refreshing timer:', error);
-    } finally {
-      setIsRefreshing(false);
+    setRefreshError('');
+    const extended = await EmailService.refreshExpirationTime();
+    setIsRefreshing(false);
+
+    if (!extended) {
+      setRefreshError('Could not extend the mailbox. Please try again.');
+      return;
     }
+    if (onExtend) onExtend();
   };
+
+  // Free mailboxes are topped up in 15 minute steps; a paid one goes back to its full lifetime.
+  const extendLabel = isPro ? 'Reset timer' : 'Add 15 minutes';
 
   // Determine color based on percentage left
   const getProgressColor = () => {
@@ -80,9 +84,10 @@ const MailboxTimer = ({ onExpire, onExtend }) => {
           onClick={handleRefreshTimer}
           disabled={isRefreshing}
         >
-          {isRefreshing ? 'Refreshing...' : 'Refresh Timer'}
+          {isRefreshing ? 'Extending...' : extendLabel}
         </button>
       </div>
+      {refreshError && <p className="timer-error" role="alert">{refreshError}</p>}
       <div className="timer-progress-container">
         <div 
           className="timer-progress-bar" 

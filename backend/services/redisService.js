@@ -176,6 +176,16 @@ const redisService = {
   },
 
   /**
+   * Seconds left on an active mailbox. Returns a negative ioredis TTL code when the mailbox
+   * has no expiry (-1) or does not exist (-2).
+   * @param {string} email - Email address
+   * @returns {Promise<number>}
+   */
+  async getMailboxTtl(email) {
+    return redis.ttl(`${KEY_PREFIXES.ACTIVE_MAILBOX}${email}`);
+  },
+
+  /**
    * Refresh mailbox expiration time
    * @param {string} email - Email address
    * @param {number} expirationSeconds - New expiration time in seconds

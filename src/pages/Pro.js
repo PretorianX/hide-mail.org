@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import LicenseService from '../services/LicenseService';
 import { useLicense } from '../context/LicenseContext';
 import DonateButton from '../components/DonateButton';
+import PlanComparison from '../components/PlanComparison';
+import { headlinePrice, chargedNote, priceLabel } from '../utils/planPricing';
 import './Pro.css';
 
 const PLAN_LABELS = {
@@ -19,15 +21,20 @@ const Pro = () => {
   const [busy, setBusy] = useState(false);
   const [apiKey, setApiKey] = useState(null);
   const [apiKeyDays, setApiKeyDays] = useState(null);
+  const [tiers, setTiers] = useState(null);
 
   useEffect(() => {
     LicenseService.listPlans()
       .then((payload) => {
         setPlans(payload.plans || []);
         setCurrency(payload.currency || 'UAH');
+        setTiers(payload.tiers || null);
       })
       .catch((err) => setError(err.message));
   }, []);
+
+  const labelFor = (planId, period) =>
+    priceLabel(plans.find((item) => item.id === planId), currency, period);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -61,6 +68,20 @@ const Pro = () => {
       LicenseService.submitWayforpayCheckout(checkout);
     } catch (err) {
       setError(err.message);
+      setBusy(false);
+    }
+  };
+
+  const handleIssueApiKey = async () => {
+    setError(null);
+    setBusy(true);
+    try {
+      const issued = await LicenseService.requestApiKey(license.key);
+      setApiKey(issued.apiKey);
+      setApiKeyDays(issued.remainingDays);
+    } catch (err) {
+      setError(err.message);
+    } finally {
       setBusy(false);
     }
   };
@@ -102,6 +123,11 @@ const Pro = () => {
               <code data-testid="pro-api-key">{apiKey}</code>
             </p>
           ) : null}
+          {license.type === 'api' ? (
+            <button type="button" disabled={busy} onClick={handleIssueApiKey}>
+              {apiKey ? 'Replace API key' : 'Get a new API key'}
+            </button>
+          ) : null}
         </div>
       ) : null}
 
@@ -115,8 +141,8 @@ const Pro = () => {
             onClick={() => handleCheckout(plan)}
           >
             <strong>{PLAN_LABELS[plan.id] || plan.id}</strong>
-            <span>{plan.amount} {currency}</span>
-            {plan.usdDisplay ? <small>about ${plan.usdDisplay}</small> : null}
+            <span>{headlinePrice(plan)}</span>
+            <small>{chargedNote(plan, currency)}</small>
             <small>{plan.id === 'yearly' ? 'billed once a year' : 'billed every month'}</small>
           </button>
         ))}
@@ -138,13 +164,15 @@ const Pro = () => {
 
       {error ? <p className="pro-error" role="alert">{error}</p> : null}
 
-      <ul className="pro-benefits">
-        <li>No ads</li>
-        <li>Keep an address for 24 hours, 7 days or 30 days</li>
-        <li>Choose your alias and use premium domains that stay off blocklists</li>
-        <li>Higher Forward & Forget limits</li>
-        <li>API plan for QA inboxes and inbound webhooks</li>
-      </ul>
+      {tiers ? (
+        <PlanComparison
+          tiers={tiers}
+          price={{
+            pro: labelFor('monthly', 'per month'),
+            api: labelFor('api', 'per month'),
+          }}
+        />
+      ) : null}
 
       <div className="pro-paypal-last-resort">
         <p>Cannot pay by card? Last-resort PayPal donate only:</p>

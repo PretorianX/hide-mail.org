@@ -283,4 +283,50 @@ describe('EmailService', () => {
       expect(EmailService.isExpired()).toBe(false);
     });
   });
+
+  describe('refreshExpirationTime', () => {
+    beforeEach(() => {
+      EmailService.currentEmail = 'user@tempmail.com';
+      EmailService.expirationTime = new Date(Date.now() + 10 * 60 * 1000);
+    });
+
+    test('takes the new lifetime from the server rather than assuming one', async () => {
+      axios.post.mockResolvedValue({ data: { success: true, data: { ttlSeconds: 1500 } } });
+
+      await EmailService.refreshExpirationTime();
+
+      const remainingMs = EmailService.expirationTime.getTime() - Date.now();
+      expect(remainingMs).toBeGreaterThan(1490 * 1000);
+      expect(remainingMs).toBeLessThanOrEqual(1500 * 1000);
+    });
+
+    test('asks the server to keep the lifetime the mailbox was created with', async () => {
+      EmailService.mailboxTtlSeconds = 604800;
+      axios.post.mockResolvedValue({ data: { success: true, data: { ttlSeconds: 604800 } } });
+
+      await EmailService.refreshExpirationTime();
+
+      expect(axios.post).toHaveBeenCalledWith(
+        expect.stringContaining('/mailbox/refresh'),
+        expect.objectContaining({ email: 'user@tempmail.com', ttlSeconds: 604800 }),
+        expect.anything()
+      );
+    });
+
+    test('leaves the countdown alone when the server did not extend the mailbox', async () => {
+      const before = EmailService.expirationTime.getTime();
+      axios.post.mockRejectedValue(new Error('Network down'));
+
+      await expect(EmailService.refreshExpirationTime()).resolves.toBe(false);
+
+      expect(EmailService.expirationTime.getTime()).toBe(before);
+    });
+
+    test('does nothing without a current mailbox', async () => {
+      EmailService.currentEmail = null;
+
+      await expect(EmailService.refreshExpirationTime()).resolves.toBe(false);
+      expect(axios.post).not.toHaveBeenCalled();
+    });
+  });
 }); 

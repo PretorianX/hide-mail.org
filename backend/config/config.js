@@ -115,10 +115,13 @@ const config = {
     currency: 'UAH',
     monthlyAmount: parseInt(process.env.PRO_PRICE_MONTHLY_UAH || 149, 10),
     yearlyAmount: parseInt(process.env.PRO_PRICE_YEARLY_UAH || 1079, 10),
-    apiAmount: parseInt(process.env.API_PRICE_MONTHLY_UAH || 799, 10),
-    monthlyUsdDisplay: process.env.PRO_PRICE_MONTHLY_USD_DISPLAY || '4.99',
-    yearlyUsdDisplay: process.env.PRO_PRICE_YEARLY_USD_DISPLAY || '36',
-    apiUsdDisplay: process.env.API_PRICE_MONTHLY_USD_DISPLAY || '19',
+    apiAmount: parseInt(process.env.API_PRICE_MONTHLY_UAH || 349, 10),
+    // Prices lead in USD on the site while WayForPay settles in UAH, so these figures must stay
+    // just above the hryvnia amount converted at the current rate: a shopper should never be
+    // charged more than the dollar price they were quoted. Review when the rate moves.
+    monthlyUsdDisplay: process.env.PRO_PRICE_MONTHLY_USD_DISPLAY || '3.49',
+    yearlyUsdDisplay: process.env.PRO_PRICE_YEARLY_USD_DISPLAY || '24.99',
+    apiUsdDisplay: process.env.API_PRICE_MONTHLY_USD_DISPLAY || '7.99',
     monthlyTtlSeconds: parseInt(process.env.PRO_LICENSE_MONTHLY_SECONDS || 30 * 24 * 60 * 60, 10),
     yearlyTtlSeconds: parseInt(process.env.PRO_LICENSE_YEARLY_SECONDS || 366 * 24 * 60 * 60, 10),
     apiKeyTtlSeconds: parseInt(process.env.API_KEY_TTL_SECONDS || 30 * 24 * 60 * 60, 10),
@@ -134,6 +137,15 @@ const config = {
       '30d': parseInt(process.env.PRO_TTL_30D || 2592000, 10),
     },
     defaultMailboxTtlSeconds: parseInt(process.env.PRO_TTL_24H || 86400, 10),
+  },
+
+  metrics: {
+    // Subscription gauges are recomputed by scanning Redis, so this is deliberately much
+    // coarser than the Prometheus scrape interval.
+    billingCollectorIntervalSeconds: parseInt(
+      process.env.BILLING_METRICS_INTERVAL_SECONDS || 60,
+      10
+    ),
   },
 };
 

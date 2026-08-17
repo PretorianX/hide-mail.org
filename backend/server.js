@@ -7,6 +7,7 @@ const { simpleParser } = require('mailparser');
 const redisService = require('./services/redisService');
 const forwardingService = require('./services/forwardingService');
 const metrics = require('./services/metricsService');
+const billingMetricsCollector = require('./services/billingMetricsCollector');
 const httpMetricsMiddleware = require('./middleware/httpMetrics');
 const config = require('./config/config');
 const logger = require('./utils/logger');
@@ -128,6 +129,7 @@ const server = app.listen(PORT, () => {
 
 // Start Prometheus metrics server
 metrics.startMetricsServer();
+billingMetricsCollector.start();
 
 // Setup SMTP server to catch emails
 const smtpServer = new SMTPServer({
@@ -297,6 +299,7 @@ smtpServer.listen(SMTP_PORT, () => {
 // Handle graceful shutdown
 process.on('SIGTERM', () => {
   logger.info('SIGTERM received, shutting down gracefully');
+  billingMetricsCollector.stop();
   metrics.stopMetricsServer();
   server.close(() => {
     logger.info('HTTP server closed');

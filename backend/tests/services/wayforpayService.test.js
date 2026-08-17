@@ -20,6 +20,7 @@ describe('wayforpayService', () => {
     process.env.WAYFORPAY_RETURN_URL = 'https://hide-mail.org/?pro=return';
     process.env.PRO_PRICE_MONTHLY_UAH = '149';
     process.env.PRO_PRICE_YEARLY_UAH = '1079';
+    process.env.API_PRICE_MONTHLY_UAH = '349';
     wayforpayService = require('../../services/wayforpayService');
   });
 
@@ -146,8 +147,8 @@ describe('wayforpayService', () => {
         dateNext: '18.09.2026',
       });
 
-      expect(payload.amount).toBe(799);
-      expect(payload.productPrice).toEqual([799]);
+      expect(payload.amount).toBe(349);
+      expect(payload.productPrice).toEqual([349]);
       expect(payload.productName).toEqual(['Hide Mail API Monthly']);
     });
 

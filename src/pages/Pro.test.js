@@ -11,6 +11,7 @@ jest.mock('../services/LicenseService', () => ({
   checkout: jest.fn(),
   fetchPaidOrder: jest.fn(),
   restore: jest.fn(),
+  requestApiKey: jest.fn(),
   submitWayforpayCheckout: jest.fn(),
 }));
 
@@ -30,6 +31,30 @@ describe('Pro page', () => {
         { id: 'yearly', type: 'pro', plan: 'yearly', amount: 1079, usdDisplay: '36' },
         { id: 'api', type: 'api', plan: 'monthly', amount: 799, usdDisplay: '19' },
       ],
+      tiers: {
+        free: {
+          ads: true,
+          forwardingLimit: 2,
+          mailboxTtlSeconds: 1800,
+          mailboxTtlOptions: [],
+        },
+        pro: {
+          ads: false,
+          forwardingLimit: 100,
+          mailboxTtlSeconds: 86400,
+          mailboxTtlOptions: [86400, 604800, 2592000],
+        },
+        api: {
+          ads: false,
+          apiAccess: true,
+          forwardingLimit: 100,
+          mailboxTtlSeconds: 86400,
+          mailboxTtlOptions: [86400, 604800, 2592000],
+        },
+        freeExtensionSeconds: 900,
+        premiumDomainCount: 1,
+        apiKeyTtlSeconds: 2592000,
+      },
     });
     LicenseService.restoreSaved.mockResolvedValue(null);
     LicenseService.fetchPaidOrder.mockResolvedValue(null);
@@ -52,7 +77,21 @@ describe('Pro page', () => {
       expect(screen.getByText(/1079/)).toBeInTheDocument();
     });
     expect(screen.getByText(/yearly/i)).toBeInTheDocument();
-    expect(screen.getByText(/no account/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/no account/i).length).toBeGreaterThan(0);
+  });
+
+  test('compares the free tier against the paid ones with real limits', async () => {
+    render(
+      <MemoryRouter>
+        <LicenseProvider>
+          <Pro />
+        </LicenseProvider>
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByTestId('plan-comparison')).toBeInTheDocument();
+    expect(screen.getByText('2 forwards per hour')).toBeInTheDocument();
+    expect(screen.getByText('$4.99 per month (149 UAH)')).toBeInTheDocument();
   });
 
   test('shows remaining days for an active Pro license', async () => {
@@ -114,6 +153,78 @@ describe('Pro page', () => {
       expect(LicenseService.fetchPaidOrder).toHaveBeenCalledWith('pro-monthly-abc');
     });
     expect(window.location.search).toBe('');
+  });
+
+  test('quotes plans in dollars and names the hryvnia amount that is charged', async () => {
+    render(
+      <MemoryRouter>
+        <LicenseProvider>
+          <Pro />
+        </LicenseProvider>
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText('$4.99')).toBeInTheDocument();
+    expect(screen.getByText('charged as 149 UAH')).toBeInTheDocument();
+    expect(screen.getByText('$4.99 per month (149 UAH)')).toBeInTheDocument();
+  });
+
+  test('lets an API subscriber pull a fresh key when the old one expires', async () => {
+    LicenseService.restoreSaved.mockResolvedValue({
+      license: {
+        key: 'HM-AAAA-BBBB-CCCC-DDDD',
+        active: true,
+        type: 'api',
+        expiresAt: Date.now() + 60 * 24 * 60 * 60 * 1000,
+        remainingDays: 60,
+      },
+      entitlements: { ads: false, apiAccess: true },
+    });
+    LicenseService.requestApiKey.mockResolvedValue({
+      success: true,
+      apiKey: 'hm_api_fresh',
+      remainingDays: 30,
+    });
+
+    render(
+      <MemoryRouter>
+        <LicenseProvider>
+          <Pro />
+        </LicenseProvider>
+      </MemoryRouter>
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: /api key/i }));
+
+    await waitFor(() => {
+      expect(LicenseService.requestApiKey).toHaveBeenCalledWith('HM-AAAA-BBBB-CCCC-DDDD');
+    });
+    expect(await screen.findByTestId('pro-api-key')).toHaveTextContent('hm_api_fresh');
+    expect(screen.getByText(/30 days left/)).toBeInTheDocument();
+  });
+
+  test('offers no API key button to a Pro license', async () => {
+    LicenseService.restoreSaved.mockResolvedValue({
+      license: {
+        key: 'HM-AAAA-BBBB-CCCC-DDDD',
+        active: true,
+        type: 'pro',
+        expiresAt: Date.now() + 12 * 24 * 60 * 60 * 1000,
+        remainingDays: 12,
+      },
+      entitlements: { ads: false },
+    });
+
+    render(
+      <MemoryRouter>
+        <LicenseProvider>
+          <Pro />
+        </LicenseProvider>
+      </MemoryRouter>
+    );
+
+    await screen.findByTestId('pro-active');
+    expect(screen.queryByRole('button', { name: /api key/i })).not.toBeInTheDocument();
   });
 
   test('restores a pasted license key', async () => {

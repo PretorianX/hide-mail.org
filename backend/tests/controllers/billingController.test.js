@@ -38,8 +38,10 @@ jest.mock('../../services/licenseService', () => ({
   findByOrderReference: jest.fn(),
   findByRecToken: jest.fn(),
   createApiKey: jest.fn(),
+  validateApiKey: jest.fn(),
   getLicense: jest.fn(),
   isActive: jest.fn(),
+  maskKey: jest.fn(() => 'HM-****-DDDD'),
 }));
 
 jest.mock('../../services/orderService', () => ({
@@ -52,6 +54,7 @@ const billingController = require('../../controllers/billingController');
 const licenseService = require('../../services/licenseService');
 const orderService = require('../../services/orderService');
 const wayforpayService = require('../../services/wayforpayService');
+const metrics = require('../../services/metricsService');
 
 const mockRes = () => {
   const res = {};
@@ -361,6 +364,202 @@ describe('billingController', () => {
         success: true,
         license: expect.objectContaining({ active: true, type: 'pro' }),
       }));
+    });
+  });
+
+  describe('issueApiKey', () => {
+    const activeApiLicense = {
+      key: 'HM-AAAA-BBBB-CCCC-DDDD',
+      type: 'api',
+      plan: 'monthly',
+      status: 'active',
+      expiresAt: Date.now() + 20 * 24 * 60 * 60 * 1000,
+    };
+
+    it('hands an API subscriber a fresh key for their license', async () => {
+      licenseService.getLicense.mockResolvedValue(activeApiLicense);
+      licenseService.isActive.mockReturnValue(true);
+      licenseService.createApiKey.mockResolvedValue('hm_api_newkey');
+      licenseService.validateApiKey.mockResolvedValue({
+        expiresAt: Date.now() + 20 * 24 * 60 * 60 * 1000,
+        remainingDays: 20,
+      });
+
+      const res = mockRes();
+      await billingController.issueApiKey({ body: { key: activeApiLicense.key } }, res);
+
+      expect(licenseService.createApiKey).toHaveBeenCalledWith(activeApiLicense.key);
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json.mock.calls[0][0]).toEqual(expect.objectContaining({
+        success: true,
+        apiKey: 'hm_api_newkey',
+        remainingDays: 20,
+      }));
+    });
+
+    it('refuses a Pro license, which carries no API access', async () => {
+      licenseService.getLicense.mockResolvedValue({ ...activeApiLicense, type: 'pro' });
+      licenseService.isActive.mockReturnValue(true);
+
+      const res = mockRes();
+      await billingController.issueApiKey({ body: { key: activeApiLicense.key } }, res);
+
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(licenseService.createApiKey).not.toHaveBeenCalled();
+    });
+
+    it('refuses an expired or unknown license without leaking which', async () => {
+      licenseService.getLicense.mockResolvedValue(null);
+      licenseService.isActive.mockReturnValue(false);
+
+      const res = mockRes();
+      await billingController.issueApiKey({ body: { key: 'HM-XXXX-XXXX-XXXX-XXXX' } }, res);
+
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(licenseService.createApiKey).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('subscription metrics', () => {
+    const signed = (overrides) => {
+      const callback = {
+        merchantAccount: 'test_merchant',
+        orderReference: 'pro-monthly-metrics',
+        amount: 149,
+        currency: 'UAH',
+        authCode: '541963',
+        cardPan: '41****8217',
+        transactionStatus: 'Approved',
+        reasonCode: '1100',
+        ...overrides,
+      };
+      callback.merchantSignature = wayforpayService.signCallback(
+        callback,
+        process.env.WAYFORPAY_SECRET_KEY
+      );
+      return callback;
+    };
+
+    const storedOrder = (overrides = {}) => ({
+      id: 'pro-monthly-metrics',
+      type: 'pro',
+      plan: 'monthly',
+      amount: 149,
+      currency: 'UAH',
+      ...overrides,
+    });
+
+    it('counts a checkout by type and plan', async () => {
+      await billingController.checkout({ body: { plan: 'yearly' } }, mockRes());
+
+      expect(metrics.billingCheckoutsTotal.inc).toHaveBeenCalledWith({
+        type: 'pro',
+        plan: 'yearly',
+      });
+    });
+
+    it('does not count a checkout that was rejected as an invalid plan', async () => {
+      await billingController.checkout({ body: { plan: 'weekly' } }, mockRes());
+
+      expect(metrics.billingCheckoutsTotal.inc).not.toHaveBeenCalled();
+    });
+
+    it('books revenue at the price we hold for the plan, not the amount in the callback', async () => {
+      licenseService.findByRecToken.mockResolvedValue(null);
+      licenseService.findByOrderReference.mockResolvedValue(null);
+      orderService.getOrder.mockResolvedValue(storedOrder({ plan: 'yearly', amount: 1079 }));
+      licenseService.createLicense.mockResolvedValue({
+        key: 'HM-A',
+        type: 'pro',
+        plan: 'yearly',
+      });
+
+      await billingController.webhook({ body: signed({ amount: 1079 }) }, mockRes());
+
+      expect(metrics.billingRevenueTotal.inc).toHaveBeenCalledWith(
+        { currency: 'UAH', type: 'pro', plan: 'yearly' },
+        1079
+      );
+      expect(metrics.billingWebhookEventsTotal.inc).toHaveBeenCalledWith({
+        result: 'license_created',
+      });
+    });
+
+    it('marks a recurring charge as a renewal', async () => {
+      licenseService.findByRecToken.mockResolvedValue({
+        key: 'HM-A',
+        type: 'pro',
+        plan: 'monthly',
+      });
+      licenseService.renewByPayment.mockResolvedValue({
+        key: 'HM-A',
+        type: 'pro',
+        plan: 'monthly',
+      });
+
+      await billingController.webhook({ body: signed({ recToken: 'rec-1' }) }, mockRes());
+
+      expect(metrics.billingWebhookEventsTotal.inc).toHaveBeenCalledWith({
+        result: 'license_renewed',
+      });
+      expect(metrics.billingRevenueTotal.inc).toHaveBeenCalledWith(
+        { currency: 'UAH', type: 'pro', plan: 'monthly' },
+        149
+      );
+    });
+
+    it('books no revenue when the paid amount does not match the order', async () => {
+      licenseService.findByRecToken.mockResolvedValue(null);
+      licenseService.findByOrderReference.mockResolvedValue(null);
+      orderService.getOrder.mockResolvedValue(storedOrder());
+
+      await billingController.webhook({ body: signed({ amount: 1 }) }, mockRes());
+
+      expect(metrics.billingRevenueTotal.inc).not.toHaveBeenCalled();
+      expect(metrics.billingWebhookEventsTotal.inc).toHaveBeenCalledWith({
+        result: 'amount_mismatch',
+      });
+    });
+
+    it('separates an unknown order from a forged signature', async () => {
+      licenseService.findByRecToken.mockResolvedValue(null);
+      licenseService.findByOrderReference.mockResolvedValue(null);
+      orderService.getOrder.mockResolvedValue(null);
+      await billingController.webhook({ body: signed({}) }, mockRes());
+
+      expect(metrics.billingWebhookEventsTotal.inc).toHaveBeenCalledWith({
+        result: 'unknown_order',
+      });
+
+      metrics.billingWebhookEventsTotal.inc.mockClear();
+      await billingController.webhook(
+        { body: { ...signed({}), merchantSignature: 'forged' } },
+        mockRes()
+      );
+
+      expect(metrics.billingWebhookEventsTotal.inc).toHaveBeenCalledWith({
+        result: 'invalid_signature',
+      });
+    });
+
+    it('records a refund as a revocation and a declined payment as ignored', async () => {
+      licenseService.revokeByPayment.mockResolvedValue(true);
+      await billingController.webhook(
+        { body: signed({ transactionStatus: 'Refunded' }) },
+        mockRes()
+      );
+
+      expect(metrics.billingWebhookEventsTotal.inc).toHaveBeenCalledWith({
+        result: 'license_revoked',
+      });
+
+      metrics.billingWebhookEventsTotal.inc.mockClear();
+      await billingController.webhook(
+        { body: signed({ transactionStatus: 'Declined' }) },
+        mockRes()
+      );
+
+      expect(metrics.billingWebhookEventsTotal.inc).toHaveBeenCalledWith({ result: 'ignored' });
     });
   });
 });

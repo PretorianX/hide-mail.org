@@ -58,6 +58,18 @@ describe('entitlementService', () => {
     expect(entitlements.customAlias).toBe(false);
   });
 
+  it('describes every tier for the public comparison using the enforced limits', () => {
+    const tiers = entitlementService.describeTiers();
+
+    expect(tiers.free).toEqual(entitlementService.getEntitlements(null));
+    expect(tiers.pro.forwardingLimit).toBe(100);
+    expect(tiers.pro.apiAccess).toBe(false);
+    expect(tiers.api.apiAccess).toBe(true);
+    expect(tiers.freeExtensionSeconds).toBe(900);
+    expect(tiers.apiKeyTtlSeconds).toBe(2592000);
+    expect(typeof tiers.premiumDomainCount).toBe('number');
+  });
+
   it('resolves a requested Pro mailbox TTL only from the allowed list', () => {
     const license = {
       type: 'pro',

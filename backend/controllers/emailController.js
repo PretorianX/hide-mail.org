@@ -255,7 +255,12 @@ const emailController = {
         return res.status(400).json({ error: 'Invalid email address' });
       }
 
-      const expirationSeconds = entitlementService.resolveMailboxTtl(req.license, requestedTtl);
+      const remainingSeconds = await redisService.getMailboxTtl(email);
+      const expirationSeconds = entitlementService.resolveRefreshTtl(
+        req.license,
+        remainingSeconds,
+        Number(ttlSeconds)
+      );
       const success = await redisService.refreshMailbox(email, expirationSeconds);
       
       if (!success) {

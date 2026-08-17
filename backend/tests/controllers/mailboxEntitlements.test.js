@@ -9,15 +9,6 @@ const licenseService = require('../../services/licenseService');
 const emailController = require('../../controllers/emailController');
 const forwardingService = require('../../services/forwardingService');
 
-jest.mock('../../services/metricsService', () => ({
-  mailboxesRegisteredTotal: { inc: jest.fn() },
-  mailboxesRefreshedTotal: { inc: jest.fn() },
-  mailboxesDeactivatedTotal: { inc: jest.fn() },
-  forwardingOtpRequestsTotal: { inc: jest.fn() },
-  forwardingOtpVerificationsTotal: { inc: jest.fn() },
-  forwardingEmailsTotal: { inc: jest.fn() },
-}));
-
 const jsonRes = () => {
   const res = {
     statusCode: 200,
@@ -38,6 +29,7 @@ describe('Pro mailbox entitlements', () => {
   let proLicense;
 
   beforeEach(async () => {
+    jest.restoreAllMocks();
     redisService.client.data = {};
     await redisService.initializeDomains(['hide-mail.org', 'pro-hide-mail.org']);
     proLicense = await licenseService.createLicense({
@@ -131,6 +123,80 @@ describe('Pro mailbox entitlements', () => {
     );
 
     expect(res.statusCode).toBe(200);
+  });
+
+  describe('refreshMailbox', () => {
+    it('adds the 15 minute extension to the time a free mailbox has left', async () => {
+      jest.spyOn(redisService, 'getMailboxTtl').mockResolvedValue(600);
+      const refreshSpy = jest.spyOn(redisService, 'refreshMailbox').mockResolvedValue(true);
+
+      const res = jsonRes();
+      await emailController.refreshMailbox(
+        { body: { email: 'random@hide-mail.org' } },
+        res,
+        (err) => { throw err; }
+      );
+
+      expect(res.statusCode).toBe(200);
+      expect(refreshSpy).toHaveBeenCalledWith('random@hide-mail.org', 1500);
+      expect(res.body.data.ttlSeconds).toBe(1500);
+    });
+
+    it('extends from the default lifetime when the mailbox has no readable TTL', async () => {
+      jest.spyOn(redisService, 'getMailboxTtl').mockResolvedValue(-1);
+      const refreshSpy = jest.spyOn(redisService, 'refreshMailbox').mockResolvedValue(true);
+
+      const res = jsonRes();
+      await emailController.refreshMailbox(
+        { body: { email: 'random@hide-mail.org' } },
+        res,
+        (err) => { throw err; }
+      );
+
+      expect(refreshSpy).toHaveBeenCalledWith('random@hide-mail.org', 900);
+    });
+
+    it('resets a Pro mailbox to the lifetime the holder paid for', async () => {
+      jest.spyOn(redisService, 'getMailboxTtl').mockResolvedValue(600);
+      const refreshSpy = jest.spyOn(redisService, 'refreshMailbox').mockResolvedValue(true);
+
+      const res = jsonRes();
+      await emailController.refreshMailbox(
+        { body: { email: 'anna@hide-mail.org', ttlSeconds: 604800 }, license: proLicense },
+        res,
+        (err) => { throw err; }
+      );
+
+      expect(refreshSpy).toHaveBeenCalledWith('anna@hide-mail.org', 604800);
+    });
+
+    it('ignores a lifetime the plan does not include', async () => {
+      jest.spyOn(redisService, 'getMailboxTtl').mockResolvedValue(600);
+      const refreshSpy = jest.spyOn(redisService, 'refreshMailbox').mockResolvedValue(true);
+
+      const res = jsonRes();
+      await emailController.refreshMailbox(
+        { body: { email: 'anna@hide-mail.org', ttlSeconds: 99999999 }, license: proLicense },
+        res,
+        (err) => { throw err; }
+      );
+
+      expect(refreshSpy).toHaveBeenCalledWith('anna@hide-mail.org', 86400);
+    });
+
+    it('reports an unknown mailbox instead of failing', async () => {
+      jest.spyOn(redisService, 'getMailboxTtl').mockResolvedValue(-2);
+      jest.spyOn(redisService, 'refreshMailbox').mockResolvedValue(false);
+
+      const res = jsonRes();
+      await emailController.refreshMailbox(
+        { body: { email: 'gone@hide-mail.org' } },
+        res,
+        (err) => { throw err; }
+      );
+
+      expect(res.statusCode).toBe(404);
+    });
   });
 
   it('returns premium domains only when a Pro license is present', async () => {

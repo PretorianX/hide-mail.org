@@ -121,6 +121,85 @@ const httpRequestDurationSeconds = new client.Histogram({
 });
 
 // ---------------------------------------------------------------------------
+// Billing / subscription metrics
+// ---------------------------------------------------------------------------
+
+const billingCheckoutsTotal = new client.Counter({
+  name: 'hidemail_billing_checkouts_total',
+  help: 'Total WayForPay checkout sessions created',
+  labelNames: ['type', 'plan'],
+});
+
+const billingWebhookEventsTotal = new client.Counter({
+  name: 'hidemail_billing_webhook_events_total',
+  help: 'Total WayForPay webhook callbacks by outcome',
+  labelNames: ['result'],
+});
+
+const billingRevenueTotal = new client.Counter({
+  name: 'hidemail_billing_revenue_total',
+  help: 'Total confirmed subscription revenue in the smallest billed unit of the currency',
+  labelNames: ['currency', 'type', 'plan'],
+});
+
+const licensesCreatedTotal = new client.Counter({
+  name: 'hidemail_licenses_created_total',
+  help: 'Total licenses issued after a first payment',
+  labelNames: ['type', 'plan'],
+});
+
+const licensesRenewedTotal = new client.Counter({
+  name: 'hidemail_licenses_renewed_total',
+  help: 'Total licenses extended by a recurring payment',
+  labelNames: ['type', 'plan'],
+});
+
+const licensesRevokedTotal = new client.Counter({
+  name: 'hidemail_licenses_revoked_total',
+  help: 'Total licenses revoked after a refund or chargeback',
+  labelNames: ['type'],
+});
+
+const licenseValidationsTotal = new client.Counter({
+  name: 'hidemail_license_validations_total',
+  help: 'Total license key validations by outcome',
+  labelNames: ['result'],
+});
+
+const apiKeyValidationsTotal = new client.Counter({
+  name: 'hidemail_api_key_validations_total',
+  help: 'Total API key validations by outcome',
+  labelNames: ['result'],
+});
+
+const licensesActive = new client.Gauge({
+  name: 'hidemail_licenses_active',
+  help: 'Currently active licenses, counted from Redis',
+  labelNames: ['type', 'plan'],
+});
+
+const apiKeysActive = new client.Gauge({
+  name: 'hidemail_api_keys_active',
+  help: 'Currently valid API keys, counted from Redis',
+});
+
+const billingOrders = new client.Gauge({
+  name: 'hidemail_billing_orders',
+  help: 'Orders still held in Redis, by status',
+  labelNames: ['status'],
+});
+
+const billingCollectorLastSuccessTimestampSeconds = new client.Gauge({
+  name: 'hidemail_billing_collector_last_success_timestamp_seconds',
+  help: 'Unix timestamp of the last successful subscription gauge collection',
+});
+
+const billingCollectorErrorsTotal = new client.Counter({
+  name: 'hidemail_billing_collector_errors_total',
+  help: 'Total failed subscription gauge collections',
+});
+
+// ---------------------------------------------------------------------------
 // Redis connectivity gauge
 // ---------------------------------------------------------------------------
 
@@ -207,6 +286,23 @@ module.exports = {
   // HTTP counters
   httpRequestsTotal,
   httpRequestDurationSeconds,
+
+  // Billing counters
+  billingCheckoutsTotal,
+  billingWebhookEventsTotal,
+  billingRevenueTotal,
+  licensesCreatedTotal,
+  licensesRenewedTotal,
+  licensesRevokedTotal,
+  licenseValidationsTotal,
+  apiKeyValidationsTotal,
+  billingCollectorErrorsTotal,
+
+  // Billing gauges
+  licensesActive,
+  apiKeysActive,
+  billingOrders,
+  billingCollectorLastSuccessTimestampSeconds,
 
   // Gauges
   redisConnected,
