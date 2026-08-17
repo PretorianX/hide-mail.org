@@ -107,7 +107,9 @@ const signPurchase = (payload, secretKey) => hmacMd5(secretKey, purchaseSignatur
 const signCallback = (payload, secretKey) => hmacMd5(secretKey, callbackSignatureString(payload));
 
 const verifyCallbackSignature = (payload, secretKey) => {
-  if (!payload || !payload.merchantSignature) {
+  // The callback is unauthenticated until this returns true, so the signature field is treated
+  // as arbitrary JSON: anything other than a string is simply not a signature.
+  if (!payload || typeof payload.merchantSignature !== 'string') {
     return false;
   }
   const expected = signCallback(payload, secretKey);

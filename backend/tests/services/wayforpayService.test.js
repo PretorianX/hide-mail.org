@@ -81,6 +81,22 @@ describe('wayforpayService', () => {
 
       expect(wayforpayService.verifyCallbackSignature(callback, TEST_SECRET)).toBe(false);
     });
+
+    it('rejects a signature that is not a string instead of throwing', () => {
+      const callback = {
+        merchantAccount: 'test_merchant',
+        orderReference: 'DH783023',
+        amount: 149,
+        currency: 'UAH',
+        authCode: '541963',
+        cardPan: '41****8217',
+        transactionStatus: 'Approved',
+        reasonCode: '1100',
+        merchantSignature: 12345,
+      };
+
+      expect(wayforpayService.verifyCallbackSignature(callback, TEST_SECRET)).toBe(false);
+    });
   });
 
   describe('buildCheckoutPayload', () => {

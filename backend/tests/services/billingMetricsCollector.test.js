@@ -43,7 +43,7 @@ const license = (type, plan, offsetMs = HOUR) => ({
  */
 const givenRedis = (store) => {
   redisService.client.scan.mockImplementation(async (cursor, _match, pattern) => {
-    const prefix = pattern.replace('*', '');
+    const prefix = pattern.replaceAll('*', '');
     const keys = Object.keys(store).filter((key) => key.startsWith(prefix));
     return ['0', keys];
   });
