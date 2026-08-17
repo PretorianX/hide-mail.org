@@ -13,7 +13,7 @@ router.post('/license/validate', apiRateLimiter.licenseValidate, billingControll
 router.post('/license/api-key', apiRateLimiter.licenseValidate, billingController.issueApiKey);
 router.get('/order/:orderReference', apiRateLimiter.orderLookup, billingController.getOrder);
 router.post('/webhook', billingController.webhook);
-// WayForPay returns the payer here with a POST; both methods redirect to the Pro page.
-router.all('/return', billingController.customerReturn);
+// The customer return is mounted in server.js instead: it arrives as a cross-site form POST and
+// has to be answered before the CORS check, which rejects WayForPay's Origin.
 
 module.exports = router;

@@ -87,6 +87,12 @@ const corsOptions = {
   maxAge: 86400 // 24 hours
 };
 
+// WayForPay returns the payer with a cross-site form POST, so the browser attaches their Origin
+// and the CORS check below would answer 500. This is a navigation rather than an XHR: nothing
+// cross-origin reads the response, which is only a redirect to the Pro page. It reads the order
+// reference from the query string, so it also needs no parsed body.
+app.all('/api/billing/return', billingController.customerReturn);
+
 // Middleware
 app.use(cors(corsOptions));
 app.use(httpMetricsMiddleware);
