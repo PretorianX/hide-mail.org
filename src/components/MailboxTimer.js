@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import EmailService from '../services/EmailService.js';
+import { useLicense } from '../context/LicenseContext';
+import ProCta from './ProCta';
 import './MailboxTimer.css';
 
 const MailboxTimer = ({ onExpire, onExtend }) => {
   const [timeLeft, setTimeLeft] = useState('30:00');
   const [percentLeft, setPercentLeft] = useState(100);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [refreshError, setRefreshError] = useState('');
+  const { isPro, entitlements } = useLicense();
 
   useEffect(() => {
     let interval;
@@ -21,16 +25,22 @@ const MailboxTimer = ({ onExpire, onExtend }) => {
         return;
       }
       
-      // Calculate minutes and seconds
-      const minutes = Math.floor(remainingTime / 60000);
+      const totalMs = remainingTime;
+      const days = Math.floor(remainingTime / 86400000);
+      const hours = Math.floor((remainingTime % 86400000) / 3600000);
+      const minutes = Math.floor((remainingTime % 3600000) / 60000);
       const seconds = Math.floor((remainingTime % 60000) / 1000);
-      
-      // Format time left
-      setTimeLeft(`${minutes}:${seconds.toString().padStart(2, '0')}`);
-      
-      // Calculate percentage left (assuming 30 min total)
-      const totalTime = 30 * 60 * 1000; // 30 minutes in milliseconds
-      const percentRemaining = (remainingTime / totalTime) * 100;
+
+      if (days > 0) {
+        setTimeLeft(`${days}d ${hours}h`);
+      } else if (hours > 0) {
+        setTimeLeft(`${hours}h ${minutes.toString().padStart(2, '0')}m`);
+      } else {
+        setTimeLeft(`${minutes}:${seconds.toString().padStart(2, '0')}`);
+      }
+
+      const configuredTotal = (entitlements?.mailboxTtlSeconds || 1800) * 1000;
+      const percentRemaining = (totalMs / configuredTotal) * 100;
       setPercentLeft(Math.min(percentRemaining, 100));
     };
     
@@ -39,20 +49,23 @@ const MailboxTimer = ({ onExpire, onExtend }) => {
     interval = setInterval(updateTimer, 1000);
     
     return () => clearInterval(interval);
-  }, [onExpire]);
+  }, [onExpire, entitlements]);
 
-  const handleRefreshTimer = () => {
+  const handleRefreshTimer = async () => {
     setIsRefreshing(true);
-    try {
-      EmailService.refreshExpirationTime();
-      if (onExtend) onExtend();
-      // Timer will update automatically in the useEffect
-    } catch (error) {
-      console.error('Error refreshing timer:', error);
-    } finally {
-      setIsRefreshing(false);
+    setRefreshError('');
+    const extended = await EmailService.refreshExpirationTime();
+    setIsRefreshing(false);
+
+    if (!extended) {
+      setRefreshError('Could not extend the mailbox. Please try again.');
+      return;
     }
+    if (onExtend) onExtend();
   };
+
+  // Free mailboxes are topped up in 15 minute steps; a paid one goes back to its full lifetime.
+  const extendLabel = isPro ? 'Reset timer' : 'Add 15 minutes';
 
   // Determine color based on percentage left
   const getProgressColor = () => {
@@ -71,9 +84,10 @@ const MailboxTimer = ({ onExpire, onExtend }) => {
           onClick={handleRefreshTimer}
           disabled={isRefreshing}
         >
-          {isRefreshing ? 'Refreshing...' : 'Refresh Timer'}
+          {isRefreshing ? 'Extending...' : extendLabel}
         </button>
       </div>
+      {refreshError && <p className="timer-error" role="alert">{refreshError}</p>}
       <div className="timer-progress-container">
         <div 
           className="timer-progress-bar" 
@@ -83,6 +97,9 @@ const MailboxTimer = ({ onExpire, onExtend }) => {
           }}
         ></div>
       </div>
+      {!isPro && percentLeft > 0 && percentLeft <= 35 && (
+        <ProCta compact className="mailbox-timer-pro" />
+      )}
     </div>
   );
 };

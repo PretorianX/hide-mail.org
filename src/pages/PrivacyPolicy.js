@@ -62,6 +62,7 @@ const PrivacyPolicy = () => {
           <ListItem>Temporary email addresses generated through our service</ListItem>
           <ListItem>Email content received by the temporary email addresses</ListItem>
           <ListItem>Information you provide when you contact us for support</ListItem>
+          <ListItem>Payment and subscription records if you buy Hide Mail Pro or the API plan, as described under "Payments and Hide Mail Pro" below</ListItem>
         </List>
         <Paragraph>
           <strong>Information we collect automatically:</strong> When you use our Service, we automatically collect certain information about your device and usage of the Service, including:
@@ -137,9 +138,33 @@ const PrivacyPolicy = () => {
       </Section>
 
       <Section>
+        <SectionTitle>Payments and Hide Mail Pro</SectionTitle>
+        <Paragraph>
+          Hide Mail Pro and the Hide Mail API are paid plans. Payments are processed by <a href="https://wayforpay.com" target="_blank" rel="noopener noreferrer">WayForPay</a>, a Ukrainian payment provider, and are charged in Ukrainian hryvnia (UAH). Any other currency shown on the Pro page is an approximate conversion for reference only.
+        </Paragraph>
+        <Paragraph>
+          <strong>We never see or store your card details.</strong> Your card number, expiry date and CVV are entered on WayForPay's own payment page and are handled entirely by WayForPay under its own privacy policy. We only receive a masked card number (for example 41****8217) in the payment confirmation.
+        </Paragraph>
+        <Paragraph>
+          <strong>What we store for a paid plan:</strong>
+        </Paragraph>
+        <List>
+          <ListItem>An order reference, the amount, the currency and the payment timestamp</ListItem>
+          <ListItem>A license key we generate for you, and, on the API plan, an API key</ListItem>
+          <ListItem>A recurring payment token issued by WayForPay, so that renewals can be charged and so that you can cancel</ListItem>
+        </List>
+        <Paragraph>
+          <strong>No account, no email address required.</strong> Hide Mail Pro has no sign-up: your license key is the only credential. It is stored in your browser's local storage and sent to us to confirm your plan. Anyone holding the key can use the plan, so treat it like a password and keep a copy. We cannot email it to you, because we do not ask for your email address. If you lose the key, contact support with your payment details.
+        </Paragraph>
+        <Paragraph>
+          License keys, API keys and order records are deleted automatically once the plan and its short grace period expire. Order records are kept for up to 7 days after payment, and the key itself is only handed back to the browser during the first hour after payment.
+        </Paragraph>
+      </Section>
+
+      <Section>
         <SectionTitle>Data Retention</SectionTitle>
         <Paragraph>
-          Temporary email addresses and their contents are automatically deleted after a short period (typically 24 hours). We do not permanently store email messages or their contents.
+          Temporary email addresses and their contents are automatically deleted when the mailbox expires. On the free plan a mailbox lasts 30 minutes and can be extended; on Hide Mail Pro you can choose 24 hours, 7 days or 30 days. We do not permanently store email messages or their contents.
         </Paragraph>
         <Paragraph>
           We retain other information for as long as necessary to provide our Service and fulfill the purposes described in this Privacy Policy, unless a longer retention period is required or permitted by law.

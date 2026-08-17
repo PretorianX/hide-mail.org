@@ -1,5 +1,42 @@
-import { render, screen } from '@testing-library/react';
+import fs from 'fs';
+import path from 'path';
 import '@testing-library/jest-dom';
+
+const loaderSource = fs.readFileSync(
+  path.join(__dirname, '..', 'public', 'adsense-config.js'),
+  'utf8'
+);
+
+// Exercises the real public/adsense-config.js, which runs before React boots.
+describe('AdSense loader', () => {
+  const runLoader = () => {
+    // eslint-disable-next-line no-eval
+    eval(loaderSource);
+  };
+
+  beforeEach(() => {
+    localStorage.clear();
+    document.head.innerHTML = '';
+    window.__RUNTIME_CONFIG__ = { adsense: { client: 'ca-pub-9729692981183751' } };
+  });
+
+  const injectedTags = () =>
+    document.head.querySelectorAll('script[src*="adsbygoogle.js"]');
+
+  test('loads the ad tag for a visitor without a license', () => {
+    runLoader();
+
+    expect(injectedTags()).toHaveLength(1);
+  });
+
+  test('never fetches the ad tag once a license key is stored', () => {
+    localStorage.setItem('hidemail_license_key', 'HM-AAAA-BBBB-CCCC-DDDD');
+
+    runLoader();
+
+    expect(injectedTags()).toHaveLength(0);
+  });
+});
 
 describe('AdSense Configuration', () => {
   const originalEnv = process.env;

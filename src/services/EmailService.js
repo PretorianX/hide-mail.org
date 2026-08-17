@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { faker } from '@faker-js/faker';
 import { getProofOfWork } from '../utils/powSolver';
+import LicenseService from './LicenseService';
 
 // Backend API URL
 const API_URL = process.env.REACT_APP_API_URL || '/api';
@@ -13,27 +14,46 @@ const DEFAULT_LIFETIME_MINUTES = 30;
 // Local storage keys
 const STORAGE_KEYS = {
   CURRENT_EMAIL: 'mailduck_current_email',
-  EXPIRATION_TIME: 'mailduck_expiration_time'
+  EXPIRATION_TIME: 'mailduck_expiration_time',
+  MAILBOX_TTL: 'mailduck_mailbox_ttl'
 };
 
 class EmailService {
   static domains = [];
+  static premiumDomains = [];
   static initialized = false;
   static currentEmail = null;
   static expirationTime = null;
+  // Lifetime the mailbox was created with, replayed on refresh so a paid plan keeps the
+  // duration its holder picked instead of dropping to the plan default.
+  static mailboxTtlSeconds = null;
+
+  static licenseHeaders() {
+    const headers = {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    };
+    const key = LicenseService.getKey();
+    if (key) {
+      headers['X-License-Key'] = key;
+    }
+    return headers;
+  }
+
+  static async fetchDomains() {
+    const response = await axios.get(`${API_URL}/domains`, {
+      headers: this.licenseHeaders(),
+    });
+    this.domains = response.data.data;
+    this.premiumDomains = response.data.premium || [];
+    return this.domains;
+  }
 
   static async initialize() {
     if (this.initialized) return;
     
     try {
-      // Load domains from the backend API
-      const response = await axios.get(`${API_URL}/domains`, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        }
-      });
-      this.domains = response.data.data;
+      await this.fetchDomains();
       
       // Load saved email from localStorage if available
       this.loadFromStorage();
@@ -58,6 +78,7 @@ class EmailService {
         if (expirationTime > new Date()) {
           this.currentEmail = savedEmail;
           this.expirationTime = expirationTime;
+          this.mailboxTtlSeconds = Number(localStorage.getItem(STORAGE_KEYS.MAILBOX_TTL)) || null;
           console.log(`Restored email from storage: ${this.currentEmail}`);
         } else {
           console.log('Saved email was expired, not restoring');
@@ -75,6 +96,9 @@ class EmailService {
       if (this.currentEmail && this.expirationTime) {
         localStorage.setItem(STORAGE_KEYS.CURRENT_EMAIL, this.currentEmail);
         localStorage.setItem(STORAGE_KEYS.EXPIRATION_TIME, this.expirationTime.toISOString());
+        if (this.mailboxTtlSeconds) {
+          localStorage.setItem(STORAGE_KEYS.MAILBOX_TTL, String(this.mailboxTtlSeconds));
+        }
       }
     } catch (error) {
       console.error('Error saving to localStorage:', error);
@@ -85,6 +109,7 @@ class EmailService {
     try {
       localStorage.removeItem(STORAGE_KEYS.CURRENT_EMAIL);
       localStorage.removeItem(STORAGE_KEYS.EXPIRATION_TIME);
+      localStorage.removeItem(STORAGE_KEYS.MAILBOX_TTL);
     } catch (error) {
       console.error('Error clearing localStorage:', error);
     }
@@ -172,7 +197,7 @@ class EmailService {
     return localPart;
   }
 
-  static async generateEmail(domain = null) {
+  static async generateEmail(domain = null, options = {}) {
     // Ensure service is initialized before generating email
     await this.initialize();
     
@@ -186,14 +211,14 @@ class EmailService {
         }
       }
       
-      // Generate a new email address
-      const localPart = this.generateRandomLocalPart();
-      
-      // Use the provided domain if specified and valid, otherwise use a random domain
-      const emailDomain = domain && this.domains.includes(domain) 
-        ? domain 
-        : this.getRandomElement(this.domains);
-      
+      const pool = options.allowPremium
+        ? [...this.domains, ...this.premiumDomains]
+        : this.domains;
+      const localPart = options.alias || this.generateRandomLocalPart();
+      const emailDomain = domain && pool.includes(domain)
+        ? domain
+        : this.getRandomElement(pool);
+
       const newEmail = `${localPart}@${emailDomain}`;
       
       // Solve PoW challenge before registering (prevents automated abuse)
@@ -207,18 +232,20 @@ class EmailService {
       console.log('PoW challenge solved');
       
       // Register the new email with the backend (including PoW solution)
-      await axios.post(`${API_URL}/mailbox/register`, 
-        { email: newEmail, pow },
+      const registerResponse = await axios.post(`${API_URL}/mailbox/register`,
         {
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          }
-        }
+          email: newEmail,
+          pow,
+          alias: options.alias,
+          ttlSeconds: options.mailboxTtlSeconds,
+        },
+        { headers: this.licenseHeaders() }
       );
-      
-      // Set expiration time (30 minutes from now)
-      this.expirationTime = new Date(Date.now() + DEFAULT_LIFETIME_MINUTES * 60 * 1000);
+
+      const ttlSeconds = registerResponse.data?.data?.ttlSeconds
+        || DEFAULT_LIFETIME_MINUTES * 60;
+      this.expirationTime = new Date(Date.now() + ttlSeconds * 1000);
+      this.mailboxTtlSeconds = ttlSeconds;
       
       // Save the new email
       this.currentEmail = newEmail;
@@ -236,8 +263,10 @@ class EmailService {
         rateLimitError.retryAfter = errorData.retryAfter || 60;
         throw rateLimitError;
       }
-      
-      throw error;
+
+      const apiError = new Error(error.response?.data?.error || error.message || 'Failed to generate email');
+      apiError.code = error.response?.data?.code || error.code;
+      throw apiError;
     }
   }
 
@@ -299,36 +328,37 @@ class EmailService {
     return now >= this.expirationTime;
   }
 
+  /**
+   * The countdown must mirror the mailbox TTL in Redis, so the new lifetime always comes from
+   * the refresh response. A failed call leaves the countdown untouched instead of showing time
+   * the server will not honour.
+   */
   static async refreshExpirationTime() {
+    if (!this.currentEmail) {
+      console.warn('No current email to refresh');
+      return false;
+    }
+
     try {
-      if (!this.currentEmail) {
-        console.warn('No current email to refresh');
+      const response = await axios.post(`${API_URL}/mailbox/refresh`,
+        { email: this.currentEmail, ttlSeconds: this.mailboxTtlSeconds },
+        { headers: this.licenseHeaders() }
+      );
+
+      const ttlSeconds = response.data?.data?.ttlSeconds;
+      if (!ttlSeconds) {
+        console.error('Refresh response did not include a mailbox lifetime');
         return false;
       }
-      
-      // Call the backend to refresh the mailbox lifetime
-      await axios.post(`${API_URL}/mailbox/refresh`, 
-        { email: this.currentEmail },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          }
-        }
-      );
-      
-      // Set new expiration time (30 minutes from now)
-      this.expirationTime = new Date(Date.now() + DEFAULT_LIFETIME_MINUTES * 60 * 1000);
+
+      this.expirationTime = new Date(Date.now() + ttlSeconds * 1000);
       this.saveToStorage();
-      
+
       console.log(`Refreshed expiration time for ${this.currentEmail}`);
       return true;
     } catch (error) {
       console.error('Error refreshing expiration time:', error);
-      // If the API call fails, still extend the time locally
-      this.expirationTime = new Date(Date.now() + DEFAULT_LIFETIME_MINUTES * 60 * 1000);
-      this.saveToStorage();
-      return true;
+      return false;
     }
   }
 

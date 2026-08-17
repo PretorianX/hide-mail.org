@@ -18,11 +18,13 @@ import AboutUs from './pages/AboutUs.js';
 import ContactUs from './pages/ContactUs.js';
 import Blog from './pages/Blog.js';
 import BlogPost from './pages/BlogPost.js';
-import ContentAwareAd from './components/ContentAwareAd.js';
+import AdSlot from './components/AdSlot.js';
 import PageAds from './components/PageAds.js';
 import CookieConsent from './components/CookieConsent.js';
 import MessageList from './components/MessageList.js';
-import DonateButton from './components/DonateButton.js';
+import ProCta from './components/ProCta.js';
+import Pro from './pages/Pro.js';
+import { LicenseProvider, useLicense } from './context/LicenseContext.js';
 import { trackPageView, analytics } from './services/analytics.js';
 
 // Component to track page views on route changes
@@ -37,6 +39,7 @@ function PageViewTracker() {
       '/about-us': 'About Us',
       '/contact-us': 'Contact Us',
       '/blog': 'Blog',
+      '/pro': 'Pro',
     };
     
     const title = pageTitles[location.pathname] || 
@@ -143,6 +146,19 @@ const FooterLink = styled(Link)`
 `;
 
 function App() {
+  return (
+    <ThemeProvider>
+      <Router>
+        <LicenseProvider>
+          <AppContent />
+        </LicenseProvider>
+      </Router>
+    </ThemeProvider>
+  );
+}
+
+function AppContent() {
+  const { isPro, entitlements } = useLicense();
   const [email, setEmail] = useState(null);
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -152,6 +168,9 @@ function App() {
   const autoRefreshIntervalRef = useRef(null);
   const [refreshing, setRefreshing] = useState(false);
   const [domains, setDomains] = useState([]);
+  const [premiumDomains, setPremiumDomains] = useState([]);
+  const [customAlias, setCustomAlias] = useState('');
+  const [mailboxTtl, setMailboxTtl] = useState(86400);
   const [selectedDomain, setSelectedDomain] = useState('');
   const [selectedMessageId, setSelectedMessageId] = useState(null);
   const [rateLimitCountdown, setRateLimitCountdown] = useState(0);
@@ -164,6 +183,7 @@ function App() {
         // Get available domains
         const availableDomains = await EmailService.getAvailableDomains();
         setDomains(availableDomains);
+        setPremiumDomains(EmailService.premiumDomains || []);
         
         // Check if we have a saved email
         if (EmailService.currentEmail) {
@@ -202,6 +222,23 @@ function App() {
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (!isPro || typeof EmailService.fetchDomains !== 'function') {
+      return undefined;
+    }
+    let cancelled = false;
+    EmailService.fetchDomains().then((availableDomains) => {
+      if (cancelled) {
+        return;
+      }
+      setDomains(availableDomains);
+      setPremiumDomains(EmailService.premiumDomains || []);
+    }).catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [isPro]);
 
   // Set up auto-refresh when email changes or autoRefresh setting changes
   useEffect(() => {
@@ -301,7 +338,11 @@ function App() {
       // Use the provided domain override if available, otherwise use the selectedDomain state
       const domainToUse = domainOverride !== null ? domainOverride : selectedDomain;
       // Only pass the domain if it's not empty (not the "Random domain" option)
-      const newEmail = await EmailService.generateEmail(domainToUse || null);
+      const newEmail = await EmailService.generateEmail(domainToUse || null, {
+        alias: isPro ? (customAlias.trim() || undefined) : undefined,
+        mailboxTtlSeconds: isPro ? mailboxTtl : undefined,
+        allowPremium: isPro,
+      });
       setEmail(newEmail);
       setMessages([]);
       // Track analytics
@@ -317,6 +358,8 @@ function App() {
       if (err.code === 'RATE_LIMIT_EXCEEDED') {
         setRateLimitCountdown(err.retryAfter || 60);
         setError('rate_limit');
+      } else if (err.code === 'PRO_REQUIRED' || err.code === 'ALIAS_TAKEN' || err.code === 'PREMIUM_DOMAIN') {
+        setError(err.code);
       } else {
         setError('Failed to generate email. Please try again later.');
       }
@@ -422,25 +465,22 @@ function App() {
   };
 
   return (
-    <ThemeProvider>
-      <Router>
+    <>
         <PageViewTracker />
         <GlobalStyle />
         <DarkModeOverrides />
         <ConfigProvider>
           <AppContainer>
             <Header />
-            <div className="ad-container">
-              <ContentAwareAd
-                slot="2183915405"
-                format="horizontal"
-                width={728}
-                height={90}
-                position="top-of-page"
-                contentSelector=".app-header"
-                minContentLength={100}
-              />
-            </div>
+            <AdSlot
+              slot="2183915405"
+              format="horizontal"
+              width={728}
+              height={90}
+              position="top-of-page"
+              contentSelector=".app-header"
+              minContentLength={100}
+            />
             <Routes>
               <Route path="/" element={
                 <>
@@ -470,8 +510,35 @@ function App() {
                                 {domains.map(domain => (
                                   <option key={domain} value={domain}>{domain}</option>
                                 ))}
+                                {isPro && premiumDomains.map(domain => (
+                                  <option key={domain} value={domain}>{domain} (Pro)</option>
+                                ))}
                               </select>
                             </div>
+                            {isPro && (
+                              <div className="domain-selector">
+                                <label htmlFor="custom-alias">Custom alias:</label>
+                                <input
+                                  id="custom-alias"
+                                  value={customAlias}
+                                  onChange={(e) => setCustomAlias(e.target.value)}
+                                  placeholder="optional username"
+                                  autoComplete="off"
+                                />
+                                <label htmlFor="mailbox-ttl">Keep for:</label>
+                                <select
+                                  id="mailbox-ttl"
+                                  value={mailboxTtl}
+                                  onChange={(e) => setMailboxTtl(Number(e.target.value))}
+                                >
+                                  {(entitlements?.mailboxTtlOptions || [86400, 604800, 2592000]).map((ttl) => (
+                                    <option key={ttl} value={ttl}>
+                                      {ttl === 86400 ? '24 hours' : ttl === 604800 ? '7 days' : '30 days'}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                            )}
                             {email ? (
                               <>
                                 <div 
@@ -536,7 +603,29 @@ function App() {
                         </section>
                         <section className="messages-section">
                           <h2>Hide Mail Inbox</h2>
-                          {error && error !== 'rate_limit' && <div className="error-message">{error}</div>}
+                          {error && error !== 'rate_limit' && (
+                            <div className="error-message">
+                              {error === 'PRO_REQUIRED' && (
+                                <>
+                                  <p>Custom aliases require Hide Mail Pro.</p>
+                                  <ProCta compact />
+                                </>
+                              )}
+                              {error === 'ALIAS_TAKEN' && (
+                                <>
+                                  <p>This address is already in use. Choose another alias, or go Pro to keep a private one.</p>
+                                  <ProCta compact />
+                                </>
+                              )}
+                              {error === 'PREMIUM_DOMAIN' && (
+                                <>
+                                  <p>Premium domains are a Hide Mail Pro feature.</p>
+                                  <ProCta compact />
+                                </>
+                              )}
+                              {error !== 'PRO_REQUIRED' && error !== 'ALIAS_TAKEN' && error !== 'PREMIUM_DOMAIN' && error}
+                            </div>
+                          )}
                           {loading ? (
                             <p>Loading...</p>
                           ) : messages.length > 0 ? (
@@ -554,21 +643,19 @@ function App() {
                       <PageAds position="bottom" slot="8004708986" />
                     </div>
                     <div className="sidebar">
-                      <div className="ad-container">
-                        <ContentAwareAd
-                          slot="9977084442"
-                          format="rectangle"
-                          width={300}
-                          height={250}
-                          position="sidebar"
-                          contentSelector=".email-section"
-                          minContentLength={100}
-                        />
-                      </div>
+                      <AdSlot
+                        slot="9977084442"
+                        format="rectangle"
+                        width={300}
+                        height={250}
+                        position="sidebar"
+                        contentSelector=".email-section"
+                        minContentLength={100}
+                      />
                       <div className="email-section">
                         <h2>Why Use Hide Mail?</h2>
                         <ul>
-                          <li>🦆 100% Free temporary email</li>
+                          <li>🦆 Free inbox with ads, or Pro without</li>
                           <li>🦆 No registration required</li>
                           <li>🦆 Protect your privacy</li>
                           <li>🦆 Avoid spam in your personal inbox</li>
@@ -576,7 +663,7 @@ function App() {
                           <li>🚀 <strong>Forward & Forget:</strong> Save important emails to your real inbox with one click</li>
                         </ul>
                       </div>
-                      <DonateButton />
+                      <ProCta />
                     </div>
                   </div>
                   
@@ -627,19 +714,19 @@ function App() {
                       <div className="faq-grid">
                         <div className="faq-item">
                           <h4>Is Hide Mail completely free?</h4>
-                          <p>Yes, Hide Mail is 100% free to use with no hidden fees or premium features. We're supported by non-intrusive advertisements.</p>
+                          <p>The inbox is free and paid for by the ads on this page. Hide Mail Pro is optional: it removes the ads, keeps an address for up to 30 days instead of 30 minutes, lets you choose the address yourself and raises the Forward &amp; Forget limit from 2 to 100 per address. There is no account either way. See the <Link to="/pro">full comparison on the Pro page</Link>.</p>
                         </div>
                         <div className="faq-item">
                           <h4>How long do temporary emails last?</h4>
-                          <p>Our temporary email addresses remain active for 30 minutes by default. After this period, all messages and the email address itself are permanently deleted.</p>
+                          <p>A free address stays active for 30 minutes and you can extend it by 15 minutes at a time. With Hide Mail Pro you pick 24 hours, 7 days or 30 days up front. Either way the address and its emails are deleted when it expires.</p>
                         </div>
                         <div className="faq-item">
                           <h4>Can I send emails from my temporary address?</h4>
                           <p>Hide Mail is primarily designed for receiving emails. While some temporary email services offer sending capabilities, our focus is on providing secure, anonymous inboxes for receiving messages.</p>
                         </div>
                         <div className="faq-item">
-                          <h4>What is Forward & Forget?</h4>
-                          <p>Forward & Forget is our unique feature that lets you save important emails to your real inbox with one click. Simply verify your real email address via OTP (no account needed), and you can forward any email you want to keep—staying anonymous while never missing what matters.</p>
+                          <h4>What is Forward &amp; Forget?</h4>
+                          <p>Forward &amp; Forget is our unique feature that lets you save important emails to your real inbox with one click. Simply verify your real email address via OTP (no account needed), and you can forward any email you want to keep—staying anonymous while never missing what matters. A free address can forward 2 emails; Hide Mail Pro raises that to 100.</p>
                         </div>
                         <div className="faq-item">
                           <h4>Is using a temporary email legal?</h4>
@@ -656,17 +743,16 @@ function App() {
                       </div>
                     </div>
                     
-                    <div className="ad-container ad-between-sections">
-                      <ContentAwareAd
-                        slot="6037839432"
-                        format="horizontal"
-                        width={728}
-                        height={90}
-                        position="middle-of-page"
-                        contentSelector=".faq-section"
-                        minContentLength={300}
-                      />
-                    </div>
+                    <AdSlot
+                      className="ad-between-sections"
+                      slot="6037839432"
+                      format="horizontal"
+                      width={728}
+                      height={90}
+                      position="middle-of-page"
+                      contentSelector=".faq-section"
+                      minContentLength={300}
+                    />
                     
                     <div className="best-practices-section">
                       <h3>Best Practices for Using Temporary Email Services</h3>
@@ -700,17 +786,16 @@ function App() {
                       </div>
                     </div>
                     
-                    <div className="ad-container ad-before-footer">
-                      <ContentAwareAd
-                        slot="9103712827"
-                        format="horizontal"
-                        width={728}
-                        height={90}
-                        position="before-footer"
-                        contentSelector=".best-practices-section"
-                        minContentLength={200}
-                      />
-                    </div>
+                    <AdSlot
+                      className="ad-before-footer"
+                      slot="9103712827"
+                      format="horizontal"
+                      width={728}
+                      height={90}
+                      position="before-footer"
+                      contentSelector=".best-practices-section"
+                      minContentLength={200}
+                    />
                   </div>
                 </>
               } />
@@ -720,6 +805,7 @@ function App() {
               <Route path="/contact-us" element={<ContactUs />} />
               <Route path="/blog" element={<Blog />} />
               <Route path="/blog/:postId" element={<BlogPost />} />
+              <Route path="/pro" element={<Pro />} />
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>
             
@@ -730,19 +816,19 @@ function App() {
                 <FooterLink to="/about-us" onClick={(e) => { e.currentTarget.blur(); analytics.navigateTo('About Us'); }}>About Us</FooterLink>
                 <FooterLink to="/contact-us" onClick={(e) => { e.currentTarget.blur(); analytics.navigateTo('Contact Us'); }}>Contact Us</FooterLink>
                 <FooterLink to="/blog" onClick={(e) => { e.currentTarget.blur(); analytics.navigateTo('Blog'); }}>Blog</FooterLink>
+                <FooterLink to="/pro" onClick={(e) => { e.currentTarget.blur(); analytics.navigateTo('Pro'); }}>Pro</FooterLink>
               </FooterLinks>
-              <DonateButton className="footer-donate" />
-              <div className="ad-container ad-in-footer">
-                <ContentAwareAd
-                  slot="2536759880"
-                  format="horizontal"
-                  width={728}
-                  height={90}
-                  position="in-footer"
-                  contentSelector="footer"
-                  minContentLength={50}
-                />
-              </div>
+              <ProCta className="footer-donate" compact />
+              <AdSlot
+                className="ad-in-footer"
+                slot="2536759880"
+                format="horizontal"
+                width={728}
+                height={90}
+                position="in-footer"
+                contentSelector="footer"
+                minContentLength={50}
+              />
               <p>&copy; {new Date().getFullYear()} Hide Mail - The friendly temporary email service</p>
               <p>We value your privacy. Hide Mail does not store or share your personal information.</p>
             </FooterContainer>
@@ -750,8 +836,7 @@ function App() {
             <CookieConsent />
           </AppContainer>
         </ConfigProvider>
-      </Router>
-    </ThemeProvider>
+    </>
   );
 }
 

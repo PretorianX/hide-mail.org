@@ -272,7 +272,7 @@ const ContactUs = () => {
           
           <h3 className="SectionTitle">Is this service completely free?</h3>
           <Paragraph className="Paragraph">
-            Yes, Hide Mail is 100% free to use. We support our service through non-intrusive advertisements.
+            The basic inbox is free and funded by ads. Optional Hide Mail Pro removes ads and keeps addresses longer. Pay with card via WayForPay; a license key replaces accounts.
           </Paragraph>
           
           <h3 className="SectionTitle">Can I send emails from my temporary address?</h3>

@@ -60,6 +60,26 @@ describe('metricsService', () => {
       expect(metrics.redisConnected).toBeDefined();
       expect(typeof metrics.redisConnected.set).toBe('function');
     });
+
+    it('should export billing counters', () => {
+      expect(metrics.billingCheckoutsTotal).toBeDefined();
+      expect(metrics.billingWebhookEventsTotal).toBeDefined();
+      expect(metrics.billingRevenueTotal).toBeDefined();
+      expect(metrics.licensesCreatedTotal).toBeDefined();
+      expect(metrics.licensesRenewedTotal).toBeDefined();
+      expect(metrics.licensesRevokedTotal).toBeDefined();
+      expect(metrics.licenseValidationsTotal).toBeDefined();
+      expect(metrics.apiKeyValidationsTotal).toBeDefined();
+      expect(metrics.billingCollectorErrorsTotal).toBeDefined();
+    });
+
+    it('should export subscription state gauges', () => {
+      expect(typeof metrics.licensesActive.set).toBe('function');
+      expect(typeof metrics.licensesActive.reset).toBe('function');
+      expect(typeof metrics.apiKeysActive.set).toBe('function');
+      expect(typeof metrics.billingOrders.set).toBe('function');
+      expect(typeof metrics.billingCollectorLastSuccessTimestampSeconds.set).toBe('function');
+    });
   });
 
   describe('server lifecycle', () => {
@@ -89,6 +109,17 @@ describe('metricsService', () => {
     it('should set redis connected gauge without error', () => {
       expect(() => metrics.redisConnected.set(1)).not.toThrow();
       expect(() => metrics.redisConnected.set(0)).not.toThrow();
+    });
+
+    it('should record billing counters with labels without error', () => {
+      expect(() => metrics.billingCheckoutsTotal.inc({ type: 'pro', plan: 'yearly' })).not.toThrow();
+      expect(() =>
+        metrics.billingRevenueTotal.inc({ currency: 'UAH', type: 'pro', plan: 'monthly' }, 149)
+      ).not.toThrow();
+      expect(() =>
+        metrics.billingWebhookEventsTotal.inc({ result: 'license_created' })
+      ).not.toThrow();
+      expect(() => metrics.licenseValidationsTotal.inc({ result: 'not_found' })).not.toThrow();
     });
 
     it('should increment forwarding counters with labels without error', () => {

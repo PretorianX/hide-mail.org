@@ -144,7 +144,7 @@ const MockHomePage = ({
           <div className="faq-item">
             <h3>Is Hide Mail completely free?</h3>
             <div className="faq-answer">
-              <p>Yes, Hide Mail is 100% free to use with no hidden charges or premium features.</p>
+              <p>The basic inbox is free and supported by ads. Hide Mail Pro adds longer inboxes, custom aliases, premium domains and an ad-free experience.</p>
             </div>
           </div>
         </div>

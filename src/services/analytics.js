@@ -88,6 +88,7 @@ export const analytics = {
   
   // Donate
   donateClick: () => trackButtonClick('Donate', 'donate'),
+  proClick: () => trackButtonClick('Hide Mail Pro', 'billing'),
   
   // Other
   toggleTheme: (theme) => trackEvent('toggle_theme', { theme }),

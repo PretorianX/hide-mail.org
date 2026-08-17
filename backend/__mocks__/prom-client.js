@@ -14,6 +14,7 @@ class Gauge {
     this.set = jest.fn();
     this.inc = jest.fn();
     this.dec = jest.fn();
+    this.reset = jest.fn();
   }
 }
 

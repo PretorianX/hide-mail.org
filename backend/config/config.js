@@ -39,6 +39,13 @@ const getEmailDomains = () => {
   return process.env.VALID_DOMAINS.split(',').map(domain => domain.trim());
 };
 
+const parseDomainList = (value) => {
+  if (!value || !value.trim()) {
+    return [];
+  }
+  return value.split(',').map(domain => domain.trim()).filter(Boolean);
+};
+
 // Final config with environment variables taking precedence
 // All time values are in seconds for consistency
 const config = {
@@ -85,9 +92,60 @@ const config = {
 
   // Forwarding Configuration
   forwarding: {
-    rateLimit: parseInt(process.env.FORWARDING_RATE_LIMIT || 10), // Max forwards per hour
+    rateLimit: parseInt(process.env.FORWARDING_RATE_LIMIT || 10), // legacy hourly cap
+    freeLimit: parseInt(process.env.FORWARDING_FREE_LIMIT || 2), // teaser forwards per mailbox
+    proLimit: parseInt(process.env.FORWARDING_PRO_LIMIT || 100), // Pro forwards per mailbox lifetime
     otpExpirationMinutes: parseInt(process.env.OTP_EXPIRATION_MINUTES || 15),
     otpLength: parseInt(process.env.OTP_LENGTH || 6),
+  },
+
+  // Premium domains are Pro-only. Empty list means Pro uses VALID_DOMAINS.
+  premiumDomains: parseDomainList(process.env.PREMIUM_DOMAINS),
+
+  // WayForPay is the only payment processor. Paddle can be added later; leave PADDLE_* unset.
+  wayforpay: {
+    merchantAccount: process.env.WAYFORPAY_MERCHANT_ACCOUNT || '',
+    secretKey: process.env.WAYFORPAY_SECRET_KEY || '',
+    domainName: process.env.WAYFORPAY_DOMAIN_NAME || '',
+    serviceUrl: process.env.WAYFORPAY_SERVICE_URL || '',
+    returnUrl: process.env.WAYFORPAY_RETURN_URL || '',
+  },
+
+  billing: {
+    currency: 'UAH',
+    monthlyAmount: parseInt(process.env.PRO_PRICE_MONTHLY_UAH || 149, 10),
+    yearlyAmount: parseInt(process.env.PRO_PRICE_YEARLY_UAH || 1079, 10),
+    apiAmount: parseInt(process.env.API_PRICE_MONTHLY_UAH || 349, 10),
+    // Prices lead in USD on the site while WayForPay settles in UAH, so these figures must stay
+    // just above the hryvnia amount converted at the current rate: a shopper should never be
+    // charged more than the dollar price they were quoted. Review when the rate moves.
+    monthlyUsdDisplay: process.env.PRO_PRICE_MONTHLY_USD_DISPLAY || '3.49',
+    yearlyUsdDisplay: process.env.PRO_PRICE_YEARLY_USD_DISPLAY || '24.99',
+    apiUsdDisplay: process.env.API_PRICE_MONTHLY_USD_DISPLAY || '7.99',
+    monthlyTtlSeconds: parseInt(process.env.PRO_LICENSE_MONTHLY_SECONDS || 30 * 24 * 60 * 60, 10),
+    yearlyTtlSeconds: parseInt(process.env.PRO_LICENSE_YEARLY_SECONDS || 366 * 24 * 60 * 60, 10),
+    apiKeyTtlSeconds: parseInt(process.env.API_KEY_TTL_SECONDS || 30 * 24 * 60 * 60, 10),
+    // The order reference travels in the WayForPay return URL, so the window in which that
+    // reference can hand out the license key is much shorter than the order's own lifetime.
+    keyHandoffSeconds: parseInt(process.env.LICENSE_KEY_HANDOFF_SECONDS || 60 * 60, 10),
+  },
+
+  pro: {
+    mailboxTtlOptions: {
+      '24h': parseInt(process.env.PRO_TTL_24H || 86400, 10),
+      '7d': parseInt(process.env.PRO_TTL_7D || 604800, 10),
+      '30d': parseInt(process.env.PRO_TTL_30D || 2592000, 10),
+    },
+    defaultMailboxTtlSeconds: parseInt(process.env.PRO_TTL_24H || 86400, 10),
+  },
+
+  metrics: {
+    // Subscription gauges are recomputed by scanning Redis, so this is deliberately much
+    // coarser than the Prometheus scrape interval.
+    billingCollectorIntervalSeconds: parseInt(
+      process.env.BILLING_METRICS_INTERVAL_SECONDS || 60,
+      10
+    ),
   },
 };
 

@@ -30,6 +30,18 @@ class RedisMock {
     return 'OK';
   }
 
+  async setex(key, seconds, value) {
+    this.data[key] = value;
+    return 'OK';
+  }
+
+  async incr(key) {
+    const current = parseInt(this.data[key], 10) || 0;
+    const next = current + 1;
+    this.data[key] = String(next);
+    return next;
+  }
+
   async del(key) {
     delete this.data[key];
     return 1;
@@ -55,8 +67,30 @@ class RedisMock {
     return Object.keys(this.data).filter(key => regex.test(key));
   }
 
+  async lpush(key, ...values) {
+    if (!Array.isArray(this.data[key])) {
+      this.data[key] = [];
+    }
+    this.data[key].unshift(...values);
+    return this.data[key].length;
+  }
+
+  async rpush(key, ...values) {
+    if (!Array.isArray(this.data[key])) {
+      this.data[key] = [];
+    }
+    this.data[key].push(...values);
+    return this.data[key].length;
+  }
+
+  async lrange(key, start, stop) {
+    const list = Array.isArray(this.data[key]) ? this.data[key] : [];
+    const end = stop === -1 ? list.length : stop + 1;
+    return list.slice(start, end);
+  }
+
   async hset(key, field, value) {
-    if (!this.data[key]) {
+    if (!this.data[key] || typeof this.data[key] !== 'object' || Array.isArray(this.data[key])) {
       this.data[key] = {};
     }
     this.data[key][field] = value;

@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import styled from 'styled-components';
 import ThemeToggle from './ThemeToggle';
+import { useLicense } from '../context/LicenseContext';
 
 const HeaderContainer = styled.header`
   background-color: var(--duck-orange);
@@ -91,6 +92,12 @@ const ParentSite = styled.a`
 `;
 
 const Header = () => {
+  const { isPro, license } = useLicense();
+  const daysLeft = license?.remainingDays
+    ?? (license?.expiresAt
+      ? Math.max(0, Math.ceil((license.expiresAt - Date.now()) / 86400000))
+      : null);
+
   return (
     <HeaderContainer className="app-header">
       <HeaderContent>
@@ -107,6 +114,10 @@ const Header = () => {
           <Nav>
             <NavLink to="/">Home</NavLink>
             <NavLink to="/blog">Blog</NavLink>
+            <NavLink to="/pro">Pro</NavLink>
+            {isPro && daysLeft !== null ? (
+              <span data-testid="header-pro-days">{daysLeft} days left</span>
+            ) : null}
             <NavLink to="/about-us">About</NavLink>
             <NavLink to="/contact-us">Contact</NavLink>
           </Nav>

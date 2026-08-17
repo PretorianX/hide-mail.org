@@ -1,6 +1,8 @@
 const express = require('express');
 const emailController = require('../controllers/emailController');
 const forwardingController = require('../controllers/forwardingController');
+const billingRoutes = require('./billing');
+const qaApiRoutes = require('./qaApi');
 const redisService = require('../services/redisService');
 const logger = require('../utils/logger');
 const { sanitizeEmail } = require('../utils/sanitize');
@@ -8,6 +10,7 @@ const { v4: uuidv4 } = require('uuid');
 const config = require('../config/config');
 const apiRateLimiter = require('../services/apiRateLimiter');
 const powService = require('../services/powService');
+const attachLicense = require('../middleware/attachLicense');
 
 const router = express.Router();
 
@@ -27,7 +30,7 @@ router.delete('/emails/:email/:id', apiRateLimiter.default, emailController.dele
 router.delete('/emails/:email', apiRateLimiter.default, emailController.deleteAllEmails);
 
 // Domain routes
-router.get('/domains', apiRateLimiter.default, emailController.getDomains);
+router.get('/domains', apiRateLimiter.default, attachLicense, emailController.getDomains);
 
 // Mailbox routes (with rate limiting and PoW protection)
 // In development: PoW is optional for easier testing
@@ -42,9 +45,10 @@ router.post('/mailbox/register',
     }
     return powService.requireProofOfWork(req, res, next);
   },
+  attachLicense,
   emailController.registerMailbox
 );
-router.post('/mailbox/refresh', apiRateLimiter.mailboxRefresh, emailController.refreshMailbox);
+router.post('/mailbox/refresh', apiRateLimiter.mailboxRefresh, attachLicense, emailController.refreshMailbox);
 router.post('/mailbox/deactivate', apiRateLimiter.default, emailController.deactivateMailbox);
 
 // Add the missing /messages endpoint (with rate limiting)
@@ -291,7 +295,7 @@ router.post('/forwarding/verify-otp', apiRateLimiter.default, forwardingControll
 
 // Forward a specific message to validated destination (rate limited)
 // POST /api/forwarding/forward/:email/:messageId
-router.post('/forwarding/forward/:email/:messageId', apiRateLimiter.default, forwardingController.forwardMessage);
+router.post('/forwarding/forward/:email/:messageId', apiRateLimiter.default, attachLicense, forwardingController.forwardMessage);
 
 // Get forwarding status (destination, rate limit, etc.)
 // GET /api/forwarding/status/:email
@@ -300,5 +304,8 @@ router.get('/forwarding/status/:email', apiRateLimiter.default, forwardingContro
 // Clear forwarding configuration
 // DELETE /api/forwarding/:email
 router.delete('/forwarding/:email', apiRateLimiter.default, forwardingController.clearForwarding);
+
+router.use('/billing', billingRoutes);
+router.use('/qa', qaApiRoutes);
 
 module.exports = router; 

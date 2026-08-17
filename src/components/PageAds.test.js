@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import PageAds from './PageAds';
+import LicenseContext from '../context/LicenseContext';
 
 // Mock the ContentAwareAd component
 jest.mock('./ContentAwareAd', () => {
@@ -43,4 +44,15 @@ describe('PageAds Component', () => {
     expect(container.firstChild).toHaveClass('page-ad');
     expect(container.firstChild).toHaveClass('page-ad-bottom');
   });
-}); 
+
+  test('renders nothing at all for a Pro user, including the wrapper', () => {
+    const { container } = render(
+      <LicenseContext.Provider value={{ isPro: true }}>
+        <PageAds position="top" slot="1234567890" />
+      </LicenseContext.Provider>
+    );
+
+    expect(container).toBeEmptyDOMElement();
+    expect(screen.queryByTestId('content-aware-ad')).not.toBeInTheDocument();
+  });
+});

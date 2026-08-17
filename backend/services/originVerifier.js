@@ -103,8 +103,8 @@ const createOriginVerifier = (options = {}) => {
   }
   
   return (req, res, next) => {
-    // Skip verification for health checks
-    if (req.path === '/health') {
+    // Skip verification for health checks and machine API keys
+    if (req.path === '/health' || req.path.startsWith('/qa') || req.path === '/billing/webhook') {
       return next();
     }
     

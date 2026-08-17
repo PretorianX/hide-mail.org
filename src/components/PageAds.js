@@ -1,6 +1,7 @@
 import React from 'react';
 import ContentAwareAd from './ContentAwareAd';
 import styled from 'styled-components';
+import { useLicense } from '../context/LicenseContext';
 
 const AdWrapper = styled.div`
   width: 100%;
@@ -18,6 +19,13 @@ const AdWrapper = styled.div`
  * @param {string} props.slot - The ad unit slot ID
  */
 const PageAds = ({ position, slot }) => {
+  const { isPro } = useLicense();
+
+  // Skip the wrapper as well, otherwise Pro keeps the placement's vertical margin.
+  if (isPro) {
+    return null;
+  }
+
   // Different ad formats based on position
   const adConfig = {
     top: {
