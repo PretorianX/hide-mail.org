@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import EmailService from '../services/EmailService.js';
+import { useLicense } from '../context/LicenseContext';
+import ProCta from './ProCta';
 import './MailboxTimer.css';
 
 const MailboxTimer = ({ onExpire, onExtend }) => {
   const [timeLeft, setTimeLeft] = useState('30:00');
   const [percentLeft, setPercentLeft] = useState(100);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const { isPro, entitlements } = useLicense();
 
   useEffect(() => {
     let interval;
@@ -21,16 +24,22 @@ const MailboxTimer = ({ onExpire, onExtend }) => {
         return;
       }
       
-      // Calculate minutes and seconds
-      const minutes = Math.floor(remainingTime / 60000);
+      const totalMs = remainingTime;
+      const days = Math.floor(remainingTime / 86400000);
+      const hours = Math.floor((remainingTime % 86400000) / 3600000);
+      const minutes = Math.floor((remainingTime % 3600000) / 60000);
       const seconds = Math.floor((remainingTime % 60000) / 1000);
-      
-      // Format time left
-      setTimeLeft(`${minutes}:${seconds.toString().padStart(2, '0')}`);
-      
-      // Calculate percentage left (assuming 30 min total)
-      const totalTime = 30 * 60 * 1000; // 30 minutes in milliseconds
-      const percentRemaining = (remainingTime / totalTime) * 100;
+
+      if (days > 0) {
+        setTimeLeft(`${days}d ${hours}h`);
+      } else if (hours > 0) {
+        setTimeLeft(`${hours}h ${minutes.toString().padStart(2, '0')}m`);
+      } else {
+        setTimeLeft(`${minutes}:${seconds.toString().padStart(2, '0')}`);
+      }
+
+      const configuredTotal = (entitlements?.mailboxTtlSeconds || 1800) * 1000;
+      const percentRemaining = (totalMs / configuredTotal) * 100;
       setPercentLeft(Math.min(percentRemaining, 100));
     };
     
@@ -39,7 +48,7 @@ const MailboxTimer = ({ onExpire, onExtend }) => {
     interval = setInterval(updateTimer, 1000);
     
     return () => clearInterval(interval);
-  }, [onExpire]);
+  }, [onExpire, entitlements]);
 
   const handleRefreshTimer = () => {
     setIsRefreshing(true);
@@ -83,6 +92,9 @@ const MailboxTimer = ({ onExpire, onExtend }) => {
           }}
         ></div>
       </div>
+      {!isPro && percentLeft > 0 && percentLeft <= 35 && (
+        <ProCta compact className="mailbox-timer-pro" />
+      )}
     </div>
   );
 };

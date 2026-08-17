@@ -46,10 +46,9 @@ const getRateLimitKey = (tempMailbox) => {
  * @param {string} tempMailbox - Temporary mailbox to check
  * @returns {Promise<Object>} - Rate limit status
  */
-const checkRateLimit = async (tempMailbox) => {
+const checkRateLimit = async (tempMailbox, limit = config.forwarding.freeLimit) => {
   const key = getRateLimitKey(tempMailbox);
-  const limit = config.forwarding?.rateLimit || 10;
-  
+
   // Get current count
   const countStr = await redisService.client.get(key);
   const currentCount = parseInt(countStr, 10) || 0;
@@ -104,8 +103,8 @@ const incrementForwardCount = async (tempMailbox) => {
  * @param {string} tempMailbox - Temporary mailbox
  * @returns {Promise<Object>} - Forwarding statistics
  */
-const getForwardingStats = async (tempMailbox) => {
-  const rateLimit = await checkRateLimit(tempMailbox);
+const getForwardingStats = async (tempMailbox, limit = config.forwarding.freeLimit) => {
+  const rateLimit = await checkRateLimit(tempMailbox, limit);
   
   return {
     forwardsUsed: rateLimit.current,
@@ -123,8 +122,8 @@ const getForwardingStats = async (tempMailbox) => {
  * @throws {Error} - If rate limit exceeded
  * @returns {Promise<Object>} - Rate limit status
  */
-const enforceRateLimit = async (tempMailbox) => {
-  const status = await checkRateLimit(tempMailbox);
+const enforceRateLimit = async (tempMailbox, limitOverride) => {
+  const status = await checkRateLimit(tempMailbox, limitOverride);
   
   if (!status.allowed) {
     const error = new Error('Rate limit exceeded');

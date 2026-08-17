@@ -116,6 +116,35 @@ const redisService = {
   },
 
   /**
+   * Store Pro/API mailbox metadata (license, alias, inbound webhook).
+   */
+  async setMailboxMeta(email, meta, ttlSeconds) {
+    const key = `mailbox_meta:${String(email).toLowerCase()}`;
+    const existingRaw = await redis.get(key);
+    const existing = existingRaw ? JSON.parse(existingRaw) : {};
+    await redis.set(key, JSON.stringify({ ...existing, ...meta }));
+    if (ttlSeconds) {
+      await redis.expire(key, ttlSeconds);
+    }
+  },
+
+  async getMailboxMeta(email) {
+    const raw = await redis.get(`mailbox_meta:${String(email).toLowerCase()}`);
+    return raw ? JSON.parse(raw) : null;
+  },
+
+  async setMailboxWebhook(email, url) {
+    const mailboxKey = `${KEY_PREFIXES.ACTIVE_MAILBOX}${email}`;
+    const ttl = await redis.ttl(mailboxKey);
+    await this.setMailboxMeta(email, { webhookUrl: url }, ttl > 0 ? ttl : undefined);
+  },
+
+  async getMailboxWebhook(email) {
+    const meta = await this.getMailboxMeta(email);
+    return meta?.webhookUrl || null;
+  },
+
+  /**
    * Check if a mailbox is active
    * @param {string} email - Email address
    * @returns {Promise<boolean>} - True if mailbox is active
@@ -359,7 +388,7 @@ const redisService = {
       logger.error('Error deactivating mailbox in Redis:', error);
       throw error;
     }
-  }
+  },
 };
 
 // Export the redis client for direct access by other services

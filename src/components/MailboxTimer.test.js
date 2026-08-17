@@ -1,7 +1,10 @@
 import React from 'react';
 import { render, screen, fireEvent, act } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import MailboxTimer from './MailboxTimer.js';
 import EmailService from '../services/EmailService.js';
+
+const renderTimer = (ui) => render(<MemoryRouter>{ui}</MemoryRouter>);
 
 // Mock the EmailService
 jest.mock('../services/EmailService.js', () => ({
@@ -21,7 +24,7 @@ describe('MailboxTimer', () => {
     // Mock 15 minutes remaining (in milliseconds)
     EmailService.getRemainingTime.mockReturnValue(15 * 60 * 1000);
     
-    render(<MailboxTimer email="test@example.com" />);
+    renderTimer(<MailboxTimer email="test@example.com" />);
     
     expect(screen.getByText('Mailbox expires in:')).toBeInTheDocument();
     expect(screen.getByText('15:00')).toBeInTheDocument();
@@ -31,7 +34,7 @@ describe('MailboxTimer', () => {
   test('shows expired when time is up', () => {
     EmailService.getRemainingTime.mockReturnValue(0);
     
-    render(<MailboxTimer email="test@example.com" />);
+    renderTimer(<MailboxTimer email="test@example.com" />);
     
     expect(screen.getByText('Expired')).toBeInTheDocument();
   });
@@ -46,7 +49,7 @@ describe('MailboxTimer', () => {
     
     jest.useFakeTimers();
     
-    render(<MailboxTimer email="test@example.com" onExpire={mockOnExpired} />);
+    renderTimer(<MailboxTimer email="test@example.com" onExpire={mockOnExpired} />);
     
     // Fast-forward time
     act(() => {
@@ -58,13 +61,21 @@ describe('MailboxTimer', () => {
     jest.useRealTimers();
   });
 
+  test('upsells Pro when the mailbox is close to expiry', () => {
+    EmailService.getRemainingTime.mockReturnValue(5 * 60 * 1000);
+
+    renderTimer(<MailboxTimer email="test@example.com" />);
+
+    expect(screen.getByTestId('pro-cta-link')).toBeInTheDocument();
+  });
+
   test('refreshes timer when button is clicked', () => {
     EmailService.getRemainingTime.mockReturnValue(10 * 60 * 1000);
     EmailService.refreshExpirationTime.mockReturnValue(true);
     
     const mockOnExtend = jest.fn();
     
-    render(<MailboxTimer email="test@example.com" onExtend={mockOnExtend} />);
+    renderTimer(<MailboxTimer email="test@example.com" onExtend={mockOnExtend} />);
     
     fireEvent.click(screen.getByText('Refresh Timer'));
     

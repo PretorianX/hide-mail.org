@@ -143,6 +143,12 @@ describe('config', () => {
       
       expect(config.environment).toBe('development');
     });
+
+    it('should parse PREMIUM_DOMAINS independently from VALID_DOMAINS', () => {
+      process.env.PREMIUM_DOMAINS = 'inbox.pro.example, mail.pro.example ';
+      const config = require('../../config/config');
+      expect(config.premiumDomains).toEqual(['inbox.pro.example', 'mail.pro.example']);
+    });
   });
 });
 

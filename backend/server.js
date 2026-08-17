@@ -11,6 +11,9 @@ const httpMetricsMiddleware = require('./middleware/httpMetrics');
 const config = require('./config/config');
 const logger = require('./utils/logger');
 const apiRoutes = require('./routes/api');
+const billingController = require('./controllers/billingController');
+const qaWebhookService = require('./services/qaWebhookService');
+const attachLicense = require('./middleware/attachLicense');
 const { createOriginVerifier, parseAllowedOrigins } = require('./services/originVerifier');
 
 const app = express();
@@ -20,7 +23,8 @@ const SMTP_PORT = process.env.SMTP_PORT || 2525;
 // Initialize Redis with domains and Forward & Forget service
 (async () => {
   try {
-    await redisService.initializeDomains(config.validDomains);
+    const allDomains = [...new Set([...config.validDomains, ...config.premiumDomains])];
+    await redisService.initializeDomains(allDomains);
     logger.info('Redis initialized with domains');
     
     // Initialize Forward & Forget service
@@ -47,11 +51,7 @@ const corsOptions = {
   origin: (origin, callback) => {
     // Allow requests with no origin (server-to-server, curl, etc.) only in dev
     if (!origin) {
-      if (isDev) {
-        return callback(null, true);
-      }
-      // In production, block requests without origin for API routes
-      return callback(null, false);
+      return callback(null, true);
     }
     
     const normalizedOrigin = origin.toLowerCase();
@@ -77,7 +77,7 @@ const corsOptions = {
     }
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'X-License-Key', 'X-Api-Key'],
   exposedHeaders: ['Content-Length', 'Content-Type', 'X-RateLimit-Limit', 'X-RateLimit-Remaining', 'X-RateLimit-Reset'],
   credentials: true,
   preflightContinue: false,
@@ -90,7 +90,11 @@ app.use(cors(corsOptions));
 app.use(httpMetricsMiddleware);
 
 app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
 app.use(morgan('dev'));
+
+// WayForPay server callbacks have no browser Origin — verify HMAC instead.
+app.post('/api/billing/webhook', billingController.webhook);
 
 // Origin verification middleware for API routes
 // Blocks requests from unauthorized origins
@@ -100,7 +104,7 @@ const originVerifier = createOriginVerifier({
 });
 
 // Routes with origin verification
-app.use('/api', originVerifier, apiRoutes);
+app.use('/api', originVerifier, attachLicense, apiRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -263,6 +267,7 @@ const smtpServer = new SMTPServer({
         logger.debug(`SMTP: Storing email with ID: ${email.id}`);
         await redisService.storeEmail(recipient, email);
         metrics.emailsStoredTotal.inc();
+        await qaWebhookService.notifyMailboxWebhook(recipient, email);
         
         logger.info(`SMTP: Email successfully processed and stored for: ${recipient}`);
         logger.info(`SMTP: Email ID: ${email.id}, Subject: ${email.subject}`);

@@ -3,6 +3,7 @@ import PropTypes from 'prop-types';
 import AdSense from './AdSense';
 import AdBlockDonateMessage from './AdBlockDonateMessage';
 import useAdBlockDetection from '../hooks/useAdBlockDetection';
+import { useLicense } from '../context/LicenseContext';
 import './AdStyles.css';
 
 /**
@@ -28,6 +29,11 @@ const AdContainer = ({
   contentAvailable = true
 }) => {
   const adBlockDetected = useAdBlockDetection();
+  const { isPro } = useLicense();
+
+  if (isPro) {
+    return null;
+  }
 
   // Determine if this is a horizontal banner (for styling)
   const isHorizontal = format === 'horizontal';

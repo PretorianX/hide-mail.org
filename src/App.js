@@ -22,7 +22,9 @@ import ContentAwareAd from './components/ContentAwareAd.js';
 import PageAds from './components/PageAds.js';
 import CookieConsent from './components/CookieConsent.js';
 import MessageList from './components/MessageList.js';
-import DonateButton from './components/DonateButton.js';
+import ProCta from './components/ProCta.js';
+import Pro from './pages/Pro.js';
+import { LicenseProvider, useLicense } from './context/LicenseContext.js';
 import { trackPageView, analytics } from './services/analytics.js';
 
 // Component to track page views on route changes
@@ -37,6 +39,7 @@ function PageViewTracker() {
       '/about-us': 'About Us',
       '/contact-us': 'Contact Us',
       '/blog': 'Blog',
+      '/pro': 'Pro',
     };
     
     const title = pageTitles[location.pathname] || 
@@ -143,6 +146,19 @@ const FooterLink = styled(Link)`
 `;
 
 function App() {
+  return (
+    <ThemeProvider>
+      <Router>
+        <LicenseProvider>
+          <AppContent />
+        </LicenseProvider>
+      </Router>
+    </ThemeProvider>
+  );
+}
+
+function AppContent() {
+  const { isPro, entitlements } = useLicense();
   const [email, setEmail] = useState(null);
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -152,6 +168,9 @@ function App() {
   const autoRefreshIntervalRef = useRef(null);
   const [refreshing, setRefreshing] = useState(false);
   const [domains, setDomains] = useState([]);
+  const [premiumDomains, setPremiumDomains] = useState([]);
+  const [customAlias, setCustomAlias] = useState('');
+  const [mailboxTtl, setMailboxTtl] = useState(86400);
   const [selectedDomain, setSelectedDomain] = useState('');
   const [selectedMessageId, setSelectedMessageId] = useState(null);
   const [rateLimitCountdown, setRateLimitCountdown] = useState(0);
@@ -164,6 +183,7 @@ function App() {
         // Get available domains
         const availableDomains = await EmailService.getAvailableDomains();
         setDomains(availableDomains);
+        setPremiumDomains(EmailService.premiumDomains || []);
         
         // Check if we have a saved email
         if (EmailService.currentEmail) {
@@ -202,6 +222,23 @@ function App() {
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (!isPro || typeof EmailService.fetchDomains !== 'function') {
+      return undefined;
+    }
+    let cancelled = false;
+    EmailService.fetchDomains().then((availableDomains) => {
+      if (cancelled) {
+        return;
+      }
+      setDomains(availableDomains);
+      setPremiumDomains(EmailService.premiumDomains || []);
+    }).catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [isPro]);
 
   // Set up auto-refresh when email changes or autoRefresh setting changes
   useEffect(() => {
@@ -301,7 +338,11 @@ function App() {
       // Use the provided domain override if available, otherwise use the selectedDomain state
       const domainToUse = domainOverride !== null ? domainOverride : selectedDomain;
       // Only pass the domain if it's not empty (not the "Random domain" option)
-      const newEmail = await EmailService.generateEmail(domainToUse || null);
+      const newEmail = await EmailService.generateEmail(domainToUse || null, {
+        alias: isPro ? (customAlias.trim() || undefined) : undefined,
+        mailboxTtlSeconds: isPro ? mailboxTtl : undefined,
+        allowPremium: isPro,
+      });
       setEmail(newEmail);
       setMessages([]);
       // Track analytics
@@ -317,6 +358,8 @@ function App() {
       if (err.code === 'RATE_LIMIT_EXCEEDED') {
         setRateLimitCountdown(err.retryAfter || 60);
         setError('rate_limit');
+      } else if (err.code === 'PRO_REQUIRED' || err.code === 'ALIAS_TAKEN' || err.code === 'PREMIUM_DOMAIN') {
+        setError(err.code);
       } else {
         setError('Failed to generate email. Please try again later.');
       }
@@ -422,8 +465,7 @@ function App() {
   };
 
   return (
-    <ThemeProvider>
-      <Router>
+    <>
         <PageViewTracker />
         <GlobalStyle />
         <DarkModeOverrides />
@@ -470,8 +512,35 @@ function App() {
                                 {domains.map(domain => (
                                   <option key={domain} value={domain}>{domain}</option>
                                 ))}
+                                {isPro && premiumDomains.map(domain => (
+                                  <option key={domain} value={domain}>{domain} (Pro)</option>
+                                ))}
                               </select>
                             </div>
+                            {isPro && (
+                              <div className="domain-selector">
+                                <label htmlFor="custom-alias">Custom alias:</label>
+                                <input
+                                  id="custom-alias"
+                                  value={customAlias}
+                                  onChange={(e) => setCustomAlias(e.target.value)}
+                                  placeholder="optional username"
+                                  autoComplete="off"
+                                />
+                                <label htmlFor="mailbox-ttl">Keep for:</label>
+                                <select
+                                  id="mailbox-ttl"
+                                  value={mailboxTtl}
+                                  onChange={(e) => setMailboxTtl(Number(e.target.value))}
+                                >
+                                  {(entitlements?.mailboxTtlOptions || [86400, 604800, 2592000]).map((ttl) => (
+                                    <option key={ttl} value={ttl}>
+                                      {ttl === 86400 ? '24 hours' : ttl === 604800 ? '7 days' : '30 days'}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                            )}
                             {email ? (
                               <>
                                 <div 
@@ -536,7 +605,29 @@ function App() {
                         </section>
                         <section className="messages-section">
                           <h2>Hide Mail Inbox</h2>
-                          {error && error !== 'rate_limit' && <div className="error-message">{error}</div>}
+                          {error && error !== 'rate_limit' && (
+                            <div className="error-message">
+                              {error === 'PRO_REQUIRED' && (
+                                <>
+                                  <p>Custom aliases require Hide Mail Pro.</p>
+                                  <ProCta compact />
+                                </>
+                              )}
+                              {error === 'ALIAS_TAKEN' && (
+                                <>
+                                  <p>This address is already in use. Choose another alias, or go Pro to keep a private one.</p>
+                                  <ProCta compact />
+                                </>
+                              )}
+                              {error === 'PREMIUM_DOMAIN' && (
+                                <>
+                                  <p>Premium domains are a Hide Mail Pro feature.</p>
+                                  <ProCta compact />
+                                </>
+                              )}
+                              {error !== 'PRO_REQUIRED' && error !== 'ALIAS_TAKEN' && error !== 'PREMIUM_DOMAIN' && error}
+                            </div>
+                          )}
                           {loading ? (
                             <p>Loading...</p>
                           ) : messages.length > 0 ? (
@@ -568,7 +659,7 @@ function App() {
                       <div className="email-section">
                         <h2>Why Use Hide Mail?</h2>
                         <ul>
-                          <li>🦆 100% Free temporary email</li>
+                          <li>🦆 Free inbox with ads, or Pro without</li>
                           <li>🦆 No registration required</li>
                           <li>🦆 Protect your privacy</li>
                           <li>🦆 Avoid spam in your personal inbox</li>
@@ -576,7 +667,7 @@ function App() {
                           <li>🚀 <strong>Forward & Forget:</strong> Save important emails to your real inbox with one click</li>
                         </ul>
                       </div>
-                      <DonateButton />
+                      <ProCta />
                     </div>
                   </div>
                   
@@ -627,11 +718,11 @@ function App() {
                       <div className="faq-grid">
                         <div className="faq-item">
                           <h4>Is Hide Mail completely free?</h4>
-                          <p>Yes, Hide Mail is 100% free to use with no hidden fees or premium features. We're supported by non-intrusive advertisements.</p>
+                          <p>The basic inbox is free and supported by ads. Hide Mail Pro adds longer inboxes, custom aliases, premium domains and an ad-free experience — without creating an account.</p>
                         </div>
                         <div className="faq-item">
                           <h4>How long do temporary emails last?</h4>
-                          <p>Our temporary email addresses remain active for 30 minutes by default. After this period, all messages and the email address itself are permanently deleted.</p>
+                          <p>Free addresses stay active for 30 minutes. Hide Mail Pro can keep an address for 24 hours, 7 days or 30 days.</p>
                         </div>
                         <div className="faq-item">
                           <h4>Can I send emails from my temporary address?</h4>
@@ -720,6 +811,7 @@ function App() {
               <Route path="/contact-us" element={<ContactUs />} />
               <Route path="/blog" element={<Blog />} />
               <Route path="/blog/:postId" element={<BlogPost />} />
+              <Route path="/pro" element={<Pro />} />
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>
             
@@ -730,8 +822,9 @@ function App() {
                 <FooterLink to="/about-us" onClick={(e) => { e.currentTarget.blur(); analytics.navigateTo('About Us'); }}>About Us</FooterLink>
                 <FooterLink to="/contact-us" onClick={(e) => { e.currentTarget.blur(); analytics.navigateTo('Contact Us'); }}>Contact Us</FooterLink>
                 <FooterLink to="/blog" onClick={(e) => { e.currentTarget.blur(); analytics.navigateTo('Blog'); }}>Blog</FooterLink>
+                <FooterLink to="/pro" onClick={(e) => { e.currentTarget.blur(); analytics.navigateTo('Pro'); }}>Pro</FooterLink>
               </FooterLinks>
-              <DonateButton className="footer-donate" />
+              <ProCta className="footer-donate" compact />
               <div className="ad-container ad-in-footer">
                 <ContentAwareAd
                   slot="2536759880"
@@ -750,8 +843,7 @@ function App() {
             <CookieConsent />
           </AppContainer>
         </ConfigProvider>
-      </Router>
-    </ThemeProvider>
+    </>
   );
 }
 

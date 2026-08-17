@@ -25,6 +25,8 @@ const rateLimiter = require('./rateLimiter');
 const srsService = require('./srsService');
 const smtpService = require('./smtpService');
 const metrics = require('./metricsService');
+const licenseService = require('./licenseService');
+const entitlementService = require('./entitlementService');
 
 /**
  * Map SMTP errors to user-friendly error codes
@@ -180,6 +182,15 @@ const verifyOTP = async (tempMailbox, destinationEmail, otp) => {
   };
 };
 
+const forwardingLimitForMailbox = async (tempMailbox) => {
+  const meta = await redisService.getMailboxMeta(tempMailbox);
+  if (!meta?.licenseKey) {
+    return config.forwarding.freeLimit;
+  }
+  const license = await licenseService.getLicense(meta.licenseKey);
+  return entitlementService.getEntitlements(license).forwardingLimit;
+};
+
 /**
  * Forward a specific email to the validated destination
  * @param {string} tempMailbox - Temporary mailbox
@@ -195,8 +206,8 @@ const forwardEmail = async (tempMailbox, messageId) => {
     throw error;
   }
 
-  // Check rate limit
-  await rateLimiter.enforceRateLimit(tempMailbox);
+  const forwardingLimit = await forwardingLimitForMailbox(tempMailbox);
+  await rateLimiter.enforceRateLimit(tempMailbox, forwardingLimit);
 
   // Get the email from Redis
   const email = await redisService.getEmailById(tempMailbox, messageId);
@@ -268,7 +279,8 @@ const getForwardingStatus = async (tempMailbox) => {
   const destination = await otpService.getValidatedDestination(tempMailbox);
   
   // Get rate limit status
-  const rateLimit = await rateLimiter.getForwardingStats(tempMailbox);
+  const forwardingLimit = await forwardingLimitForMailbox(tempMailbox);
+  const rateLimit = await rateLimiter.getForwardingStats(tempMailbox, forwardingLimit);
 
   return {
     active: true,

@@ -48,27 +48,28 @@ describe('emailController', () => {
       
       await emailController.getDomains(req, res);
       
-      expect(redisService.getDomains).toHaveBeenCalled();
       expect(res.json).toHaveBeenCalledWith({
         success: true,
-        count: mockDomains.length,
-        data: mockDomains
+        count: 2,
+        data: ['domain1.com', 'domain2.com'],
+        premium: [],
       });
     });
 
     it('should handle errors', async () => {
-      // Mock the redisService.getDomains method to throw an error
-      redisService.getDomains.mockRejectedValueOnce(new Error('Redis error'));
-      
+      const entitlementService = require('../../services/entitlementService');
       const req = {};
       const res = {
         status: jest.fn().mockReturnThis(),
         json: jest.fn()
       };
+      const spy = jest.spyOn(entitlementService, 'getEntitlements').mockImplementation(() => {
+        throw new Error('Redis error');
+      });
       
       await emailController.getDomains(req, res);
-      
-      expect(redisService.getDomains).toHaveBeenCalled();
+
+      spy.mockRestore();
       expect(res.status).toHaveBeenCalledWith(500);
       expect(res.json).toHaveBeenCalledWith({
         success: false,

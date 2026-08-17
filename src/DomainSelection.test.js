@@ -57,7 +57,10 @@ describe('Domain Selection Tests', () => {
     
     // Verify that generateEmail was called with the selected domain
     await waitFor(() => {
-      expect(EmailService.generateEmail).toHaveBeenCalledWith('private-mail.org');
+      expect(EmailService.generateEmail).toHaveBeenCalledWith(
+        'private-mail.org',
+        expect.objectContaining({ allowPremium: false })
+      );
     });
   });
 
@@ -84,7 +87,10 @@ describe('Domain Selection Tests', () => {
     
     // Verify that generateEmail was called with null
     await waitFor(() => {
-      expect(EmailService.generateEmail).toHaveBeenCalledWith(null);
+      expect(EmailService.generateEmail).toHaveBeenCalledWith(
+        null,
+        expect.objectContaining({ allowPremium: false })
+      );
     });
   });
 }); 

@@ -1,21 +1,15 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import DonateButton from './DonateButton';
+import ProCta from './ProCta';
 import './AdBlockDonateMessage.css';
 
 /**
- * AdBlockDonateMessage component displayed when adblock is detected
- * Replaces ad banners with a friendly donation request
- * 
- * @param {Object} props - Component props
- * @param {number} props.width - Width of the container in pixels
- * @param {number} props.height - Height of the container in pixels
- * @param {string} props.className - Additional CSS class for the container
+ * Shown in ad slots when adblock is detected. Sells Pro instead of PayPal donate.
  */
-const AdBlockDonateMessage = ({ 
-  width = 300, 
-  height = 250, 
-  className = '' 
+const AdBlockDonateMessage = ({
+  width = 300,
+  height = 250,
+  className = ''
 }) => {
   const containerStyle = {
     width: `${width}px`,
@@ -23,18 +17,17 @@ const AdBlockDonateMessage = ({
   };
 
   return (
-    <div 
-      className={`adblock-donate-message ${className}`.trim()} 
+    <div
+      className={`adblock-donate-message ${className}`.trim()}
       style={containerStyle}
       data-testid="adblock-donate-message"
     >
       <div className="adblock-donate-content">
-        <div className="adblock-icon">🛡️</div>
         <h3 className="adblock-title">Ad Blocker Detected</h3>
         <p className="adblock-text">
-          Please support us by making a small donation to keep this service free!
+          Ads fund the free inbox. Disable your blocker, or go Pro — no ads, longer addresses.
         </p>
-        <DonateButton className="adblock-donate-button" />
+        <ProCta className="adblock-donate-button" compact />
       </div>
     </div>
   );
