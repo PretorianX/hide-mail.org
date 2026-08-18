@@ -17,12 +17,19 @@
 .pro-cta-button {
   display: inline-block;
   background: var(--duck-orange, #f7941d);
-  color: #fff;
   text-decoration: none;
   font-weight: 600;
   font-size: 14px;
   padding: 8px 14px;
   border-radius: 8px;
+}
+
+/* The `a` qualifier is load-bearing. It lifts the dark-theme selector to (0,2,2), which outranks
+   the global `[data-theme='dark'] a:not(.nav-pro-cta)` rule at (0,2,1). Without it the two tie and
+   document order hands the win to the global rule, painting the label orange on the orange fill. */
+a.pro-cta-button,
+body[data-theme='dark'] a.pro-cta-button {
+  color: #1a1a1a;
 }
 
 .pro-cta-button:hover,
@@ -40,8 +47,4 @@
 
 body[data-theme='dark'] .pro-cta-text {
   color: #e0e0e0;
-}
-
-body[data-theme='dark'] .pro-cta-button {
-  color: #1a1a1a;
 }
