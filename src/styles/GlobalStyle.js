@@ -1,4 +1,5 @@
 import { createGlobalStyle } from 'styled-components';
+import { HEADER_INK, HEADER_INK_STRONG, HEADER_HOVER_WASH } from './headerInk';
 
 const GlobalStyle = createGlobalStyle`
   :root {
@@ -76,7 +77,7 @@ const GlobalStyle = createGlobalStyle`
     transition: all 0.2s ease;
   }
 
-  /* Theme toggle button styling */
+  /* Theme toggle button styling: it sits on the orange header bar, so it carries the header ink. */
   .theme-toggle {
     display: flex;
     align-items: center;
@@ -85,24 +86,35 @@ const GlobalStyle = createGlobalStyle`
     height: 40px;
     border-radius: 50%;
     background-color: transparent;
-    color: var(--duck-white);
-    border: 2px solid var(--duck-white);
+    color: ${HEADER_INK};
+    border: 2px solid ${HEADER_INK};
     padding: 0;
     transition: all 0.3s ease;
   }
 
   .theme-toggle:hover {
-    background-color: rgba(255, 255, 255, 0.2);
+    background-color: ${HEADER_HOVER_WASH};
+    color: ${HEADER_INK_STRONG};
+    border-color: ${HEADER_INK_STRONG};
   }
 
-  /* Dark mode specific theme toggle styling */
+  .theme-toggle:focus-visible {
+    outline: 3px solid ${HEADER_INK_STRONG};
+    outline-offset: 2px;
+  }
+
+  /* App.css paints every dark-mode button in --duck-orange, which on the orange bar would leave
+     the toggle invisible; this keeps it a bare ringed glyph in both themes. */
   [data-theme='dark'] .theme-toggle {
-    color: var(--duck-white);
-    border-color: var(--duck-white);
+    background-color: transparent;
+    color: ${HEADER_INK};
+    border-color: ${HEADER_INK};
   }
 
   [data-theme='dark'] .theme-toggle:hover {
-    background-color: rgba(255, 255, 255, 0.2);
+    background-color: ${HEADER_HOVER_WASH};
+    color: ${HEADER_INK_STRONG};
+    border-color: ${HEADER_INK_STRONG};
   }
 
   /* Add smooth transitions for theme changes */

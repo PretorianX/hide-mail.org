@@ -2,6 +2,7 @@ import React from 'react';
 import styled from 'styled-components';
 import { useTheme } from '../styles/ThemeContext';
 import { analytics } from '../services/analytics';
+import { HEADER_INK, HEADER_INK_STRONG, HEADER_HOVER_WASH } from '../styles/headerInk';
 
 const ToggleButton = styled.button`
   display: flex;
@@ -11,14 +12,21 @@ const ToggleButton = styled.button`
   height: 40px;
   border-radius: 50%;
   background-color: transparent;
-  color: var(--duck-white);
-  border: 2px solid var(--duck-white);
+  color: ${HEADER_INK};
+  border: 2px solid ${HEADER_INK};
   padding: 0;
   transition: all 0.3s ease;
   cursor: pointer;
-  
+
   &:hover {
-    background-color: rgba(255, 255, 255, 0.2);
+    background-color: ${HEADER_HOVER_WASH};
+    color: ${HEADER_INK_STRONG};
+    border-color: ${HEADER_INK_STRONG};
+  }
+
+  &:focus-visible {
+    outline: 3px solid ${HEADER_INK_STRONG};
+    outline-offset: 2px;
   }
 `;
 
