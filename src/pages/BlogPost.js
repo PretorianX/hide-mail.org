@@ -101,10 +101,8 @@ const BlogPostContent = styled.div`
   
   img {
     display: block;
-    width: 100%;
     max-width: 100%;
-    aspect-ratio: 16 / 9;
-    object-fit: cover;
+    height: auto;
     border-radius: 6px;
     margin: 20px 0;
   }
