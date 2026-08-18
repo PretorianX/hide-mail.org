@@ -36,24 +36,40 @@ const BlogPostsGrid = styled.div`
   margin-top: 40px;
 `;
 
-const BlogPostCard = styled.div`
+const BlogPostCard = styled.article`
+  position: relative;
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
   background: #fff;
   
-  &:hover {
+  &:hover,
+  &:focus-within {
     transform: translateY(-5px);
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
   }
+  
+  &:focus-within {
+    outline: 3px solid #4285f4;
+    outline-offset: 3px;
+  }
+  
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+    
+    &:hover,
+    &:focus-within {
+      transform: none;
+    }
+  }
 `;
 
-const BlogPostImage = styled.div`
-  height: 180px;
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
+const BlogPostImage = styled.img`
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
 `;
 
 const BlogPostContent = styled.div`
@@ -66,6 +82,25 @@ const BlogPostTitle = styled.h2`
   color: #333;
 `;
 
+const BlogPostLink = styled(Link)`
+  color: inherit;
+  text-decoration: none;
+  
+  /* Stretches this single link over the whole card, so the card is one hit target
+     without nesting further interactive elements inside it. */
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+  }
+  
+  /* The focus ring is drawn on the card by :focus-within, which matches the hit area. */
+  &:focus,
+  &:focus-visible {
+    outline: none;
+  }
+`;
+
 const BlogPostExcerpt = styled.p`
   font-size: 0.95rem;
   color: #666;
@@ -73,13 +108,13 @@ const BlogPostExcerpt = styled.p`
   margin-bottom: 15px;
 `;
 
-const ReadMoreLink = styled(Link)`
+const ReadMoreCue = styled.span`
   display: inline-block;
   color: #4285f4;
   font-weight: 500;
-  text-decoration: none;
   
-  &:hover {
+  ${BlogPostCard}:hover &,
+  ${BlogPostCard}:focus-within & {
     text-decoration: underline;
   }
 `;
@@ -152,11 +187,14 @@ const Blog = () => {
       <BlogPostsGrid className="blog-posts-grid">
         {blogPosts.map(post => (
           <BlogPostCard key={post.id} className="BlogPostCard">
-            <BlogPostImage style={{ backgroundImage: `url(${post.image})` }} />
+            {/* Decorative: the card link right below already announces the post title. */}
+            <BlogPostImage src={post.image} alt="" loading="lazy" decoding="async" />
             <BlogPostContent>
-              <BlogPostTitle className="BlogPostTitle">{post.title}</BlogPostTitle>
+              <BlogPostTitle className="BlogPostTitle">
+                <BlogPostLink to={`/blog/${post.id}`} className="BlogPostLink">{post.title}</BlogPostLink>
+              </BlogPostTitle>
               <BlogPostExcerpt className="BlogPostExcerpt">{post.excerpt}</BlogPostExcerpt>
-              <ReadMoreLink to={`/blog/${post.id}`} className="ReadMoreLink">Read More →</ReadMoreLink>
+              <ReadMoreCue className="ReadMoreCue" aria-hidden="true">Read More →</ReadMoreCue>
             </BlogPostContent>
           </BlogPostCard>
         ))}

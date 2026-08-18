@@ -1,7 +1,8 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import { BrowserRouter, MemoryRouter, Routes, Route } from 'react-router';
+import { MemoryRouter, Routes, Route } from 'react-router';
 import BlogPost from './BlogPost';
+import { cssTextFor } from '../test-utils/styledCss';
 
 // Mock the ContentAwareAd component
 jest.mock('../components/ContentAwareAd', () => {
@@ -25,7 +26,9 @@ jest.mock('../data/blogPosts', () => [
     title: 'What Are Temporary Email Addresses and How Do They Work?',
     date: 'June 15, 2023',
     image: '/images/blog/temporary-email-guide.jpg',
-    content: '<p>This is test content for the temporary email guide.</p>'
+    content:
+      '<p>This is test content for the temporary email guide.</p>' +
+      '<img src="/images/blog/temp-email-concept.jpg" alt="Concept illustration of temporary email" />'
   },
   {
     id: 'email-privacy',
@@ -90,5 +93,56 @@ describe('BlogPost Component', () => {
     
     const adComponents = screen.getAllByTestId('content-aware-ad');
     expect(adComponents).toHaveLength(3);
+  });
+});
+
+describe('BlogPost images', () => {
+  const renderPost = () =>
+    render(
+      <MemoryRouter initialEntries={['/blog/temporary-email-guide']}>
+        <Routes>
+          <Route path="/blog/:postId" element={<BlogPost />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+  test('renders the cover image eagerly with a reserved aspect ratio', () => {
+    renderPost();
+
+    const cover = screen.getByRole('img', {
+      name: 'What Are Temporary Email Addresses and How Do They Work?'
+    });
+    expect(cover).toHaveAttribute('src', '/images/blog/temporary-email-guide.jpg');
+    expect(cover).toHaveAttribute('decoding', 'async');
+    expect(cover).not.toHaveAttribute('loading', 'lazy');
+
+    const coverCss = cssTextFor(cover);
+    expect(coverCss).toContain('aspect-ratio');
+    expect(coverCss).toContain('object-fit: cover');
+  });
+
+  test('lazy loads content images while keeping their authored alt text', () => {
+    renderPost();
+
+    const contentImage = screen.getByRole('img', {
+      name: 'Concept illustration of temporary email'
+    });
+    expect(contentImage).toHaveAttribute('src', '/images/blog/temp-email-concept.jpg');
+    expect(contentImage).toHaveAttribute('loading', 'lazy');
+    expect(contentImage).toHaveAttribute('decoding', 'async');
+  });
+
+  test('renders related post thumbnails lazily without duplicating the link name', () => {
+    renderPost();
+
+    const thumbnails = screen.getAllByRole('presentation');
+    expect(thumbnails).toHaveLength(1);
+    expect(thumbnails[0]).toHaveAttribute('src', '/images/blog/email-privacy.jpg');
+    expect(thumbnails[0]).toHaveAttribute('loading', 'lazy');
+    expect(thumbnails[0]).toHaveAttribute('decoding', 'async');
+
+    expect(
+      screen.getByRole('link', { name: 'Email Privacy: Why It Matters and How to Protect It' })
+    ).toHaveAttribute('href', '/blog/email-privacy');
   });
 }); 

@@ -35,8 +35,13 @@ const DarkModeOverrides = createGlobalStyle`
     box-shadow: 0 4px 12px var(--shadow-color);
   }
 
-  [data-theme='dark'] .BlogPostCard:hover {
+  [data-theme='dark'] .BlogPostCard:hover,
+  [data-theme='dark'] .BlogPostCard:focus-within {
     box-shadow: 0 8px 20px var(--shadow-color);
+  }
+
+  [data-theme='dark'] .BlogPostCard:focus-within {
+    outline-color: var(--duck-orange);
   }
 
   [data-theme='dark'] .BlogPostTitle {
@@ -47,7 +52,7 @@ const DarkModeOverrides = createGlobalStyle`
     color: var(--light-text);
   }
 
-  [data-theme='dark'] .ReadMoreLink {
+  [data-theme='dark'] .ReadMoreCue {
     color: var(--duck-orange);
   }
 

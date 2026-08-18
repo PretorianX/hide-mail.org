@@ -1,9 +1,10 @@
 import React, { useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router';
+import { useParams, Link } from 'react-router';
 import styled from 'styled-components';
 import ContentAwareAd from '../components/ContentAwareAd';
 import blogPosts from '../data/blogPosts';
 import { getAdSenseSlot, AD_SLOTS } from '../utils/adsenseSlots';
+import { withOptimizedImages } from '../utils/blogContent';
 
 const BlogPostContainer = styled.div`
   max-width: 800px;
@@ -51,8 +52,10 @@ const BlogPostDate = styled.span`
 `;
 
 const BlogPostImage = styled.img`
+  display: block;
   width: 100%;
-  height: auto;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
   border-radius: 8px;
   margin-bottom: 30px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
@@ -97,7 +100,9 @@ const BlogPostContent = styled.div`
   }
   
   img {
+    display: block;
     max-width: 100%;
+    height: auto;
     border-radius: 6px;
     margin: 20px 0;
   }
@@ -141,11 +146,11 @@ const RelatedPostCard = styled(Link)`
   }
 `;
 
-const RelatedPostImage = styled.div`
-  height: 150px;
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
+const RelatedPostImage = styled.img`
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
 `;
 
 const RelatedPostContent = styled.div`
@@ -191,7 +196,6 @@ const NotFoundMessage = styled.div`
 
 const BlogPost = () => {
   const { postId } = useParams();
-  const navigate = useNavigate();
   const post = blogPosts.find(p => p.id === postId);
   
   useEffect(() => {
@@ -233,7 +237,7 @@ const BlogPost = () => {
         </BlogPostMeta>
       </BlogPostHeader>
       
-      <BlogPostImage src={post.image} alt={post.title} className="BlogPostImage" />
+      <BlogPostImage src={post.image} alt={post.title} decoding="async" className="BlogPostImage" />
       
       <AdContainer>
         <ContentAwareAd
@@ -247,7 +251,10 @@ const BlogPost = () => {
         />
       </AdContainer>
       
-      <BlogPostContent className="BlogPostContent" dangerouslySetInnerHTML={{ __html: post.content }} />
+      <BlogPostContent
+        className="BlogPostContent"
+        dangerouslySetInnerHTML={{ __html: withOptimizedImages(post.content) }}
+      />
       
       <AdContainer>
         <ContentAwareAd
@@ -267,7 +274,8 @@ const BlogPost = () => {
           <RelatedPostsGrid className="RelatedPostsGrid">
             {relatedPosts.map(relatedPost => (
               <RelatedPostCard key={relatedPost.id} to={`/blog/${relatedPost.id}`} className="RelatedPostCard">
-                <RelatedPostImage style={{ backgroundImage: `url(${relatedPost.image})` }} />
+                {/* Decorative: the surrounding link is already named by the post title. */}
+                <RelatedPostImage src={relatedPost.image} alt="" loading="lazy" decoding="async" />
                 <RelatedPostContent>
                   <RelatedPostTitle className="RelatedPostTitle">{relatedPost.title}</RelatedPostTitle>
                 </RelatedPostContent>
