@@ -1,0 +1,11 @@
+[Unit]
+Description=Deploy the Hide Mail images published to GHCR
+Documentation=https://github.com/PretorianX/hide-mail.org/blob/main/deploy/README.md
+Requires=docker.service
+After=docker.service network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/hidemail-autodeploy
+# A pull over a slow link plus the health wait; beyond this something is wrong, not slow.
+TimeoutStartSec=15min

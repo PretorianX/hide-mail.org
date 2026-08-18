@@ -1,6 +1,6 @@
 ---
 name: security-maintainer
-description: Check Dependabot alerts and npm audit, bump vulnerable packages via npm overrides, run tests, and remind about prod redeploy. Use when the user asks to check vulnerabilities, Dependabot, npm audit, security advisories, or dependency bumps for hide-mail.org.
+description: Check Dependabot alerts and npm audit, bump vulnerable packages via npm overrides, run tests, and confirm the host auto-deploy picked up the new images. Use when the user asks to check vulnerabilities, Dependabot, npm audit, security advisories, or dependency bumps for hide-mail.org.
 ---
 
 # Security maintainer
@@ -26,11 +26,10 @@ description: Check Dependabot alerts and npm audit, bump vulnerable packages via
    (cd backend && npm audit --audit-level=high)
    ```
 5. Conventional commit, e.g. `fix(deps): resolve Dependabot advisories`.
-6. After push to `main`, CI publishes GHCR `:latest` and opens/updates the **Redeploy production** issue (emails assignee). Remind the user to run on prod:
+6. After push to `main`, CI publishes GHCR `:latest` and `hidemail-autodeploy.timer` on the host pulls it within ~5 minutes. Nothing to trigger and no issue to close; confirm it landed with:
    ```bash
-   docker compose pull && docker compose up -d
+   journalctl -u hidemail-autodeploy -n 20
    ```
-   then close the redeploy issue.
 
 ## Hard rules
 
