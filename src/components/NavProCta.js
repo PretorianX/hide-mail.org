@@ -31,7 +31,7 @@ const pillBase = css`
   }
 
   @media (max-width: 768px) {
-    width: 100%;
+    flex-basis: 100%;
     margin-left: 0;
   }
 `;
