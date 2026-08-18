@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router';
 import Header from './Header';
 import { ThemeProvider } from '../styles/ThemeContext';
 import { HEADER_INK, HEADER_INK_STRONG } from '../styles/headerInk';
+import { cssRulesFor } from '../test-utils/styledCss';
 
 jest.mock('../context/LicenseContext', () => ({
   useLicense: () => ({ isPro: false, license: null }),
@@ -24,16 +25,10 @@ const inkOf = element => window.getComputedStyle(element).color;
 
 // jsdom applies no pseudo-class rules, so state colours are read off the emitted stylesheet.
 // The rendered ratios themselves are measured in headless Chrome, not here.
-const declarationsFor = (element, pseudo) =>
-  [...document.styleSheets]
-    .flatMap(sheet => [...sheet.cssRules])
-    .filter(rule =>
-      rule.selectorText &&
-      rule.selectorText
-        .split(',')
-        .some(selector => [...element.classList].some(name => selector.trim() === `.${name}${pseudo}`))
-    )
-    .map(rule => rule.style);
+const stateRulesOf = (element, pseudo) =>
+  cssRulesFor(element)
+    .filter(cssText => cssText.split('{')[0].includes(pseudo))
+    .join(' ');
 
 describe('Header Component', () => {
   test('renders header with logo and navigation links', () => {
@@ -89,8 +84,7 @@ describe('Header ink on the orange bar', () => {
     const home = within(screen.getByRole('navigation')).getByRole('link', { name: 'Home' });
 
     [':hover', ':active'].forEach(pseudo => {
-      const colours = declarationsFor(home, pseudo).map(style => style.color);
-      expect(colours).toContain(HEADER_INK_STRONG);
+      expect(stateRulesOf(home, pseudo)).toContain(`color: ${HEADER_INK_STRONG}`);
     });
   });
 
@@ -103,8 +97,7 @@ describe('Header ink on the orange bar', () => {
     ];
 
     focusables.forEach(element => {
-      const outlines = declarationsFor(element, ':focus-visible').map(style => style.outline);
-      expect(outlines.join(' ')).toContain(HEADER_INK_STRONG);
+      expect(stateRulesOf(element, ':focus-visible')).toContain(`outline: 3px solid ${HEADER_INK_STRONG}`);
     });
   });
 
