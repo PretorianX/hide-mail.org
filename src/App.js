@@ -23,6 +23,7 @@ import PageAds from './components/PageAds.js';
 import CookieConsent from './components/CookieConsent.js';
 import MessageList from './components/MessageList.js';
 import ProCta from './components/ProCta.js';
+import HomeProBadge from './components/HomeProBadge.js';
 import Pro from './pages/Pro.js';
 import { LicenseProvider, useLicense } from './context/LicenseContext.js';
 import { trackPageView, analytics } from './services/analytics.js';
@@ -158,7 +159,7 @@ function App() {
 }
 
 function AppContent() {
-  const { isPro, entitlements } = useLicense();
+  const { isPro, entitlements, license } = useLicense();
   const [email, setEmail] = useState(null);
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -174,6 +175,10 @@ function AppContent() {
   const [selectedDomain, setSelectedDomain] = useState('');
   const [selectedMessageId, setSelectedMessageId] = useState(null);
   const [rateLimitCountdown, setRateLimitCountdown] = useState(0);
+  const daysLeft = license?.remainingDays
+    ?? (license?.expiresAt
+      ? Math.max(0, Math.ceil((license.expiresAt - Date.now()) / 86400000))
+      : null);
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -491,6 +496,7 @@ function AppContent() {
                         <section className="email-section">
                           <div className="email-container">
                             <h2>Your Hide Mail Address</h2>
+                            {isPro ? <HomeProBadge daysLeft={daysLeft} /> : null}
                             <div className="domain-selector">
                               <label htmlFor="domain-select">Choose a domain:</label>
                               <select
@@ -663,7 +669,7 @@ function AppContent() {
                           <li>🚀 <strong>Forward & Forget:</strong> Save important emails to your real inbox with one click</li>
                         </ul>
                       </div>
-                      <ProCta />
+                      {!isPro ? <ProCta /> : null}
                     </div>
                   </div>
                   
@@ -818,7 +824,7 @@ function AppContent() {
                 <FooterLink to="/blog" onClick={(e) => { e.currentTarget.blur(); analytics.navigateTo('Blog'); }}>Blog</FooterLink>
                 <FooterLink to="/pro" onClick={(e) => { e.currentTarget.blur(); analytics.navigateTo('Pro'); }}>Pro</FooterLink>
               </FooterLinks>
-              <ProCta className="footer-donate" compact />
+              {!isPro ? <ProCta className="footer-donate" compact /> : null}
               <AdSlot
                 className="ad-in-footer"
                 slot="2536759880"

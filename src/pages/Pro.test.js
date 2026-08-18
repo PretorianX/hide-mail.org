@@ -1,9 +1,43 @@
 import React from 'react';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import Pro from './Pro';
 import { LicenseProvider } from '../context/LicenseContext';
 import LicenseService from '../services/LicenseService';
+
+const renderPro = () =>
+  render(
+    <MemoryRouter>
+      <LicenseProvider>
+        <Pro />
+      </LicenseProvider>
+    </MemoryRouter>
+  );
+
+const mockPaidReturn = () => {
+  window.history.replaceState({}, '', '/pro?handoffToken=token-abc');
+  LicenseService.fetchPaidOrder.mockResolvedValue({
+    licenseKey: 'HM-AAAA-BBBB-CCCC-DDDD',
+  });
+  LicenseService.restore.mockResolvedValue({
+    license: {
+      key: 'HM-AAAA-BBBB-CCCC-DDDD',
+      active: true,
+      type: 'pro',
+      remainingDays: 30,
+    },
+    entitlements: { ads: false },
+  });
+};
+
+if (typeof HTMLDialogElement !== 'undefined') {
+  HTMLDialogElement.prototype.showModal = function showModal() {
+    this.setAttribute('open', '');
+  };
+  HTMLDialogElement.prototype.close = function close() {
+    this.removeAttribute('open');
+  };
+}
 
 jest.mock('../services/LicenseService', () => ({
   listPlans: jest.fn(),
@@ -24,6 +58,7 @@ jest.mock('../components/DonateButton', () => {
 describe('Pro page', () => {
   beforeEach(() => {
     localStorage.clear();
+    window.history.replaceState({}, '', '/pro');
     LicenseService.listPlans.mockResolvedValue({
       success: true,
       settlementCurrency: 'UAH',
@@ -66,6 +101,10 @@ describe('Pro page', () => {
       license: { key: 'HM-AAAA-BBBB-CCCC-DDDD', active: true, type: 'pro' },
       entitlements: { ads: false },
     });
+    Object.assign(navigator, {
+      clipboard: { writeText: jest.fn().mockResolvedValue(undefined) },
+    });
+    sessionStorage.clear();
   });
 
   test('renders yearly as the featured checkout option', async () => {
@@ -324,5 +363,161 @@ describe('Pro page', () => {
     await waitFor(() => {
       expect(LicenseService.restore).toHaveBeenCalledWith('HM-AAAA-BBBB-CCCC-DDDD');
     });
+  });
+
+  test('opens a success dialog with the license key and remaining days after payment', async () => {
+    mockPaidReturn();
+    renderPro();
+
+    const dialog = await screen.findByRole('dialog', { name: /payment successful/i });
+    expect(within(dialog).getByText('HM-AAAA-BBBB-CCCC-DDDD')).toBeInTheDocument();
+    expect(within(dialog).getByText(/30 days/i)).toBeInTheDocument();
+    expect(within(dialog).getByRole('link', { name: /go to your inbox/i })).toHaveAttribute('href', '/');
+  });
+
+  test('copies the license key to the clipboard when payment succeeds', async () => {
+    mockPaidReturn();
+    renderPro();
+
+    await screen.findByRole('dialog', { name: /payment successful/i });
+    await waitFor(() => {
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith('HM-AAAA-BBBB-CCCC-DDDD');
+    });
+  });
+
+  test('lets the visitor copy the license key from the success dialog', async () => {
+    mockPaidReturn();
+    renderPro();
+
+    const dialog = await screen.findByRole('dialog', { name: /payment successful/i });
+    await waitFor(() => {
+      expect(navigator.clipboard.writeText).toHaveBeenCalled();
+    });
+    navigator.clipboard.writeText.mockClear();
+
+    fireEvent.click(within(dialog).getByRole('button', { name: /copy license key/i }));
+
+    await waitFor(() => {
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith('HM-AAAA-BBBB-CCCC-DDDD');
+    });
+    expect(within(dialog).getByText(/copied/i)).toBeInTheDocument();
+  });
+
+  test('does not open a payment success dialog for an already-active license', async () => {
+    LicenseService.restoreSaved.mockResolvedValue({
+      license: {
+        key: 'HM-AAAA-BBBB-CCCC-DDDD',
+        active: true,
+        type: 'pro',
+        remainingDays: 12,
+        expiresAt: Date.now() + 12 * 24 * 60 * 60 * 1000,
+      },
+      entitlements: { ads: false },
+    });
+
+    renderPro();
+
+    const card = await screen.findByTestId('pro-active');
+    expect(within(card).getByText('Pro is active')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: /payment successful/i })).not.toBeInTheDocument();
+  });
+
+  test('lets the visitor copy the saved license key from the active plan card', async () => {
+    LicenseService.restoreSaved.mockResolvedValue({
+      license: {
+        key: 'HM-AAAA-BBBB-CCCC-DDDD',
+        active: true,
+        type: 'pro',
+        remainingDays: 12,
+        expiresAt: Date.now() + 12 * 24 * 60 * 60 * 1000,
+      },
+      entitlements: { ads: false },
+    });
+
+    renderPro();
+
+    const card = await screen.findByTestId('pro-active');
+    fireEvent.click(within(card).getByRole('button', { name: /copy license key/i }));
+
+    await waitFor(() => {
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith('HM-AAAA-BBBB-CCCC-DDDD');
+    });
+  });
+
+  test('collects the license key when the return URL uses a snake_case handoff token', async () => {
+    window.history.replaceState({}, '', '/pro?handoff_token=token-abc');
+    LicenseService.fetchPaidOrder.mockResolvedValue({
+      licenseKey: 'HM-AAAA-BBBB-CCCC-DDDD',
+    });
+    LicenseService.restore.mockResolvedValue({
+      license: {
+        key: 'HM-AAAA-BBBB-CCCC-DDDD',
+        active: true,
+        type: 'pro',
+        remainingDays: 30,
+      },
+      entitlements: { ads: false },
+    });
+
+    renderPro();
+
+    await screen.findByRole('dialog', { name: /payment successful/i });
+    expect(LicenseService.fetchPaidOrder).toHaveBeenCalledWith('token-abc');
+  });
+
+  test('retries the handoff until WayForPay has marked the order paid', async () => {
+    window.history.replaceState({}, '', '/pro?handoffToken=token-abc');
+    LicenseService.fetchPaidOrder
+      .mockResolvedValueOnce({ licenseKey: null, data: { paidAt: null } })
+      .mockResolvedValueOnce({ licenseKey: 'HM-AAAA-BBBB-CCCC-DDDD' });
+    LicenseService.restore.mockResolvedValue({
+      license: {
+        key: 'HM-AAAA-BBBB-CCCC-DDDD',
+        active: true,
+        type: 'pro',
+        remainingDays: 30,
+      },
+      entitlements: { ads: false },
+    });
+
+    renderPro();
+
+    expect(await screen.findByText(/confirming payment/i)).toBeInTheDocument();
+    await screen.findByRole('dialog', { name: /payment successful/i }, { timeout: 4000 });
+    expect(LicenseService.fetchPaidOrder).toHaveBeenCalledTimes(2);
+  });
+
+  test('hides the shop while payment is confirming', async () => {
+    window.history.replaceState({}, '', '/pro?handoffToken=token-abc');
+    LicenseService.fetchPaidOrder.mockImplementation(() => new Promise(() => {}));
+
+    renderPro();
+
+    expect(await screen.findByText(/confirming payment/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /yearly/i })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/paste your key/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/last-resort paypal/i)).not.toBeInTheDocument();
+  });
+
+  test('collects a handoff token kept in session after the URL was stripped', async () => {
+    window.history.replaceState({}, '', '/pro');
+    sessionStorage.setItem('hidemail_handoff_token', 'token-abc');
+    LicenseService.fetchPaidOrder.mockResolvedValue({
+      licenseKey: 'HM-AAAA-BBBB-CCCC-DDDD',
+    });
+    LicenseService.restore.mockResolvedValue({
+      license: {
+        key: 'HM-AAAA-BBBB-CCCC-DDDD',
+        active: true,
+        type: 'pro',
+        remainingDays: 30,
+      },
+      entitlements: { ads: false },
+    });
+
+    renderPro();
+
+    await screen.findByRole('dialog', { name: /payment successful/i });
+    expect(LicenseService.fetchPaidOrder).toHaveBeenCalledWith('token-abc');
   });
 });

@@ -1,8 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router';
 import LicenseService from '../services/LicenseService';
 import { useLicense } from '../context/LicenseContext';
 import DonateButton from '../components/DonateButton';
 import PlanComparison from '../components/PlanComparison';
+import LicenseKeyCopy from '../components/LicenseKeyCopy';
 import {
   headlinePrice,
   chargedNote,
@@ -19,6 +21,38 @@ const PLAN_LABELS = {
   api: 'API for QA',
 };
 
+const remainingDaysOf = (item) => {
+  if (typeof item.remainingDays === 'number') {
+    return item.remainingDays;
+  }
+  if (item.expiresAt) {
+    return Math.max(0, Math.ceil((item.expiresAt - Date.now()) / 86400000));
+  }
+  return 0;
+};
+
+const HANDOFF_POLL_MS = 1000;
+const HANDOFF_POLL_ATTEMPTS = 30;
+const HANDOFF_STORAGE_KEY = 'hidemail_handoff_token';
+
+const readHandoffToken = () => {
+  const params = new URLSearchParams(window.location.search);
+  const fromUrl = params.get('handoffToken') || params.get('handoff_token');
+  if (fromUrl) {
+    sessionStorage.setItem(HANDOFF_STORAGE_KEY, fromUrl);
+    return fromUrl;
+  }
+  return sessionStorage.getItem(HANDOFF_STORAGE_KEY);
+};
+
+const clearHandoffToken = () => {
+  sessionStorage.removeItem(HANDOFF_STORAGE_KEY);
+};
+
+const sleep = (ms) => new Promise((resolve) => {
+  setTimeout(resolve, ms);
+});
+
 const Pro = () => {
   const { license, activate } = useLicense();
   const [plans, setPlans] = useState([]);
@@ -31,6 +65,10 @@ const Pro = () => {
   const [apiKeyDays, setApiKeyDays] = useState(null);
   const [tiers, setTiers] = useState(null);
   const [checkoutDisabled, setCheckoutDisabled] = useState(false);
+  const [issuedLicense, setIssuedLicense] = useState(null);
+  const [keyCopied, setKeyCopied] = useState(false);
+  const [confirmingPayment, setConfirmingPayment] = useState(false);
+  const successDialogRef = useRef(null);
 
   const currencies = displayCurrencies(fx.rates);
 
@@ -60,8 +98,11 @@ const Pro = () => {
     priceLabel(plans.find((item) => item.id === planId), displayCurrency, period, fx);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const handoffToken = params.get('handoffToken');
+    if (license?.active) {
+      clearHandoffToken();
+      return undefined;
+    }
+    const handoffToken = readHandoffToken();
     if (!handoffToken) {
       return undefined;
     }
@@ -69,32 +110,81 @@ const Pro = () => {
     // anything the ad scripts on the page report as the current URL.
     window.history.replaceState({}, '', window.location.pathname);
     let cancelled = false;
-    LicenseService.fetchPaidOrder(handoffToken).then((paid) => {
+    setConfirmingPayment(true);
+
+    const restoreHandoffInUrl = () => {
+      const newUrl = new URL(window.location.href);
+      newUrl.searchParams.set('handoffToken', handoffToken);
+      window.history.replaceState({}, '', newUrl.toString());
+    };
+
+    (async () => {
+      let paid = null;
+      for (let attempt = 0; attempt < HANDOFF_POLL_ATTEMPTS; attempt += 1) {
+        if (cancelled) {
+          return;
+        }
+        try {
+          paid = await LicenseService.fetchPaidOrder(handoffToken);
+        } catch {
+          paid = null;
+        }
+        if (paid?.licenseKey) {
+          break;
+        }
+        if (attempt < HANDOFF_POLL_ATTEMPTS - 1) {
+          await sleep(HANDOFF_POLL_MS);
+        }
+      }
       if (cancelled) {
         return;
       }
+      setConfirmingPayment(false);
       if (paid?.licenseKey) {
-        activate(paid.licenseKey);
-        if (paid.apiKey || paid.data?.apiKey) {
-          setApiKey(paid.apiKey || paid.data.apiKey);
-          setApiKeyDays(paid.apiKeyRemainingDays || paid.data?.apiKeyRemainingDays || null);
+        clearHandoffToken();
+        try {
+          const payload = await activate(paid.licenseKey);
+          if (cancelled) {
+            return;
+          }
+          setIssuedLicense(payload.license);
+          if (paid.apiKey || paid.data?.apiKey) {
+            setApiKey(paid.apiKey || paid.data.apiKey);
+            setApiKeyDays(paid.apiKeyRemainingDays || paid.data?.apiKeyRemainingDays || null);
+          }
+        } catch (err) {
+          setError(err.message);
+          restoreHandoffInUrl();
         }
-      } else if (!paid?.licenseKey && paid?.data && !paid.data.paidAt) {
-        const token = handoffToken;
-        const newUrl = new URL(window.location.href);
-        newUrl.searchParams.set('handoffToken', token);
-        window.history.replaceState({}, '', newUrl.toString());
+        return;
       }
-    }).catch(() => {
-      const token = handoffToken;
-      const newUrl = new URL(window.location.href);
-      newUrl.searchParams.set('handoffToken', token);
-      window.history.replaceState({}, '', newUrl.toString());
-    });
+      setError('Payment is still confirming. Refresh this page in a moment.');
+      restoreHandoffInUrl();
+    })();
+
     return () => {
       cancelled = true;
     };
-  }, [activate]);
+  }, [activate, license?.active]);
+
+  const copyLicenseKey = useCallback((key) => {
+    navigator.clipboard.writeText(key).then(() => {
+      setKeyCopied(true);
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (issuedLicense?.key) {
+      copyLicenseKey(issuedLicense.key);
+    }
+  }, [issuedLicense, copyLicenseKey]);
+
+  const bindSuccessDialog = useCallback((dialog) => {
+    successDialogRef.current = dialog;
+    if (dialog && typeof dialog.showModal === 'function' && !dialog.open) {
+      dialog.showModal();
+    }
+  }, []);
 
   const handleCurrencyChange = (event) => {
     const next = event.target.value;
@@ -141,22 +231,64 @@ const Pro = () => {
     }
   };
 
+  const showShop = !confirmingPayment && !license?.active;
+
   return (
     <div className="pro-page">
       <h1>Hide Mail Pro</h1>
-      <p>
-        Pay with Visa, Mastercard, Apple Pay or Google Pay. No account: you get a license key
-        to paste on any browser. PayPal stays as a last-resort donate on this page only.
-      </p>
+      {confirmingPayment ? (
+        <p className="pro-confirming" role="status">Confirming payment…</p>
+      ) : !license?.active ? (
+        <p>
+          Pay with Visa, Mastercard, Apple Pay or Google Pay. No account: you get a license key
+          to paste on any browser. PayPal stays as a last-resort donate on this page only.
+        </p>
+      ) : null}
+
+      {issuedLicense ? (
+        <dialog
+          ref={bindSuccessDialog}
+          className="pro-success-dialog"
+          closedby="any"
+          aria-labelledby="pro-success-title"
+        >
+          <h2 id="pro-success-title">Payment successful — Pro is active</h2>
+          <p>
+            Your license key lasts {remainingDaysOf(issuedLicense)} days
+            {issuedLicense.expiresAt
+              ? ` (until ${new Date(issuedLicense.expiresAt).toLocaleDateString()})`
+              : ''}.
+          </p>
+          <p className="pro-key-label">Save this key. We cannot email it to you.</p>
+          <LicenseKeyCopy
+            licenseKey={issuedLicense.key}
+            copied={keyCopied}
+            onCopy={copyLicenseKey}
+            testId="pro-success-key"
+          />
+          <Link className="pro-success-home" to="/">Go to your inbox</Link>
+          <form method="dialog">
+            <button type="submit">Stay on this page</button>
+          </form>
+        </dialog>
+      ) : null}
 
       {license?.active ? (
         <div className="pro-active" data-testid="pro-active">
+          <p className="pro-active-status">Pro is active</p>
           <p data-testid="pro-days-left">
-            {license.remainingDays ?? Math.max(0, Math.ceil((license.expiresAt - Date.now()) / 86400000))} days left
+            {remainingDaysOf(license)} days left
           </p>
-          <p>Pro is active until {new Date(license.expiresAt).toLocaleDateString()}.</p>
+          {license.expiresAt ? (
+            <p>Pro is active until {new Date(license.expiresAt).toLocaleDateString()}.</p>
+          ) : null}
           <p className="pro-key-label">Save this key:</p>
-          <code data-testid="pro-license-key">{license.key}</code>
+          <LicenseKeyCopy
+            licenseKey={license.key}
+            copied={false}
+            onCopy={copyLicenseKey}
+            testId="pro-license-key"
+          />
           {apiKey ? (
             <p>
               API key
@@ -173,7 +305,7 @@ const Pro = () => {
         </div>
       ) : null}
 
-      {plans.length > 0 ? (
+      {showShop && plans.length > 0 ? (
         <>
           <label className="pro-currency" htmlFor="display-currency">
             Display currency
@@ -213,20 +345,22 @@ const Pro = () => {
         </>
       ) : null}
 
-      <form className="pro-restore" onSubmit={handleRestore}>
-        <label htmlFor="license-key">Already paid? Paste your key</label>
-        <input
-          id="license-key"
-          value={restoreKey}
-          onChange={(event) => setRestoreKey(event.target.value)}
-          autoComplete="off"
-        />
-        <button type="submit" disabled={busy || !restoreKey.trim()}>Restore</button>
-      </form>
+      {showShop ? (
+        <form className="pro-restore" onSubmit={handleRestore}>
+          <label htmlFor="license-key">Already paid? Paste your key</label>
+          <input
+            id="license-key"
+            value={restoreKey}
+            onChange={(event) => setRestoreKey(event.target.value)}
+            autoComplete="off"
+          />
+          <button type="submit" disabled={busy || !restoreKey.trim()}>Restore</button>
+        </form>
+      ) : null}
 
       {error ? <p className="pro-error" role="alert">{error}</p> : null}
 
-      {tiers ? (
+      {showShop && tiers ? (
         <PlanComparison
           tiers={tiers}
           price={{
@@ -236,10 +370,12 @@ const Pro = () => {
         />
       ) : null}
 
-      <div className="pro-paypal-last-resort">
-        <p>Cannot pay by card? Last-resort PayPal donate only:</p>
-        <DonateButton />
-      </div>
+      {showShop ? (
+        <div className="pro-paypal-last-resort">
+          <p>Cannot pay by card? Last-resort PayPal donate only:</p>
+          <DonateButton />
+        </div>
+      ) : null}
     </div>
   );
 };
