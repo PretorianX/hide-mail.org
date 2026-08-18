@@ -250,13 +250,19 @@ const webhook = async (req, res, next) => {
  * WayForPay sends the payer back with a POST, which static hosting answers with 405, so the
  * browser lands here and is redirected to the page that turns the order reference into a key.
  */
-const customerReturn = (req, res) => {
-  const target = new URL(config.wayforpay.returnUrl);
-  const { orderReference } = req.query || {};
-  if (typeof orderReference === 'string' && orderReference) {
-    target.searchParams.set('orderReference', orderReference);
+const customerReturn = async (req, res, next) => {
+  try {
+    const target = new URL(config.wayforpay.returnUrl);
+    const { orderReference } = req.query || {};
+    if (typeof orderReference === 'string' && orderReference) {
+      const token = await orderService.createHandoffToken(orderReference);
+      target.searchParams.set('handoffToken', token);
+    }
+    return res.redirect(302, target.toString());
+  } catch (error) {
+    logger.error(`Billing return error: ${sanitizeForLog(error.message)}`);
+    return next(error);
   }
-  return res.redirect(302, target.toString());
 };
 
 const validateLicense = async (req, res, next) => {
@@ -325,7 +331,11 @@ const issueApiKey = async (req, res, next) => {
 
 const getOrder = async (req, res, next) => {
   try {
-    const order = await orderService.getOrder(req.params.orderReference);
+    const orderReference = await orderService.resolveHandoffToken(req.params.handoffToken);
+    if (!orderReference) {
+      return res.status(404).json({ success: false, error: 'Order not found' });
+    }
+    const order = await orderService.getOrder(orderReference);
     if (!order) {
       return res.status(404).json({ success: false, error: 'Order not found' });
     }
@@ -337,12 +347,17 @@ const getOrder = async (req, res, next) => {
       return res.status(200).json({ success: true, data: safe, licenseKey: null, apiKey: null });
     }
 
+    const consumed = await orderService.consumeHandoffToken(req.params.handoffToken);
+    if (!consumed) {
+      return res.status(404).json({ success: false, error: 'Order not found' });
+    }
+    const { apiKey, apiKeyRemainingDays, apiKeyExpiresAt, ...safe } = order;
     return res.status(200).json({
       success: true,
-      data: order,
+      data: safe,
       licenseKey: order.licenseKey,
-      apiKey: order.apiKey || null,
-      apiKeyRemainingDays: order.apiKeyRemainingDays || null,
+      apiKey: null,
+      apiKeyRemainingDays: null,
     });
   } catch (error) {
     logger.error(`Get order error: ${sanitizeForLog(error.message)}`);

@@ -100,8 +100,8 @@ class LicenseService {
     return payload.checkout || payload.data;
   }
 
-  static async fetchPaidOrder(orderReference) {
-    const response = await fetch(`${API_URL}/billing/order/${encodeURIComponent(orderReference)}`, {
+  static async fetchPaidOrder(handoffToken) {
+    const response = await fetch(`${API_URL}/billing/order/${encodeURIComponent(handoffToken)}`, {
       headers: jsonHeaders,
     });
     const payload = await response.json();

@@ -135,8 +135,8 @@ describe('Pro page', () => {
     });
   });
 
-  test('removes the order reference from the URL after collecting the license key', async () => {
-    window.history.replaceState({}, '', '/pro?orderReference=pro-monthly-abc');
+  test('removes the handoff token from the URL after collecting the license key', async () => {
+    window.history.replaceState({}, '', '/pro?handoffToken=token-abc');
     LicenseService.fetchPaidOrder.mockResolvedValue({
       licenseKey: 'HM-AAAA-BBBB-CCCC-DDDD',
     });
@@ -150,7 +150,7 @@ describe('Pro page', () => {
     );
 
     await waitFor(() => {
-      expect(LicenseService.fetchPaidOrder).toHaveBeenCalledWith('pro-monthly-abc');
+      expect(LicenseService.fetchPaidOrder).toHaveBeenCalledWith('token-abc');
     });
     expect(window.location.search).toBe('');
   });
