@@ -42,12 +42,15 @@ const Pro = () => {
     if (!handoffToken) {
       return undefined;
     }
-    // The reference can hand out the license key, so keep it out of history, referrers and
-    // anything the ad scripts on the page report as the current URL.
-    window.history.replaceState({}, '', window.location.pathname);
     let cancelled = false;
     LicenseService.fetchPaidOrder(handoffToken).then((paid) => {
-      if (!cancelled && paid?.licenseKey) {
+      if (cancelled) {
+        return;
+      }
+      // The reference can hand out the license key, so keep it out of history, referrers and
+      // anything the ad scripts on the page report as the current URL.
+      window.history.replaceState({}, '', window.location.pathname);
+      if (paid?.licenseKey) {
         activate(paid.licenseKey);
         if (paid.apiKey || paid.data?.apiKey) {
           setApiKey(paid.apiKey || paid.data.apiKey);

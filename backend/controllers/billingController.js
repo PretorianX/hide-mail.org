@@ -331,7 +331,7 @@ const issueApiKey = async (req, res, next) => {
 
 const getOrder = async (req, res, next) => {
   try {
-    const orderReference = await orderService.consumeHandoffToken(req.params.handoffToken);
+    const orderReference = await orderService.resolveHandoffToken(req.params.handoffToken);
     if (!orderReference) {
       return res.status(404).json({ success: false, error: 'Order not found' });
     }
@@ -347,9 +347,11 @@ const getOrder = async (req, res, next) => {
       return res.status(200).json({ success: true, data: safe, licenseKey: null, apiKey: null });
     }
 
+    await orderService.consumeHandoffToken(req.params.handoffToken);
+    const { apiKey, apiKeyRemainingDays, apiKeyExpiresAt, ...safe } = order;
     return res.status(200).json({
       success: true,
-      data: order,
+      data: safe,
       licenseKey: order.licenseKey,
       apiKey: null,
       apiKeyRemainingDays: null,

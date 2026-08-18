@@ -91,6 +91,15 @@ const createHandoffToken = async (orderId, ttlSeconds = HANDOFF_TTL_SECONDS) => 
   return token;
 };
 
+const resolveHandoffToken = async (token) => {
+  if (!token || typeof token !== 'string') {
+    return null;
+  }
+  const key = `${HANDOFF_PREFIX}${token}`;
+  const result = await redisService.client.get(key);
+  return result || null;
+};
+
 const consumeHandoffToken = async (token) => {
   if (!token || typeof token !== 'string') {
     return null;
@@ -109,5 +118,6 @@ module.exports = {
   markOrderPaid,
   markCallbackApplied,
   createHandoffToken,
+  resolveHandoffToken,
   consumeHandoffToken,
 };
