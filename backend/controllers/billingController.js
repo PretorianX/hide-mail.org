@@ -347,7 +347,10 @@ const getOrder = async (req, res, next) => {
       return res.status(200).json({ success: true, data: safe, licenseKey: null, apiKey: null });
     }
 
-    await orderService.consumeHandoffToken(req.params.handoffToken);
+    const consumed = await orderService.consumeHandoffToken(req.params.handoffToken);
+    if (!consumed) {
+      return res.status(404).json({ success: false, error: 'Order not found' });
+    }
     const { apiKey, apiKeyRemainingDays, apiKeyExpiresAt, ...safe } = order;
     return res.status(200).json({
       success: true,

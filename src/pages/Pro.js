@@ -42,21 +42,31 @@ const Pro = () => {
     if (!handoffToken) {
       return undefined;
     }
+    // The reference can hand out the license key, so keep it out of history, referrers and
+    // anything the ad scripts on the page report as the current URL.
+    window.history.replaceState({}, '', window.location.pathname);
     let cancelled = false;
     LicenseService.fetchPaidOrder(handoffToken).then((paid) => {
       if (cancelled) {
         return;
       }
-      // The reference can hand out the license key, so keep it out of history, referrers and
-      // anything the ad scripts on the page report as the current URL.
-      window.history.replaceState({}, '', window.location.pathname);
       if (paid?.licenseKey) {
         activate(paid.licenseKey);
         if (paid.apiKey || paid.data?.apiKey) {
           setApiKey(paid.apiKey || paid.data.apiKey);
           setApiKeyDays(paid.apiKeyRemainingDays || paid.data?.apiKeyRemainingDays || null);
         }
+      } else if (!paid?.licenseKey && paid?.data && !paid.data.paidAt) {
+        const token = handoffToken;
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.set('handoffToken', token);
+        window.history.replaceState({}, '', newUrl.toString());
       }
+    }).catch(() => {
+      const token = handoffToken;
+      const newUrl = new URL(window.location.href);
+      newUrl.searchParams.set('handoffToken', token);
+      window.history.replaceState({}, '', newUrl.toString());
     });
     return () => {
       cancelled = true;
