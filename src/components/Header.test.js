@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { BrowserRouter } from 'react-router';
 import Header from './Header';
 import { ThemeProvider } from '../styles/ThemeContext';
@@ -8,35 +8,50 @@ jest.mock('../context/LicenseContext', () => ({
   useLicense: () => ({ isPro: false, license: null }),
 }));
 
+const renderHeader = () =>
+  render(
+    <ThemeProvider>
+      <BrowserRouter>
+        <Header />
+      </BrowserRouter>
+    </ThemeProvider>
+  );
+
 describe('Header Component', () => {
   test('renders header with logo and navigation links', () => {
-    render(
-      <ThemeProvider>
-        <BrowserRouter>
-          <Header />
-        </BrowserRouter>
-      </ThemeProvider>
-    );
-    
+    renderHeader();
+
     // Check for logo text
     expect(screen.getByText('Hide Mail')).toBeInTheDocument();
     expect(screen.getByText('Your friendly temporary email service')).toBeInTheDocument();
-    
-    // Check for navigation links
-    expect(screen.getByText('Home')).toBeInTheDocument();
-    expect(screen.getByText('Pro')).toBeInTheDocument();
-    expect(screen.getByText('Blog')).toBeInTheDocument();
-    expect(screen.getByText('About')).toBeInTheDocument();
-    expect(screen.getByText('Contact')).toBeInTheDocument();
-    
-    // Check that links have correct hrefs
-    expect(screen.getByText('Home').closest('a')).toHaveAttribute('href', '/');
-    expect(screen.getByText('Pro').closest('a')).toHaveAttribute('href', '/pro');
-    expect(screen.getByText('Blog').closest('a')).toHaveAttribute('href', '/blog');
-    expect(screen.getByText('About').closest('a')).toHaveAttribute('href', '/about-us');
-    expect(screen.getByText('Contact').closest('a')).toHaveAttribute('href', '/contact-us');
-    
+
+    // Check that navigation links are present and point at the right pages
+    const nav = within(screen.getByRole('navigation'));
+    expect(nav.getByRole('link', { name: 'Home' })).toHaveAttribute('href', '/');
+    expect(nav.getByRole('link', { name: 'Blog' })).toHaveAttribute('href', '/blog');
+    expect(nav.getByRole('link', { name: 'About' })).toHaveAttribute('href', '/about-us');
+    expect(nav.getByRole('link', { name: 'Contact' })).toHaveAttribute('href', '/contact-us');
+    expect(nav.getByRole('link', { name: 'Go Pro' })).toHaveAttribute('href', '/pro');
+
     // Check that theme toggle button is present
     expect(screen.getByRole('button', { name: /switch to (dark|light) mode/i })).toBeInTheDocument();
   });
-}); 
+
+  test('presents Pro as a call to action and the other entries as plain links', () => {
+    renderHeader();
+    const nav = within(screen.getByRole('navigation'));
+
+    expect(nav.getByRole('link', { name: 'Go Pro' })).toHaveClass('nav-pro-cta');
+
+    ['Home', 'Blog', 'About', 'Contact'].forEach(label => {
+      expect(nav.getByRole('link', { name: label })).not.toHaveClass('nav-pro-cta');
+    });
+  });
+
+  test('renders the Pro entry last so it sits at the trailing edge of the nav', () => {
+    renderHeader();
+
+    const navLinks = within(screen.getByRole('navigation')).getAllByRole('link');
+    expect(navLinks[navLinks.length - 1]).toHaveClass('nav-pro-cta');
+  });
+});

@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router';
 import styled from 'styled-components';
 import ThemeToggle from './ThemeToggle';
+import NavProCta from './NavProCta';
 import { useLicense } from '../context/LicenseContext';
 
 const HeaderContainer = styled.header`
@@ -52,7 +53,13 @@ const NavContainer = styled.div`
 const Nav = styled.nav`
   display: flex;
   justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 20px;
+
+  @media (max-width: 768px) {
+    gap: 10px;
+  }
 `;
 
 const ThemeToggleContainer = styled.div`
@@ -79,18 +86,6 @@ const NavLink = styled(Link)`
   }
 `;
 
-const ParentSite = styled.a`
-  font-size: 12px;
-  color: #888;
-  text-decoration: none;
-  display: block;
-  margin-top: 5px;
-  
-  &:hover {
-    text-decoration: underline;
-  }
-`;
-
 const Header = () => {
   const { isPro, license } = useLicense();
   const daysLeft = license?.remainingDays
@@ -114,12 +109,9 @@ const Header = () => {
           <Nav>
             <NavLink to="/">Home</NavLink>
             <NavLink to="/blog">Blog</NavLink>
-            <NavLink to="/pro">Pro</NavLink>
-            {isPro && daysLeft !== null ? (
-              <span data-testid="header-pro-days">{daysLeft} days left</span>
-            ) : null}
             <NavLink to="/about-us">About</NavLink>
             <NavLink to="/contact-us">Contact</NavLink>
+            <NavProCta isPro={isPro} daysLeft={daysLeft} />
           </Nav>
         </NavContainer>
       </HeaderContent>

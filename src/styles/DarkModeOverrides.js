@@ -6,12 +6,14 @@ const DarkModeOverrides = createGlobalStyle`
     background-color: var(--duck-orange);
   }
   
-  [data-theme='dark'] .app-header a {
+  /* .nav-pro-cta is a filled button, not a link on the bar: forcing the link ink onto it
+     would put near-white text on a white fill. */
+  [data-theme='dark'] .app-header a:not(.nav-pro-cta) {
     color: var(--duck-white);
     text-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
   }
   
-  [data-theme='dark'] .app-header a:hover {
+  [data-theme='dark'] .app-header a:not(.nav-pro-cta):hover {
     background-color: rgba(0, 0, 0, 0.2);
   }
 
@@ -110,7 +112,7 @@ const DarkModeOverrides = createGlobalStyle`
     color: var(--light-text);
   }
 
-  [data-theme='dark'] a {
+  [data-theme='dark'] a:not(.nav-pro-cta) {
     color: var(--duck-orange);
   }
 
