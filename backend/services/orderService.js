@@ -51,8 +51,27 @@ const markOrderPaid = async (orderId, licenseKey, extra = {}) => {
   return persist(order);
 };
 
+/**
+ * Remembers which callback the order last acted on. WayForPay replays a callback until it is
+ * acknowledged, so a queue of replays can outlive the status it describes, and the transaction's
+ * own processing date is the only thing that orders them.
+ */
+const markCallbackApplied = async (orderId, processingDate) => {
+  let order = await getOrder(orderId);
+  if (!order) {
+    order = {
+      id: orderId,
+      status: 'pending',
+      createdAt: Date.now(),
+    };
+  }
+  order.lastCallbackProcessingDate = processingDate;
+  return persist(order);
+};
+
 module.exports = {
   createOrder,
   getOrder,
   markOrderPaid,
+  markCallbackApplied,
 };
