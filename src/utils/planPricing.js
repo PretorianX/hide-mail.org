@@ -11,7 +11,11 @@ export const displayAmount = (usdAmount, usdRate, toRate) =>
   floorToCents(usdAmount * (usdRate / toRate));
 
 export const displayCurrencies = (rates) => {
-  const others = Object.keys(rates || {}).filter((code) => code !== 'USD').sort();
+  const codes = Object.keys(rates || {});
+  if (codes.length === 0) {
+    return ['USD'];
+  }
+  const others = codes.filter((code) => code !== 'USD').sort();
   return ['USD', ...others, 'UAH'];
 };
 
@@ -41,11 +45,15 @@ export const headlinePrice = (plan, displayCurrency, fx) => {
   );
 };
 
-export const chargedNote = (plan) => `charged as ${plan.amount} UAH`;
+export const chargedNote = (plan) =>
+  (plan?.amount == null ? 'UAH charge unavailable' : `charged as ${plan.amount} UAH`);
 
 export const priceLabel = (plan, displayCurrency, period, fx) => {
   if (!plan) {
     return '—';
+  }
+  if (plan.amount == null) {
+    return `${headlinePrice(plan, displayCurrency, fx)} ${period}`;
   }
   return `${headlinePrice(plan, displayCurrency, fx)} ${period} (${plan.amount} UAH)`;
 };

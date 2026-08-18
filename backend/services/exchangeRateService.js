@@ -47,20 +47,32 @@ const writeCache = async (payload) => {
   );
 };
 
+// Live API uses camelCase (reasonCode, rates). The wiki example uses REASONCODE/RATES.
+const pick = (body, camel, upper) =>
+  (body && (body[camel] !== undefined && body[camel] !== null ? body[camel] : body[upper]));
+
 const parseRates = (body) => {
-  if (!body || Number(body.REASONCODE) !== 1100) {
-    throw new Error('CURRENCY_RATES not OK');
+  const reasonCode = Number(pick(body, 'reasonCode', 'REASONCODE'));
+  const reason = pick(body, 'reason', 'REASON');
+  if (!body || reasonCode !== 1100) {
+    throw new Error(
+      `CURRENCY_RATES not OK reasonCode=${Number.isFinite(reasonCode) ? reasonCode : 'none'} reason=${reason || ''}`
+    );
   }
-  const rates = body.RATES;
-  if (!rates || typeof rates !== 'object' || Object.keys(rates).length === 0) {
+  const rawRates = pick(body, 'rates', 'RATES');
+  if (!rawRates || typeof rawRates !== 'object' || Object.keys(rawRates).length === 0) {
     throw new Error('CURRENCY_RATES missing RATES');
   }
-  if (!isPositiveFinite(Number(rates.USD))) {
+  const rates = {};
+  Object.entries(rawRates).forEach(([code, value]) => {
+    rates[String(code).toUpperCase()] = Number(value);
+  });
+  if (!isPositiveFinite(rates.USD)) {
     throw new Error('CURRENCY_RATES missing USD');
   }
   return {
     rates,
-    ratesDate: body.RATESDATE,
+    ratesDate: pick(body, 'ratesDate', 'RATESDATE'),
     fetchedAt: Date.now(),
   };
 };
