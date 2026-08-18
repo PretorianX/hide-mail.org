@@ -42,4 +42,14 @@ describe('webhookUrlGuard', () => {
       validatePublicHttpsWebhookUrl('https://qa.example.test/hook', lookup)
     ).rejects.toThrow(/invalid webhook url/i);
   });
+
+  it('rejects hex-encoded IPv4-mapped IPv6 loopback addresses', async () => {
+    const lookup = jest.fn().mockResolvedValue([
+      { address: '::ffff:7f00:1', family: 6 },
+    ]);
+
+    await expect(
+      validatePublicHttpsWebhookUrl('https://qa.example.test/hook', lookup)
+    ).rejects.toThrow(/invalid webhook url/i);
+  });
 });

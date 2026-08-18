@@ -38,6 +38,8 @@ const isPrivateIpv6 = (address) => {
     if (net.isIP(mapped) === 4) {
       return isPrivateIpv4(mapped);
     }
+    // Reject all other ::ffff: forms (e.g., hex-encoded IPv4-mapped addresses)
+    return true;
   }
   return false;
 };
