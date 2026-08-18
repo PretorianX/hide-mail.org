@@ -227,6 +227,26 @@ describe('billingController', () => {
         expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ status: 'accept' }));
       });
 
+      // A duplicate takes the renewal branch, because the licence it created is now findable by
+      // orderReference, so re-applying one would extend the licence and book the sale twice.
+      it('ignores a re-delivery of the callback it has already applied', async () => {
+        orderService.getOrder.mockResolvedValue({
+          id: 'pro-monthly-replay',
+          type: 'pro',
+          plan: 'monthly',
+          amount: 149,
+          currency: 'UAH',
+          lastCallbackProcessingDate: 1786994135,
+        });
+
+        const res = mockRes();
+        await billingController.webhook({ body: approvedReplay(1786994135) }, res);
+
+        expect(licenseService.createLicense).not.toHaveBeenCalled();
+        expect(licenseService.renewByPayment).not.toHaveBeenCalled();
+        expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ status: 'accept' }));
+      });
+
       it('applies a callback that is newer than the one already recorded', async () => {
         licenseService.findByRecToken.mockResolvedValue(null);
         licenseService.findByOrderReference.mockResolvedValue(null);

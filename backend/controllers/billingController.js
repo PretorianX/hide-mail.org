@@ -160,7 +160,10 @@ const activateLicense = async ({ orderReference, recToken, amount, currency }) =
  * WayForPay replays a callback until it is acknowledged, so a queue of replays can outlive the
  * status it describes: a refunded order was activated once because an Approved replay landed 44
  * minutes after the Refunded callback had settled the transaction. The processing date is the
- * transaction's own clock, so a callback older than the one already applied is stale by definition.
+ * transaction's own clock, so a callback that is not newer than the one already applied has nothing
+ * left to say. Re-delivering the same date has to count as superseded too: the licence a duplicate
+ * would find by orderReference sends it down the renewal branch, extending the licence by another
+ * period and booking the sale a second time.
  */
 const isSupersededCallback = async (orderReference, processingDate) => {
   if (typeof processingDate !== 'number') {
@@ -168,7 +171,7 @@ const isSupersededCallback = async (orderReference, processingDate) => {
   }
   const order = await orderService.getOrder(orderReference);
   const applied = order?.lastCallbackProcessingDate;
-  return typeof applied === 'number' && processingDate < applied;
+  return typeof applied === 'number' && processingDate <= applied;
 };
 
 const webhook = async (req, res, next) => {
