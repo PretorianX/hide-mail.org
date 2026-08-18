@@ -11,6 +11,7 @@ const { sanitizeForLog } = require('../utils/sanitize');
 
 const WAYFORPAY_API_URL = 'https://api.wayforpay.com/api';
 const CACHE_KEY = 'billing:fx:rates';
+const FETCH_TIMEOUT_MS = 8000;
 
 const rateUnavailable = (message) => {
   const error = new Error(message);
@@ -38,8 +39,12 @@ const readCache = async () => {
 };
 
 const writeCache = async (payload) => {
-  await redisService.client.set(CACHE_KEY, JSON.stringify(payload));
-  await redisService.client.expire(CACHE_KEY, config.billing.fxStaleSeconds);
+  await redisService.client.set(
+    CACHE_KEY,
+    JSON.stringify(payload),
+    'EX',
+    config.billing.fxStaleSeconds
+  );
 };
 
 const parseRates = (body) => {
@@ -82,6 +87,7 @@ const fetchFromWayForPay = async () => {
       orderDate,
       merchantSignature,
     }),
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   });
 
   if (!response.ok) {

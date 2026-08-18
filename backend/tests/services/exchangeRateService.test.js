@@ -70,7 +70,10 @@ describe('exchangeRateService', () => {
 
     expect(global.fetch).toHaveBeenCalledWith(
       'https://api.wayforpay.com/api',
-      expect.objectContaining({ method: 'POST' })
+      expect.objectContaining({
+        method: 'POST',
+        signal: expect.any(AbortSignal),
+      })
     );
     const sent = JSON.parse(global.fetch.mock.calls[0][1].body);
     expect(sent.transactionType).toBe('CURRENCY_RATES');
