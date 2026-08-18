@@ -999,19 +999,21 @@ footer a:hover {
   text-decoration: underline;
 }
 
-/* WCAG 2.2: Footer links in dark mode - orange on dark background */
-[data-theme='dark'] footer a,
-[data-theme='dark'] .footer a,
-[data-theme='dark'] .footer-links a {
+/* WCAG 2.2: Footer links in dark mode - orange on dark background.
+   Scoped away from the Pro button: it is a link painted as a filled orange button, so orange text
+   forced onto it lands orange on orange, which is the opposite of what these rules are here for. */
+[data-theme='dark'] footer a:not(.pro-cta-button),
+[data-theme='dark'] .footer a:not(.pro-cta-button),
+[data-theme='dark'] .footer-links a:not(.pro-cta-button) {
   color: var(--duck-orange-light, #ffa940) !important; /* WCAG AA: 5.4:1 contrast */
   text-decoration: none;
   transition: all 0.2s ease;
   font-weight: 500;
 }
 
-[data-theme='dark'] footer a:hover,
-[data-theme='dark'] .footer a:hover,
-[data-theme='dark'] .footer-links a:hover {
+[data-theme='dark'] footer a:not(.pro-cta-button):hover,
+[data-theme='dark'] .footer a:not(.pro-cta-button):hover,
+[data-theme='dark'] .footer-links a:not(.pro-cta-button):hover {
   color: #ffbe6b !important;
   text-decoration: underline;
   background-color: rgba(255, 169, 64, 0.15);

@@ -163,11 +163,14 @@ const GlobalStyle = createGlobalStyle`
     border-top-color: var(--border-color);
   }
   
-  [data-theme='dark'] footer a {
+  /* The Pro button is a link painted as a filled orange button, so the footer's link colour is kept
+     off it: on hover this selector outweighs the button's own colour and turned the label orange on
+     orange. */
+  [data-theme='dark'] footer a:not(.pro-cta-button) {
     color: var(--duck-orange);
   }
   
-  [data-theme='dark'] footer a:hover {
+  [data-theme='dark'] footer a:not(.pro-cta-button):hover {
     color: var(--duck-orange-light);
   }
 `;

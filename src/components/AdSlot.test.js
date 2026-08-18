@@ -17,25 +17,30 @@ const renderWithLicense = (isPro, props = {}) =>
   );
 
 describe('AdSlot', () => {
-  test('renders the labelled ad container for a free user', () => {
+  test('renders the ad for a free user', () => {
     renderWithLicense(false);
 
-    expect(screen.getByTestId('ad-slot')).toHaveClass('ad-container');
     expect(screen.getByTestId('content-aware-ad')).toBeInTheDocument();
   });
 
-  test('appends the placement class to the container', () => {
+  // The label is drawn by CSS on .ad-container, and AdContainer further down already carries that
+  // class, so repeating it on the placement wrapper printed "Advertisement" twice per slot.
+  test('leaves the ad-container class to the ad itself so the label is not repeated', () => {
     renderWithLicense(false, { className: 'ad-in-footer' });
 
-    const slot = screen.getByTestId('ad-slot');
-    expect(slot).toHaveClass('ad-container');
-    expect(slot).toHaveClass('ad-in-footer');
+    expect(screen.getByTestId('ad-slot')).not.toHaveClass('ad-container');
   });
 
-  test('renders no ad-container for a Pro user so no Advertisement label is left behind', () => {
+  test('keeps the placement class on the wrapper', () => {
+    renderWithLicense(false, { className: 'ad-in-footer' });
+
+    expect(screen.getByTestId('ad-slot')).toHaveClass('ad-in-footer');
+  });
+
+  // Nothing at all, so a paid page is not left with a stray "Advertisement" label or its margin.
+  test('renders nothing for a Pro user', () => {
     const { container } = renderWithLicense(true);
 
     expect(container).toBeEmptyDOMElement();
-    expect(container.querySelector('.ad-container')).toBeNull();
   });
 });
