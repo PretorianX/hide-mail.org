@@ -132,4 +132,17 @@ describe('exchangeRateService', () => {
       code: 'RATE_UNAVAILABLE',
     });
   });
+
+  it('accepts the live camelCase body WayForPay actually returns', async () => {
+    fetchOk({
+      reasonCode: 1100,
+      reason: 'OK',
+      ratesDate: 1519115604,
+      rates: { USD: 41.5, EUR: 45.2 },
+    });
+
+    const payload = await exchangeRateService.getRates();
+    expect(payload.rates.USD).toBe(41.5);
+    expect(payload.ratesDate).toBe(1519115604);
+  });
 });

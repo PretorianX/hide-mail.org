@@ -418,7 +418,24 @@ const listPlans = async (req, res, next) => {
     });
   } catch (error) {
     if (error.code === 'RATE_UNAVAILABLE') {
-      return respondRateUnavailable(res, error);
+      // Checkout still refuses without a rate. The page can show USD list prices and
+      // the comparison table instead of going blank.
+      return res.status(200).json({
+        success: true,
+        rateUnavailable: true,
+        settlementCurrency: 'UAH',
+        defaultDisplayCurrency: 'USD',
+        usdRate: null,
+        rates: {},
+        plans: CATALOG.map(({ id, type, plan }) => ({
+          id,
+          type,
+          plan,
+          usd: pricingService.usdPrice(type, plan),
+          amount: null,
+        })),
+        tiers: entitlementService.describeTiers(),
+      });
     }
     logger.error(`Billing listPlans error: ${sanitizeForLog(error.message)}`);
     return next(error);

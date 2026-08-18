@@ -50,6 +50,7 @@ const checkoutAlternative = (usd, rates, displayCurrency) => {
 };
 
 module.exports = {
+  usdPrice,
   uahFromUsd,
   displayAmount,
   quotePlan,

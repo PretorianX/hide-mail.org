@@ -30,6 +30,7 @@ const Pro = () => {
   const [apiKey, setApiKey] = useState(null);
   const [apiKeyDays, setApiKeyDays] = useState(null);
   const [tiers, setTiers] = useState(null);
+  const [checkoutDisabled, setCheckoutDisabled] = useState(false);
 
   const currencies = displayCurrencies(fx.rates);
 
@@ -42,6 +43,10 @@ const Pro = () => {
           rates: payload.rates || {},
         });
         setTiers(payload.tiers || null);
+        setCheckoutDisabled(Boolean(payload.rateUnavailable));
+        if (payload.rateUnavailable) {
+          setError('Currency rates are unavailable. Checkout is paused; USD prices below are the list prices.');
+        }
         const allowed = displayCurrencies(payload.rates);
         setDisplayCurrency((current) => (allowed.includes(current) ? current : 'USD'));
       })
@@ -188,7 +193,7 @@ const Pro = () => {
                 key={plan.id}
                 type="button"
                 className={`pro-plan ${plan.id === 'yearly' ? 'pro-plan-featured' : ''}`}
-                disabled={busy}
+                disabled={busy || checkoutDisabled || plan.amount == null}
                 onClick={() => handleCheckout(plan)}
               >
                 <strong>{PLAN_LABELS[plan.id] || plan.id}</strong>

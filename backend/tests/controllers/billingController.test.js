@@ -107,7 +107,7 @@ describe('billingController', () => {
       expect(JSON.stringify(payload)).not.toMatch(/secret/i);
     });
 
-    it('returns 503 RATE_UNAVAILABLE when FX rates cannot be quoted', async () => {
+    it('returns USD list prices and tiers when FX rates cannot be quoted', async () => {
       const error = new Error('Currency rates are unavailable. Try again later.');
       error.code = 'RATE_UNAVAILABLE';
       error.status = 503;
@@ -116,11 +116,13 @@ describe('billingController', () => {
       const res = mockRes();
       await billingController.listPlans({}, res);
 
-      expect(res.status).toHaveBeenCalledWith(503);
-      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
-        success: false,
-        code: 'RATE_UNAVAILABLE',
-      }));
+      expect(res.status).toHaveBeenCalledWith(200);
+      const payload = res.json.mock.calls[0][0];
+      expect(payload.rateUnavailable).toBe(true);
+      expect(payload.tiers).toBeDefined();
+      expect(payload.plans).toEqual(expect.arrayContaining([
+        expect.objectContaining({ id: 'monthly', usd: 3.49, amount: null }),
+      ]));
     });
   });
 

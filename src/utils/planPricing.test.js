@@ -18,6 +18,7 @@ describe('planPricing', () => {
 
   test('lists WayForPay rate codes plus UAH, with USD first', () => {
     expect(displayCurrencies(fx.rates)).toEqual(['USD', 'EUR', 'GBP', 'UAH']);
+    expect(displayCurrencies({})).toEqual(['USD']);
   });
 
   test('leads with the selected display currency', () => {
@@ -28,6 +29,7 @@ describe('planPricing', () => {
 
   test('names the amount that actually leaves the card', () => {
     expect(chargedNote(monthly)).toBe('charged as 140 UAH');
+    expect(chargedNote({ ...monthly, amount: null })).toBe('UAH charge unavailable');
   });
 
   test('combines both currencies for the comparison table', () => {

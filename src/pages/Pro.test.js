@@ -193,8 +193,49 @@ describe('Pro page', () => {
     });
   });
 
-  test('shows a rates error and does not offer checkout', async () => {
-    LicenseService.listPlans.mockRejectedValue(new Error('Currency rates are unavailable. Try again later.'));
+  test('shows USD list prices and the comparison table when rates are down', async () => {
+    LicenseService.listPlans.mockResolvedValue({
+      success: true,
+      rateUnavailable: true,
+      settlementCurrency: 'UAH',
+      defaultDisplayCurrency: 'USD',
+      usdRate: null,
+      rates: {},
+      plans: [
+        { id: 'monthly', type: 'pro', plan: 'monthly', amount: null, usd: 3.49 },
+        { id: 'yearly', type: 'pro', plan: 'yearly', amount: null, usd: 24.99 },
+        { id: 'api', type: 'api', plan: 'monthly', amount: null, usd: 7.99 },
+      ],
+      tiers: {
+        free: {
+          ads: true,
+          customAlias: false,
+          premiumDomains: false,
+          apiAccess: false,
+          forwardingLimit: 2,
+          mailboxTtlSeconds: 1800,
+          mailboxTtlOptions: [],
+        },
+        pro: {
+          ads: false,
+          customAlias: true,
+          premiumDomains: true,
+          apiAccess: false,
+          forwardingLimit: 100,
+          mailboxTtlSeconds: 86400,
+          mailboxTtlOptions: [86400, 604800, 2592000],
+        },
+        api: {
+          ads: false,
+          customAlias: true,
+          premiumDomains: true,
+          apiAccess: true,
+          forwardingLimit: 100,
+          mailboxTtlSeconds: 86400,
+          mailboxTtlOptions: [86400, 604800, 2592000],
+        },
+      },
+    });
 
     render(
       <MemoryRouter>
@@ -204,8 +245,9 @@ describe('Pro page', () => {
       </MemoryRouter>
     );
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(/currency rates are unavailable/i);
-    expect(screen.queryByRole('button', { name: /monthly/i })).not.toBeInTheDocument();
+    expect(await screen.findByRole('alert')).toHaveTextContent(/checkout is paused/i);
+    expect(screen.getByRole('button', { name: /monthly/i })).toBeDisabled();
+    expect(screen.getByRole('heading', { name: /what you actually get/i })).toBeInTheDocument();
   });
 
   test('lets an API subscriber pull a fresh key when the old one expires', async () => {
