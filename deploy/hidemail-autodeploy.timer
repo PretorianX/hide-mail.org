@@ -6,7 +6,6 @@ OnBootSec=2min
 OnUnitActiveSec=5min
 # A manifest check is cheap, so the window only exists to avoid waking the host on the dot.
 AccuracySec=30s
-Persistent=true
 
 [Install]
 WantedBy=timers.target
