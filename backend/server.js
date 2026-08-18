@@ -17,8 +17,10 @@ const billingController = require('./controllers/billingController');
 const qaWebhookService = require('./services/qaWebhookService');
 const attachLicense = require('./middleware/attachLicense');
 const { createOriginVerifier, parseAllowedOrigins } = require('./services/originVerifier');
+const { randomUUID } = require('node:crypto');
 
 const app = express();
+app.disable('x-powered-by');
 const PORT = process.env.PORT || 3001;
 const SMTP_PORT = process.env.SMTP_PORT || 2525;
 
@@ -94,6 +96,11 @@ const corsOptions = {
 app.all('/api/billing/return', billingController.customerReturn);
 
 // Middleware
+app.use((req, res, next) => {
+  req.correlationId = req.get('x-correlation-id') || randomUUID();
+  res.setHeader('x-correlation-id', req.correlationId);
+  next();
+});
 app.use(cors(corsOptions));
 app.use(httpMetricsMiddleware);
 
@@ -120,11 +127,13 @@ app.get('/health', (req, res) => {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  logger.error(`Error: ${err.message}`);
+  logger.error(`Error [${req.correlationId}]: ${err.message}`);
+  const isProduction = config.environment === 'production';
   res.status(err.status || 500).json({
     error: {
-      message: err.message || 'Internal Server Error'
-    }
+      message: isProduction ? 'Internal Server Error' : (err.message || 'Internal Server Error'),
+      correlationId: req.correlationId,
+    },
   });
 });
 

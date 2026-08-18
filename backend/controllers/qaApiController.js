@@ -13,6 +13,7 @@ const crypto = require('crypto');
 const config = require('../config/config');
 const redisService = require('../services/redisService');
 const entitlementService = require('../services/entitlementService');
+const { validatePublicHttpsWebhookUrl } = require('../services/webhookUrlGuard');
 const logger = require('../utils/logger');
 
 const randomLocalPart = () => `qa${crypto.randomBytes(6).toString('hex')}`;
@@ -95,10 +96,19 @@ const setWebhook = async (req, res, next) => {
   try {
     const { email } = req.params;
     const { url } = req.body || {};
-    if (!url || typeof url !== 'string' || !url.startsWith('https://')) {
+    if (!url || typeof url !== 'string') {
       return res.status(400).json({
         success: false,
-        error: 'HTTPS webhook url is required',
+        error: 'Valid public HTTPS webhook URL is required',
+        code: 'INVALID_WEBHOOK_URL',
+      });
+    }
+    try {
+      await validatePublicHttpsWebhookUrl(url);
+    } catch {
+      return res.status(400).json({
+        success: false,
+        error: 'Valid public HTTPS webhook URL is required',
         code: 'INVALID_WEBHOOK_URL',
       });
     }
