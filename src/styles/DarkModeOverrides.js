@@ -1,4 +1,5 @@
 import { createGlobalStyle } from 'styled-components';
+import { HEADER_INK, HEADER_INK_STRONG, HEADER_HOVER_WASH } from './headerInk';
 
 const DarkModeOverrides = createGlobalStyle`
   /* Navigation Dark Mode Styles */
@@ -6,15 +7,18 @@ const DarkModeOverrides = createGlobalStyle`
     background-color: var(--duck-orange);
   }
   
-  /* .nav-pro-cta is a filled button, not a link on the bar: forcing the link ink onto it
-     would put near-white text on a white fill. */
+  /* The bar stays orange in dark mode, so these links keep the same dark ink as in light mode.
+     The rule exists only to outrank the global [data-theme='dark'] a rule below, which would
+     otherwise paint them orange on orange. .nav-pro-cta is a filled button, not a link on the
+     bar: forcing the link ink onto it would put dark ink on its own dark hover fill. */
   [data-theme='dark'] .app-header a:not(.nav-pro-cta) {
-    color: var(--duck-white);
-    text-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
+    color: ${HEADER_INK};
   }
   
-  [data-theme='dark'] .app-header a:not(.nav-pro-cta):hover {
-    background-color: rgba(0, 0, 0, 0.2);
+  [data-theme='dark'] .app-header nav a:not(.nav-pro-cta):hover,
+  [data-theme='dark'] .app-header nav a:not(.nav-pro-cta):active {
+    background-color: ${HEADER_HOVER_WASH};
+    color: ${HEADER_INK_STRONG};
   }
 
   /* Blog Page Dark Mode Styles */

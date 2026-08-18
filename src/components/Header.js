@@ -4,6 +4,7 @@ import styled from 'styled-components';
 import ThemeToggle from './ThemeToggle';
 import NavProCta from './NavProCta';
 import { useLicense } from '../context/LicenseContext';
+import { HEADER_INK, HEADER_INK_STRONG, HEADER_HOVER_WASH } from '../styles/headerInk';
 
 const HeaderContainer = styled.header`
   background-color: var(--duck-orange);
@@ -12,7 +13,7 @@ const HeaderContainer = styled.header`
   text-align: center;
   border-radius: 12px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  color: var(--duck-white);
+  color: ${HEADER_INK};
 `;
 
 const HeaderContent = styled.div`
@@ -24,20 +25,25 @@ const HeaderContent = styled.div`
 
 const Logo = styled(Link)`
   text-decoration: none;
-  color: white;
+  color: ${HEADER_INK};
   display: block;
   text-align: center;
-  
+
+  &:focus-visible {
+    outline: 3px solid ${HEADER_INK_STRONG};
+    outline-offset: 2px;
+  }
+
   h1 {
     margin: 0;
     font-size: 2.5rem;
     font-weight: 700;
-    color: white;
+    color: ${HEADER_INK};
   }
   
   span {
     font-size: 16px;
-    color: white;
+    color: ${HEADER_INK};
     display: block;
     margin-top: 5px;
   }
@@ -69,20 +75,21 @@ const ThemeToggleContainer = styled.div`
 `;
 
 const NavLink = styled(Link)`
-  color: white;
+  color: ${HEADER_INK};
   text-decoration: none;
   padding: 5px 10px;
   border-radius: 4px;
-  transition: background-color 0.3s;
-  
-  &:hover {
-    background-color: rgba(255, 255, 255, 0.2);
+  transition: background-color 0.3s, color 0.3s;
+
+  &:hover,
+  &:active {
+    background-color: ${HEADER_HOVER_WASH};
+    color: ${HEADER_INK_STRONG};
   }
-  
-  /* Fix for dark mode - ensure proper contrast without changing font weight */
-  [data-theme='dark'] & {
-    color: var(--duck-white);
-    text-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
+
+  &:focus-visible {
+    outline: 3px solid ${HEADER_INK_STRONG};
+    outline-offset: 2px;
   }
 `;
 
@@ -100,17 +107,17 @@ const Header = () => {
           <ThemeToggle />
         </ThemeToggleContainer>
         
-        <Logo to="/">
+        <Logo to="/" className="app-header-logo">
           <h1>Hide Mail</h1>
-          <span>Your friendly temporary email service</span>
+          <span className="app-header-tagline">Your friendly temporary email service</span>
         </Logo>
         
         <NavContainer>
           <Nav>
-            <NavLink to="/">Home</NavLink>
-            <NavLink to="/blog">Blog</NavLink>
-            <NavLink to="/about-us">About</NavLink>
-            <NavLink to="/contact-us">Contact</NavLink>
+            <NavLink className="nav-link" to="/">Home</NavLink>
+            <NavLink className="nav-link" to="/blog">Blog</NavLink>
+            <NavLink className="nav-link" to="/about-us">About</NavLink>
+            <NavLink className="nav-link" to="/contact-us">Contact</NavLink>
             <NavProCta isPro={isPro} daysLeft={daysLeft} />
           </Nav>
         </NavContainer>

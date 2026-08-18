@@ -2,6 +2,10 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import ThemeToggle from './ThemeToggle';
 import { ThemeProvider } from '../styles/ThemeContext';
+import { HEADER_INK } from '../styles/headerInk';
+
+const toRgb = hex => `rgb(${[1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16)).join(', ')})`;
+const asRgb = value => (value.startsWith('#') ? toRgb(value) : value);
 
 // Mock localStorage
 const localStorageMock = (() => {
@@ -113,4 +117,17 @@ describe('ThemeToggle Component', () => {
     expect(toggleButton).toHaveAttribute('aria-label', 'Switch to light mode');
     expect(toggleButton).toHaveAttribute('title', 'Switch to light mode');
   });
-}); 
+
+  test('paints its glyph and its ring in the dark header ink', () => {
+    render(
+      <ThemeProvider>
+        <ThemeToggle />
+      </ThemeProvider>
+    );
+
+    const styles = window.getComputedStyle(screen.getByRole('button'));
+    expect(styles.color).toBe(toRgb(HEADER_INK));
+    // jsdom leaves a colour that came from the `border` shorthand in its authored hex form.
+    expect(asRgb(styles.borderColor)).toBe(toRgb(HEADER_INK));
+  });
+});
