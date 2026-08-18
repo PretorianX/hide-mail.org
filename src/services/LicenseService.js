@@ -81,17 +81,17 @@ class LicenseService {
   static async listPlans() {
     const response = await fetch(`${API_URL}/billing/plans`, { headers: jsonHeaders });
     const payload = await response.json();
-    if (!payload.success) {
+    if (!response.ok || !payload.success) {
       throw new Error(payload.error || 'Unable to load plans');
     }
     return payload;
   }
 
-  static async checkout(plan, type = 'pro') {
+  static async checkout(plan, type = 'pro', displayCurrency = 'USD') {
     const response = await fetch(`${API_URL}/billing/checkout`, {
       method: 'POST',
       headers: jsonHeaders,
-      body: JSON.stringify({ plan, type }),
+      body: JSON.stringify({ plan, type, displayCurrency }),
     });
     const payload = await response.json();
     if (!response.ok || !payload.success) {

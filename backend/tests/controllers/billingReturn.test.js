@@ -16,6 +16,7 @@ describe('WayForPay customer return', () => {
         orderReference: 'pro-monthly-abc',
         orderDate: 1786992999,
         dateNext: '17.09.2026',
+        amount: 140,
       });
 
       // WayForPay POSTs the payer to returnUrl. Static hosting answers POST with 405, so the
@@ -32,6 +33,7 @@ describe('WayForPay customer return', () => {
         orderReference: 'pro-monthly-abc',
         orderDate: 1786992999,
         dateNext: '17.09.2026',
+        amount: 140,
       });
 
       const withDifferentReturn = { ...payload, returnUrl: 'https://example.com/other' };

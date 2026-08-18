@@ -1,21 +1,41 @@
-import { headlinePrice, chargedNote, priceLabel } from './planPricing';
+import {
+  headlinePrice,
+  chargedNote,
+  priceLabel,
+  displayAmount,
+  displayCurrencies,
+  floorToCents,
+} from './planPricing';
 
-const monthly = { id: 'monthly', amount: 149, usdDisplay: '4.99' };
+const monthly = { id: 'monthly', amount: 140, usd: 3.49 };
+const fx = { usdRate: 41.5, rates: { USD: 41.5, EUR: 45.2, GBP: 52.1 } };
 
 describe('planPricing', () => {
-  test('leads with the dollar figure', () => {
-    expect(headlinePrice(monthly)).toBe('$4.99');
+  test('floors a conversion to cents rather than rounding', () => {
+    expect(floorToCents(3.204424778761062)).toBe(3.2);
+    expect(displayAmount(3.49, 41.5, 45.2)).toBe(3.2);
+  });
+
+  test('lists WayForPay rate codes plus UAH, with USD first', () => {
+    expect(displayCurrencies(fx.rates)).toEqual(['USD', 'EUR', 'GBP', 'UAH']);
+  });
+
+  test('leads with the selected display currency', () => {
+    expect(headlinePrice(monthly, 'USD', fx)).toBe('$3.49');
+    expect(headlinePrice(monthly, 'EUR', fx)).toBe('3.20 EUR');
+    expect(headlinePrice(monthly, 'UAH', fx)).toBe('140 UAH');
   });
 
   test('names the amount that actually leaves the card', () => {
-    expect(chargedNote(monthly, 'UAH')).toBe('charged as 149 UAH');
+    expect(chargedNote(monthly)).toBe('charged as 140 UAH');
   });
 
   test('combines both currencies for the comparison table', () => {
-    expect(priceLabel(monthly, 'UAH', 'per month')).toBe('$4.99 per month (149 UAH)');
+    expect(priceLabel(monthly, 'USD', 'per month', fx)).toBe('$3.49 per month (140 UAH)');
+    expect(priceLabel(monthly, 'EUR', 'per month', fx)).toBe('3.20 EUR per month (140 UAH)');
   });
 
   test('shows a placeholder while prices are still loading', () => {
-    expect(priceLabel(undefined, 'UAH', 'per month')).toBe('—');
+    expect(priceLabel(undefined, 'USD', 'per month', fx)).toBe('—');
   });
 });

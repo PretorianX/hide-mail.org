@@ -4,8 +4,9 @@ process.env.WAYFORPAY_SECRET_KEY = 'dhkq3vUi94{Z!5frxs(02ML';
 process.env.WAYFORPAY_DOMAIN_NAME = 'www.market.ua';
 process.env.WAYFORPAY_SERVICE_URL = 'https://hide-mail.org/api/billing/webhook';
 process.env.WAYFORPAY_RETURN_URL = 'https://hide-mail.org/?pro=return';
-process.env.PRO_PRICE_MONTHLY_UAH = '149';
-process.env.PRO_PRICE_YEARLY_UAH = '1079';
+process.env.PRO_PRICE_MONTHLY_USD = '3.49';
+process.env.PRO_PRICE_YEARLY_USD = '24.99';
+process.env.API_PRICE_MONTHLY_USD = '7.99';
 
 jest.mock('../../config/config', () => {
   const actual = jest.requireActual('../../config/config');
@@ -21,14 +22,16 @@ jest.mock('../../config/config', () => {
     billing: {
       ...actual.billing,
       currency: 'UAH',
-      monthlyAmount: 149,
-      yearlyAmount: 1079,
-      apiAmount: 799,
-      monthlyUsdDisplay: '4.99',
-      yearlyUsdDisplay: '36',
+      monthlyUsd: 3.49,
+      yearlyUsd: 24.99,
+      apiUsd: 7.99,
     },
   };
 });
+
+jest.mock('../../services/exchangeRateService', () => ({
+  getRates: jest.fn(),
+}));
 
 jest.mock('../../services/licenseService', () => ({
   createLicense: jest.fn(),
@@ -59,6 +62,12 @@ const licenseService = require('../../services/licenseService');
 const orderService = require('../../services/orderService');
 const wayforpayService = require('../../services/wayforpayService');
 const metrics = require('../../services/metricsService');
+const exchangeRateService = require('../../services/exchangeRateService');
+
+const MOCK_RATES = { USD: 41.5, EUR: 45.2, GBP: 52.1 };
+const MONTHLY_UAH = 140;
+const YEARLY_UAH = 1030;
+const API_UAH = 330;
 
 const mockRes = () => {
   const res = {};
@@ -72,21 +81,46 @@ const mockNext = jest.fn();
 describe('billingController', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    exchangeRateService.getRates.mockResolvedValue({
+      rates: MOCK_RATES,
+      ratesDate: 1519115604,
+      fetchedAt: Date.now(),
+    });
   });
 
   describe('listPlans', () => {
-    it('returns public Pro and API prices without secrets', () => {
+    it('returns public Pro and API prices without secrets', async () => {
       const res = mockRes();
-      billingController.listPlans({}, res);
+      await billingController.listPlans({}, res);
 
       expect(res.status).toHaveBeenCalledWith(200);
       const payload = res.json.mock.calls[0][0];
+      expect(payload.settlementCurrency).toBe('UAH');
+      expect(payload.defaultDisplayCurrency).toBe('USD');
+      expect(payload.usdRate).toBe(41.5);
+      expect(payload.rates).toEqual(MOCK_RATES);
       expect(payload.plans).toEqual(expect.arrayContaining([
-        expect.objectContaining({ id: 'monthly', amount: 149 }),
-        expect.objectContaining({ id: 'yearly', amount: 1079 }),
-        expect.objectContaining({ id: 'api' }),
+        expect.objectContaining({ id: 'monthly', amount: MONTHLY_UAH, usd: 3.49 }),
+        expect.objectContaining({ id: 'yearly', amount: YEARLY_UAH }),
+        expect.objectContaining({ id: 'api', amount: API_UAH }),
       ]));
       expect(JSON.stringify(payload)).not.toMatch(/secret/i);
+    });
+
+    it('returns 503 RATE_UNAVAILABLE when FX rates cannot be quoted', async () => {
+      const error = new Error('Currency rates are unavailable. Try again later.');
+      error.code = 'RATE_UNAVAILABLE';
+      error.status = 503;
+      exchangeRateService.getRates.mockRejectedValue(error);
+
+      const res = mockRes();
+      await billingController.listPlans({}, res);
+
+      expect(res.status).toHaveBeenCalledWith(503);
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+        success: false,
+        code: 'RATE_UNAVAILABLE',
+      }));
     });
   });
 
@@ -101,9 +135,12 @@ describe('billingController', () => {
       const payload = res.json.mock.calls[0][0];
       expect(payload.success).toBe(true);
       expect(payload.data.orderReference).toMatch(/^pro-monthly-/);
-      expect(payload.data.amount).toBe(149);
+      expect(payload.data.amount).toBe(MONTHLY_UAH);
+      expect(payload.data.currency).toBe('UAH');
       expect(payload.data.regularMode).toBe('monthly');
       expect(payload.data.merchantSignature).toBeTruthy();
+      expect(payload.data.alternativeCurrency).toBe('USD');
+      expect(payload.data.alternativeAmount).toBe(3.49);
     });
 
     it('rejects an unknown plan', async () => {
@@ -123,9 +160,9 @@ describe('billingController', () => {
 
       const payload = res.json.mock.calls[0][0];
       expect(payload.data.orderReference).toMatch(/^api-monthly-/);
-      expect(payload.data.amount).toBe(799);
+      expect(payload.data.amount).toBe(API_UAH);
       expect(orderService.createOrder).toHaveBeenCalledWith(
-        expect.objectContaining({ type: 'api', amount: 799 })
+        expect.objectContaining({ type: 'api', amount: API_UAH })
       );
     });
 
@@ -137,6 +174,49 @@ describe('billingController', () => {
 
       expect(res.status).toHaveBeenCalledWith(400);
       expect(orderService.createOrder).not.toHaveBeenCalled();
+    });
+
+    it('does not create an order when rates are unavailable', async () => {
+      const error = new Error('Currency rates are unavailable. Try again later.');
+      error.code = 'RATE_UNAVAILABLE';
+      error.status = 503;
+      exchangeRateService.getRates.mockRejectedValue(error);
+
+      const res = mockRes();
+      await billingController.checkout({ body: { plan: 'monthly' } }, res);
+
+      expect(res.status).toHaveBeenCalledWith(503);
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+        code: 'RATE_UNAVAILABLE',
+      }));
+      expect(orderService.createOrder).not.toHaveBeenCalled();
+    });
+
+    it('sends alternativeCurrency EUR only when the client asked for EUR', async () => {
+      const eurRes = mockRes();
+      await billingController.checkout({ body: { plan: 'monthly', displayCurrency: 'eur' } }, eurRes);
+      const eurPayload = eurRes.json.mock.calls[0][0].data;
+      expect(eurPayload.alternativeCurrency).toBe('EUR');
+      expect(eurPayload.alternativeAmount).toBe(3.2);
+      expect(eurPayload.currency).toBe('UAH');
+      expect(eurPayload.amount).toBe(MONTHLY_UAH);
+
+      const gbpRes = mockRes();
+      await billingController.checkout({ body: { plan: 'monthly', displayCurrency: 'GBP' } }, gbpRes);
+      expect(gbpRes.json.mock.calls[0][0].data.alternativeCurrency).toBe('USD');
+      expect(gbpRes.json.mock.calls[0][0].data.alternativeAmount).toBe(3.49);
+    });
+
+    it('does not include alternativeAmount in the purchase HMAC', async () => {
+      const res = mockRes();
+      await billingController.checkout({ body: { plan: 'monthly', displayCurrency: 'EUR' } }, res);
+      const payload = res.json.mock.calls[0][0].data;
+      const unsigned = { ...payload };
+      delete unsigned.alternativeAmount;
+      delete unsigned.alternativeCurrency;
+      expect(payload.merchantSignature).toBe(
+        wayforpayService.signPurchase(unsigned, process.env.WAYFORPAY_SECRET_KEY)
+      );
     });
   });
 

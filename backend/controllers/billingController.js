@@ -12,6 +12,8 @@ const licenseService = require('../services/licenseService');
 const orderService = require('../services/orderService');
 const entitlementService = require('../services/entitlementService');
 const metrics = require('../services/metricsService');
+const exchangeRateService = require('../services/exchangeRateService');
+const pricingService = require('../services/pricingService');
 
 const licenseTtlForPlan = (plan) => {
   if (plan === 'yearly') {
@@ -32,15 +34,21 @@ const formatDateNext = (plan, from = new Date()) => {
   return `${dd}.${mm}.${next.getFullYear()}`;
 };
 
+const respondRateUnavailable = (res, error) =>
+  res.status(503).json({
+    success: false,
+    error: error.message,
+    code: 'RATE_UNAVAILABLE',
+  });
+
 const checkout = async (req, res, next) => {
   try {
     const plan = req.body?.plan;
     const type = req.body?.type === 'api' ? 'api' : 'pro';
 
-    let product;
     try {
-      product = wayforpayService.resolveProduct(type, plan);
-    } catch (error) {
+      wayforpayService.resolveProduct(type, plan);
+    } catch {
       return res.status(400).json({
         success: false,
         error: type === 'api' ? 'API plan must be monthly' : 'plan must be monthly or yearly',
@@ -56,6 +64,23 @@ const checkout = async (req, res, next) => {
       });
     }
 
+    let ratesPayload;
+    try {
+      ratesPayload = await exchangeRateService.getRates();
+    } catch (error) {
+      if (error.code === 'RATE_UNAVAILABLE') {
+        return respondRateUnavailable(res, error);
+      }
+      throw error;
+    }
+
+    const quote = pricingService.quotePlan(type, plan, ratesPayload.rates);
+    const alternative = pricingService.checkoutAlternative(
+      quote.usd,
+      ratesPayload.rates,
+      req.body?.displayCurrency
+    );
+
     const orderReference = `${type}-${plan}-${uuidv4()}`;
     const orderDate = Math.floor(Date.now() / 1000);
 
@@ -63,7 +88,7 @@ const checkout = async (req, res, next) => {
       id: orderReference,
       plan,
       type,
-      amount: product.amount,
+      amount: quote.amountUah,
       currency: config.billing.currency,
     });
 
@@ -73,19 +98,17 @@ const checkout = async (req, res, next) => {
       orderReference,
       orderDate,
       dateNext: formatDateNext(plan),
+      amount: quote.amountUah,
+      alternativeAmount: alternative.alternativeAmount,
+      alternativeCurrency: alternative.alternativeCurrency,
     });
-
-    const checkout = {
-      ...payload,
-      displayUsd: product.usdDisplay,
-    };
 
     metrics.billingCheckoutsTotal.inc({ type, plan });
 
     return res.status(200).json({
       success: true,
-      checkout,
-      data: checkout,
+      checkout: payload,
+      data: payload,
     });
   } catch (error) {
     logger.error(`Billing checkout error: ${sanitizeForLog(error.message)}`);
@@ -103,9 +126,8 @@ const checkout = async (req, res, next) => {
  * Revenue is booked from the price we hold server-side, never from the callback, so the
  * figure on the dashboard matches what we actually charge for the plan.
  */
-const recordSale = ({ type, plan }) => {
-  const { amount } = wayforpayService.resolveProduct(type, plan);
-  metrics.billingRevenueTotal.inc({ currency: config.billing.currency, type, plan }, amount);
+const recordSale = ({ type, plan, amount }) => {
+  metrics.billingRevenueTotal.inc({ currency: config.billing.currency, type, plan }, Number(amount));
 };
 
 const activateLicense = async ({ orderReference, recToken, amount, currency }) => {
@@ -119,7 +141,7 @@ const activateLicense = async ({ orderReference, recToken, amount, currency }) =
       ttlSeconds: licenseTtlForPlan(existing.plan),
     });
     await orderService.markOrderPaid(orderReference, license.key);
-    recordSale(existing);
+    recordSale({ type: existing.type, plan: existing.plan, amount });
     metrics.billingWebhookEventsTotal.inc({ result: 'license_renewed' });
     return;
   }
@@ -152,7 +174,7 @@ const activateLicense = async ({ orderReference, recToken, amount, currency }) =
     extra.apiKeyExpiresAt = issued.expiresAt;
   }
   await orderService.markOrderPaid(orderReference, license.key, extra);
-  recordSale(order);
+  recordSale({ type: order.type, plan: order.plan, amount: order.amount });
   metrics.billingWebhookEventsTotal.inc({ result: 'license_created' });
 };
 
@@ -371,22 +393,36 @@ const CATALOG = [
   { id: 'api', type: 'api', plan: 'monthly' },
 ];
 
-const listPlans = (req, res) => {
-  res.status(200).json({
-    success: true,
-    currency: config.billing.currency,
-    plans: CATALOG.map(({ id, type, plan }) => {
-      const product = wayforpayService.resolveProduct(type, plan);
+const listPlans = async (req, res, next) => {
+  try {
+    const ratesPayload = await exchangeRateService.getRates();
+    const plans = CATALOG.map(({ id, type, plan }) => {
+      const quote = pricingService.quotePlan(type, plan, ratesPayload.rates);
       return {
         id,
         type,
         plan,
-        amount: product.amount,
-        usdDisplay: product.usdDisplay,
+        usd: quote.usd,
+        amount: quote.amountUah,
       };
-    }),
-    tiers: entitlementService.describeTiers(),
-  });
+    });
+
+    return res.status(200).json({
+      success: true,
+      settlementCurrency: 'UAH',
+      defaultDisplayCurrency: 'USD',
+      usdRate: Number(ratesPayload.rates.USD),
+      rates: ratesPayload.rates,
+      plans,
+      tiers: entitlementService.describeTiers(),
+    });
+  } catch (error) {
+    if (error.code === 'RATE_UNAVAILABLE') {
+      return respondRateUnavailable(res, error);
+    }
+    logger.error(`Billing listPlans error: ${sanitizeForLog(error.message)}`);
+    return next(error);
+  }
 };
 
 module.exports = {

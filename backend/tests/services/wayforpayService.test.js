@@ -18,9 +18,9 @@ describe('wayforpayService', () => {
     process.env.WAYFORPAY_DOMAIN_NAME = 'www.market.ua';
     process.env.WAYFORPAY_SERVICE_URL = 'https://hide-mail.org/api/billing/webhook';
     process.env.WAYFORPAY_RETURN_URL = 'https://hide-mail.org/?pro=return';
-    process.env.PRO_PRICE_MONTHLY_UAH = '149';
-    process.env.PRO_PRICE_YEARLY_UAH = '1079';
-    process.env.API_PRICE_MONTHLY_UAH = '349';
+    process.env.PRO_PRICE_MONTHLY_USD = '3.49';
+    process.env.PRO_PRICE_YEARLY_USD = '24.99';
+    process.env.API_PRICE_MONTHLY_USD = '7.99';
     wayforpayService = require('../../services/wayforpayService');
   });
 
@@ -107,15 +107,16 @@ describe('wayforpayService', () => {
         orderReference: 'pro-monthly-test',
         orderDate: 1700000000,
         dateNext: '18.09.2026',
+        amount: 140,
       });
 
       expect(payload.merchantAccount).toBe('test_merchant');
       expect(payload.merchantDomainName).toBe('www.market.ua');
       expect(payload.currency).toBe('UAH');
-      expect(payload.amount).toBe(149);
+      expect(payload.amount).toBe(140);
       expect(payload.productName).toEqual(['Hide Mail Pro Monthly']);
       expect(payload.productCount).toEqual([1]);
-      expect(payload.productPrice).toEqual([149]);
+      expect(payload.productPrice).toEqual([140]);
       expect(payload.regularMode).toBe('monthly');
       expect(payload.regularOn).toBe(1);
       expect(payload.regularBehavior).toBe('preset');
@@ -135,9 +136,10 @@ describe('wayforpayService', () => {
         orderReference: 'pro-yearly-test',
         orderDate: 1700000000,
         dateNext: '17.08.2027',
+        amount: 1030,
       });
 
-      expect(payload.amount).toBe(1079);
+      expect(payload.amount).toBe(1030);
       expect(payload.productName).toEqual(['Hide Mail Pro Yearly']);
       expect(payload.regularMode).toBe('yearly');
     });
@@ -150,6 +152,7 @@ describe('wayforpayService', () => {
           orderReference: 'x',
           orderDate: 1,
           dateNext: '01.01.2027',
+          amount: 140,
         })
       ).toThrow(/unsupported pro plan/i);
     });
@@ -161,10 +164,11 @@ describe('wayforpayService', () => {
         orderReference: 'api-monthly-test',
         orderDate: 1700000000,
         dateNext: '18.09.2026',
+        amount: 330,
       });
 
-      expect(payload.amount).toBe(349);
-      expect(payload.productPrice).toEqual([349]);
+      expect(payload.amount).toBe(330);
+      expect(payload.productPrice).toEqual([330]);
       expect(payload.productName).toEqual(['Hide Mail API Monthly']);
     });
 

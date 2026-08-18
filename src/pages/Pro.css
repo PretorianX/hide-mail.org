@@ -46,6 +46,19 @@
   opacity: 0.8;
 }
 
+.pro-currency {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 16px 0 0;
+  font-size: 0.95rem;
+}
+
+.pro-currency select {
+  font: inherit;
+  padding: 4px 8px;
+}
+
 .pro-restore {
   display: flex;
   flex-wrap: wrap;

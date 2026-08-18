@@ -85,9 +85,9 @@ Key configuration options in `.env`:
 | `WAYFORPAY_SECRET_KEY` | WayForPay secret key used to sign and verify payments |
 | `WAYFORPAY_SERVICE_URL` | Public HTTPS URL WayForPay posts payment results to |
 | `WAYFORPAY_RETURN_URL` | Page the payer is redirected to after payment. WayForPay itself is given `/api/billing/return` on the same origin, because it returns the browser with a POST |
-| `PRO_PRICE_MONTHLY_UAH` / `PRO_PRICE_YEARLY_UAH` | Pro prices charged in UAH |
-| `API_PRICE_MONTHLY_UAH` | API plan price charged in UAH |
-| `PRO_PRICE_*_USD_DISPLAY` / `API_PRICE_MONTHLY_USD_DISPLAY` | Dollar prices shown on the site; display only |
+| `PRO_PRICE_MONTHLY_USD` / `PRO_PRICE_YEARLY_USD` | Pro list prices in USD; UAH charged is derived from WayForPay rates |
+| `API_PRICE_MONTHLY_USD` | API plan list price in USD |
+| `FX_CACHE_SECONDS` / `FX_STALE_SECONDS` | Fresh FX cache TTL (default 2h) and maximum stale-cache age (default 24h) |
 | `PREMIUM_DOMAINS` | Pro-only domains; empty means Pro uses `VALID_DOMAINS` |
 
 See [.env.example](./.env.example) for the full list with comments. For AdSense slot
@@ -95,17 +95,19 @@ configuration, see [ADSENSE-SLOTS-CONFIG.md](./ADSENSE-SLOTS-CONFIG.md).
 
 ## Hide Mail Pro
 
-Paid plans are optional; the service works fully without any WayForPay configuration. When
+Paid plans are optional; the free inbox works without any WayForPay configuration. When
 `WAYFORPAY_MERCHANT_ACCOUNT` or `WAYFORPAY_SECRET_KEY` is empty, `/api/billing/checkout`
-answers `503 PAYMENTS_NOT_CONFIGURED` and the site stays free and ad-supported.
+answers `503 PAYMENTS_NOT_CONFIGURED` and `/api/billing/plans` answers `503 RATE_UNAVAILABLE`.
 
 ### Prices and currency
 
-WayForPay settles in hryvnia, so the card is always debited the UAH amount. The site leads with
-a US dollar price because most visitors are outside Ukraine, and every dollar figure is shown
-next to the hryvnia amount that is actually charged. The `*_USD_DISPLAY` values are static: keep
-each one slightly above the UAH price converted at the current rate so a shopper is never
-charged more than the price they were quoted, and review them when the rate moves.
+WayForPay settles in hryvnia, so the card is always debited the UAH amount. USD list prices
+in env are the source of truth; the charged UAH is `floor(usd × WayForPay USD rate / 10) × 10`.
+Rates are fetched from WayForPay `CURRENCY_RATES`, cached for two hours, and usable stale for
+up to 24 hours. After that, listing and checkout return `503 RATE_UNAVAILABLE` rather than
+inventing a rate. The site defaults to a USD display; visitors can switch to any currency in
+the rate table (plus UAH). Other-currency figures are a converted display — the bank still
+settles in UAH.
 
 ### How a purchase works
 

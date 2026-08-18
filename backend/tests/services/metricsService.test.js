@@ -71,6 +71,8 @@ describe('metricsService', () => {
       expect(metrics.licenseValidationsTotal).toBeDefined();
       expect(metrics.apiKeyValidationsTotal).toBeDefined();
       expect(metrics.billingCollectorErrorsTotal).toBeDefined();
+      expect(metrics.billingFxFetchErrorsTotal).toBeDefined();
+      expect(metrics.billingFxCacheHitsTotal).toBeDefined();
     });
 
     it('should export subscription state gauges', () => {
@@ -79,6 +81,8 @@ describe('metricsService', () => {
       expect(typeof metrics.apiKeysActive.set).toBe('function');
       expect(typeof metrics.billingOrders.set).toBe('function');
       expect(typeof metrics.billingCollectorLastSuccessTimestampSeconds.set).toBe('function');
+      expect(typeof metrics.billingFxUsdUah.set).toBe('function');
+      expect(typeof metrics.billingFxLastSuccessTimestampSeconds.set).toBe('function');
     });
   });
 
