@@ -107,17 +107,17 @@ const Header = () => {
           <ThemeToggle />
         </ThemeToggleContainer>
         
-        <Logo to="/" className="app-header-logo">
+        <Logo to="/">
           <h1>Hide Mail</h1>
-          <span className="app-header-tagline">Your friendly temporary email service</span>
+          <span>Your friendly temporary email service</span>
         </Logo>
         
         <NavContainer>
           <Nav>
-            <NavLink className="nav-link" to="/">Home</NavLink>
-            <NavLink className="nav-link" to="/blog">Blog</NavLink>
-            <NavLink className="nav-link" to="/about-us">About</NavLink>
-            <NavLink className="nav-link" to="/contact-us">Contact</NavLink>
+            <NavLink to="/">Home</NavLink>
+            <NavLink to="/blog">Blog</NavLink>
+            <NavLink to="/about-us">About</NavLink>
+            <NavLink to="/contact-us">Contact</NavLink>
             <NavProCta isPro={isPro} daysLeft={daysLeft} />
           </Nav>
         </NavContainer>
