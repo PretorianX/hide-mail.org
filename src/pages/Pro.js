@@ -38,15 +38,15 @@ const Pro = () => {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const orderReference = params.get('orderReference');
-    if (!orderReference) {
+    const handoffToken = params.get('handoffToken');
+    if (!handoffToken) {
       return undefined;
     }
     // The reference can hand out the license key, so keep it out of history, referrers and
     // anything the ad scripts on the page report as the current URL.
     window.history.replaceState({}, '', window.location.pathname);
     let cancelled = false;
-    LicenseService.fetchPaidOrder(orderReference).then((paid) => {
+    LicenseService.fetchPaidOrder(handoffToken).then((paid) => {
       if (!cancelled && paid?.licenseKey) {
         activate(paid.licenseKey);
         if (paid.apiKey || paid.data?.apiKey) {

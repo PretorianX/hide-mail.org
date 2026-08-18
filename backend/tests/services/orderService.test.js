@@ -52,6 +52,28 @@ describe('orderService', () => {
     expect(paid.licenseKey).toBe('HM-TEST-KEY1-KEY2-KEY3');
   });
 
+  describe('handoff tokens', () => {
+    it('creates and consumes a single-use handoff token', async () => {
+      const created = await orderService.createOrder({
+        id: 'pro-monthly-token',
+        plan: 'monthly',
+        type: 'pro',
+        amount: 149,
+        currency: 'UAH',
+      });
+      await orderService.markOrderPaid(created.id, 'HM-TEST-KEY1-KEY2-KEY3');
+
+      const token = await orderService.createHandoffToken(created.id);
+      expect(typeof token).toBe('string');
+
+      const orderId = await orderService.consumeHandoffToken(token);
+      expect(orderId).toBe(created.id);
+
+      const secondUse = await orderService.consumeHandoffToken(token);
+      expect(secondUse).toBeNull();
+    });
+  });
+
   describe('markCallbackApplied', () => {
     it('stamps the processing date on an existing order', async () => {
       const created = await orderService.createOrder({

@@ -50,26 +50,27 @@ describe('WayForPay customer return', () => {
       return res;
     };
 
-    it('redirects a POST from WayForPay to the Pro page, preserving the order reference', () => {
+    it('redirects a POST from WayForPay to the Pro page, preserving the order reference', async () => {
       const billingController = require('../../controllers/billingController');
       const res = mockRes();
 
-      billingController.customerReturn(
+      await billingController.customerReturn(
         { query: { orderReference: 'pro-monthly-abc' }, body: { transactionStatus: 'Approved' } },
         res
       );
 
-      expect(res.redirect).toHaveBeenCalledWith(
-        302,
-        'https://hide-mail.org/pro?orderReference=pro-monthly-abc'
-      );
+      const [, targetUrl] = res.redirect.mock.calls[0];
+      const target = new URL(targetUrl);
+      expect(target.origin + target.pathname).toBe('https://hide-mail.org/pro');
+      expect(target.searchParams.get('orderReference')).toBeNull();
+      expect(target.searchParams.get('handoffToken')).toMatch(/^[0-9a-f-]{36}$/i);
     });
 
-    it('redirects to the Pro page even without an order reference', () => {
+    it('redirects to the Pro page even without an order reference', async () => {
       const billingController = require('../../controllers/billingController');
       const res = mockRes();
 
-      billingController.customerReturn({ query: {}, body: {} }, res);
+      await billingController.customerReturn({ query: {}, body: {} }, res);
 
       expect(res.redirect).toHaveBeenCalledWith(302, 'https://hide-mail.org/pro');
     });
@@ -94,7 +95,9 @@ describe('WayForPay customer return', () => {
         .send('transactionStatus=Approved&reasonCode=1100')
         .expect(302);
 
-      expect(res.headers.location).toBe('https://hide-mail.org/pro?orderReference=pro-monthly-abc');
+      const target = new URL(res.headers.location);
+      expect(target.searchParams.get('handoffToken')).toBeTruthy();
+      expect(target.searchParams.get('orderReference')).toBeNull();
     });
 
     it('needs no parsed body, since it is mounted before the body parsers', async () => {
@@ -111,14 +114,14 @@ describe('WayForPay customer return', () => {
         .send('transactionStatus=Approved')
         .expect(302);
 
-      expect(res.headers.location).toBe('https://hide-mail.org/pro?orderReference=pro-monthly-abc');
+      expect(new URL(res.headers.location).searchParams.get('handoffToken')).toBeTruthy();
     });
 
-    it('ignores an attacker supplied order reference that is not a string', () => {
+    it('ignores an attacker supplied order reference that is not a string', async () => {
       const billingController = require('../../controllers/billingController');
       const res = mockRes();
 
-      billingController.customerReturn({ query: { orderReference: ['a', 'b'] }, body: {} }, res);
+      await billingController.customerReturn({ query: { orderReference: ['a', 'b'] }, body: {} }, res);
 
       expect(res.redirect).toHaveBeenCalledWith(302, 'https://hide-mail.org/pro');
     });

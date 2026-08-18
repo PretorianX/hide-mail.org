@@ -1,7 +1,10 @@
 const redisService = require('./redisService');
+const { v4: uuidv4 } = require('uuid');
 
 const ORDER_PREFIX = 'order:';
 const ORDER_TTL_SECONDS = 7 * 24 * 60 * 60;
+const HANDOFF_PREFIX = 'order_handoff:';
+const HANDOFF_TTL_SECONDS = 5 * 60;
 
 const persist = async (order) => {
   await redisService.client.set(`${ORDER_PREFIX}${order.id}`, JSON.stringify(order));
@@ -81,9 +84,30 @@ const markCallbackApplied = async (orderId, processingDate) => {
   return persist(order);
 };
 
+const createHandoffToken = async (orderId, ttlSeconds = HANDOFF_TTL_SECONDS) => {
+  const token = uuidv4();
+  const key = `${HANDOFF_PREFIX}${token}`;
+  await redisService.client.set(key, orderId, 'EX', ttlSeconds);
+  return token;
+};
+
+const consumeHandoffToken = async (token) => {
+  if (!token || typeof token !== 'string') {
+    return null;
+  }
+  const key = `${HANDOFF_PREFIX}${token}`;
+  const result = await redisService.client.get(key);
+  if (result) {
+    await redisService.client.del(key);
+  }
+  return result || null;
+};
+
 module.exports = {
   createOrder,
   getOrder,
   markOrderPaid,
   markCallbackApplied,
+  createHandoffToken,
+  consumeHandoffToken,
 };

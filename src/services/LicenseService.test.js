@@ -74,4 +74,22 @@ describe('LicenseService', () => {
       })
     ).toThrow(/unexpected payment url/i);
   });
+
+  test('exchanges a handoff token for a paid license key', async () => {
+    fetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        success: true,
+        licenseKey: 'HM-AAAA-BBBB-CCCC-DDDD',
+        apiKey: null,
+      }),
+    });
+
+    const payload = await LicenseService.fetchPaidOrder('token-abc');
+    expect(payload.licenseKey).toBe('HM-AAAA-BBBB-CCCC-DDDD');
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/billing/order/token-abc',
+      expect.objectContaining({ headers: expect.any(Object) })
+    );
+  });
 });

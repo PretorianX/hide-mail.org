@@ -49,6 +49,8 @@ jest.mock('../../services/orderService', () => ({
   markOrderPaid: jest.fn(),
   markCallbackApplied: jest.fn(),
   getOrder: jest.fn(),
+  createHandoffToken: jest.fn().mockResolvedValue('handoff-token-1'),
+  consumeHandoffToken: jest.fn(),
 }));
 
 const billingController = require('../../controllers/billingController');
@@ -481,7 +483,8 @@ describe('billingController', () => {
   });
 
   describe('getOrder', () => {
-    it('returns the license key right after payment', async () => {
+    it('returns the license key from a one-time handoff token', async () => {
+      orderService.consumeHandoffToken.mockResolvedValue('pro-monthly-1');
       orderService.getOrder.mockResolvedValue({
         id: 'pro-monthly-1',
         status: 'paid',
@@ -489,12 +492,23 @@ describe('billingController', () => {
         licenseKey: 'HM-AAAA-BBBB-CCCC-DDDD',
       });
       const res = mockRes();
-      await billingController.getOrder({ params: { orderReference: 'pro-monthly-1' } }, res);
+      await billingController.getOrder({ params: { handoffToken: 'handoff-token-1' } }, res);
 
       expect(res.json.mock.calls[0][0].licenseKey).toBe('HM-AAAA-BBBB-CCCC-DDDD');
+      expect(res.json.mock.calls[0][0].apiKey).toBeNull();
+    });
+
+    it('rejects an expired or already-used handoff token', async () => {
+      orderService.consumeHandoffToken.mockResolvedValue(null);
+      const res = mockRes();
+      await billingController.getOrder({ params: { handoffToken: 'expired' } }, res);
+
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(orderService.getOrder).not.toHaveBeenCalled();
     });
 
     it('stops handing out the license key once the handoff window closed', async () => {
+      orderService.consumeHandoffToken.mockResolvedValue('pro-monthly-1');
       orderService.getOrder.mockResolvedValue({
         id: 'pro-monthly-1',
         status: 'paid',
@@ -503,7 +517,7 @@ describe('billingController', () => {
         apiKey: 'hm_api_secret',
       });
       const res = mockRes();
-      await billingController.getOrder({ params: { orderReference: 'pro-monthly-1' } }, res);
+      await billingController.getOrder({ params: { handoffToken: 'handoff-token-1' } }, res);
 
       const payload = res.json.mock.calls[0][0];
       expect(payload.licenseKey).toBeNull();
