@@ -1,0 +1,62 @@
+.pro-key-copy {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--duck-gray, #f0f0f0);
+  border-radius: 8px;
+  padding: 12px 12px 12px 16px;
+}
+
+.pro-key-copy code {
+  flex: 1;
+  overflow-wrap: anywhere;
+  font-size: 0.95rem;
+}
+
+.pro-key-copy .copy-icon-button {
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  padding: 8px;
+  min-width: 44px;
+  min-height: 44px;
+  cursor: pointer;
+  color: var(--duck-orange, #f7941d);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pro-key-copy .copy-icon-button:hover,
+.pro-key-copy .copy-icon-button:focus-visible {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.pro-key-copy .copy-icon-button:focus-visible {
+  outline: 3px solid var(--duck-orange, #f7941d);
+  outline-offset: 2px;
+}
+
+.pro-key-copy .copy-icon-button.copied {
+  color: var(--success-color, #28a745);
+}
+
+.pro-key-copy .copy-toast {
+  position: absolute;
+  top: -40px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--success-color, #28a745);
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  z-index: 10;
+}
+
+body[data-theme='dark'] .pro-key-copy {
+  background: #1f1f1f;
+}

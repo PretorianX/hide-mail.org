@@ -73,7 +73,7 @@ const NavProCta = ({ isPro, daysLeft }) => {
 
   return (
     <ProMember className="nav-pro-cta nav-pro-cta--member" to="/pro">
-      Pro
+      Pro active
       {typeof daysLeft === 'number' && (
         <span data-testid="header-pro-days">&nbsp;· {daysLeft} days left</span>
       )}

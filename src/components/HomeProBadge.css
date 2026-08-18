@@ -1,0 +1,15 @@
+.home-pro-active {
+  margin: -8px 0 16px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #fff8ee;
+  border: 2px solid var(--duck-orange, #f7941d);
+  color: #7a3b00;
+  font-weight: 700;
+  text-align: center;
+}
+
+body[data-theme='dark'] .home-pro-active {
+  background: #2f2418;
+  color: #ffd7a1;
+}

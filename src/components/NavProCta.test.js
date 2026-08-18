@@ -33,9 +33,10 @@ describe('NavProCta', () => {
   });
 
   describe('when the visitor already has Pro', () => {
-    test('shows the remaining days instead of an upgrade prompt', () => {
+    test('shows Pro active and remaining days instead of an upgrade prompt', () => {
       renderCta({ isPro: true, daysLeft: 12 });
 
+      expect(screen.getByRole('link', { name: /pro active/i })).toBeInTheDocument();
       expect(screen.getByTestId('header-pro-days')).toHaveTextContent('12 days left');
       expect(screen.queryByRole('link', { name: /go pro/i })).not.toBeInTheDocument();
     });
@@ -52,7 +53,7 @@ describe('NavProCta', () => {
       renderCta({ isPro: true, daysLeft: null });
 
       expect(screen.queryByTestId('header-pro-days')).not.toBeInTheDocument();
-      expect(screen.getByRole('link', { name: /pro/i })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /^pro active$/i })).toBeInTheDocument();
     });
   });
 });
