@@ -38,7 +38,7 @@ const tiers = {
   apiKeyTtlSeconds: 2592000,
 };
 
-const price = { pro: '149 UAH per month', api: '799 UAH per month' };
+const price = { pro: '$3.49 per month (140 UAH)', api: '$7.99 per month (330 UAH)' };
 
 const renderTable = (overrides = {}) =>
   render(<PlanComparison tiers={{ ...tiers, ...overrides }} price={price} />);
@@ -70,8 +70,8 @@ describe('PlanComparison', () => {
   test('shows the price of each paid tier', () => {
     renderTable();
 
-    expect(screen.getByText('149 UAH per month')).toBeInTheDocument();
-    expect(screen.getByText('799 UAH per month')).toBeInTheDocument();
+    expect(screen.getByText('$3.49 per month (140 UAH)')).toBeInTheDocument();
+    expect(screen.getByText('$7.99 per month (330 UAH)')).toBeInTheDocument();
   });
 
   test('says the API key lifetime for the API tier only', () => {

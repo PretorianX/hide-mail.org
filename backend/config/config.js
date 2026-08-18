@@ -46,6 +46,14 @@ const parseDomainList = (value) => {
   return value.split(',').map(domain => domain.trim()).filter(Boolean);
 };
 
+const parsePositiveNumber = (raw, fallback, name) => {
+  const parsed = Number(raw === undefined || raw === '' ? fallback : raw);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    throw new Error(`${name} must be a positive finite number`);
+  }
+  return parsed;
+};
+
 // Final config with environment variables taking precedence
 // All time values are in seconds for consistency
 const config = {
@@ -112,16 +120,13 @@ const config = {
   },
 
   billing: {
+    // WayForPay credits this merchant in hryvnia only; USD in env is the list price.
     currency: 'UAH',
-    monthlyAmount: parseInt(process.env.PRO_PRICE_MONTHLY_UAH || 149, 10),
-    yearlyAmount: parseInt(process.env.PRO_PRICE_YEARLY_UAH || 1079, 10),
-    apiAmount: parseInt(process.env.API_PRICE_MONTHLY_UAH || 349, 10),
-    // Prices lead in USD on the site while WayForPay settles in UAH, so these figures must stay
-    // just above the hryvnia amount converted at the current rate: a shopper should never be
-    // charged more than the dollar price they were quoted. Review when the rate moves.
-    monthlyUsdDisplay: process.env.PRO_PRICE_MONTHLY_USD_DISPLAY || '3.49',
-    yearlyUsdDisplay: process.env.PRO_PRICE_YEARLY_USD_DISPLAY || '24.99',
-    apiUsdDisplay: process.env.API_PRICE_MONTHLY_USD_DISPLAY || '7.99',
+    monthlyUsd: parsePositiveNumber(process.env.PRO_PRICE_MONTHLY_USD, '3.49', 'PRO_PRICE_MONTHLY_USD'),
+    yearlyUsd: parsePositiveNumber(process.env.PRO_PRICE_YEARLY_USD, '24.99', 'PRO_PRICE_YEARLY_USD'),
+    apiUsd: parsePositiveNumber(process.env.API_PRICE_MONTHLY_USD, '7.99', 'API_PRICE_MONTHLY_USD'),
+    fxCacheSeconds: parsePositiveNumber(process.env.FX_CACHE_SECONDS, 7200, 'FX_CACHE_SECONDS'),
+    fxStaleSeconds: parsePositiveNumber(process.env.FX_STALE_SECONDS, 86400, 'FX_STALE_SECONDS'),
     monthlyTtlSeconds: parseInt(process.env.PRO_LICENSE_MONTHLY_SECONDS || 30 * 24 * 60 * 60, 10),
     yearlyTtlSeconds: parseInt(process.env.PRO_LICENSE_YEARLY_SECONDS || 366 * 24 * 60 * 60, 10),
     apiKeyTtlSeconds: parseInt(process.env.API_KEY_TTL_SECONDS || 30 * 24 * 60 * 60, 10),

@@ -75,6 +75,25 @@ describe('LicenseService', () => {
     ).toThrow(/unexpected payment url/i);
   });
 
+  test('sends the selected display currency with checkout', async () => {
+    fetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        success: true,
+        checkout: { paymentUrl: 'https://secure.wayforpay.com/pay', amount: 140 },
+      }),
+    });
+
+    await LicenseService.checkout('monthly', 'pro', 'EUR');
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/billing/checkout',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ plan: 'monthly', type: 'pro', displayCurrency: 'EUR' }),
+      })
+    );
+  });
+
   test('exchanges a handoff token for a paid license key', async () => {
     fetch.mockResolvedValue({
       ok: true,

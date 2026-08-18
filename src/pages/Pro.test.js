@@ -23,13 +23,17 @@ jest.mock('../components/DonateButton', () => {
 
 describe('Pro page', () => {
   beforeEach(() => {
+    localStorage.clear();
     LicenseService.listPlans.mockResolvedValue({
       success: true,
-      currency: 'UAH',
+      settlementCurrency: 'UAH',
+      defaultDisplayCurrency: 'USD',
+      usdRate: 41.5,
+      rates: { USD: 41.5, EUR: 45.2, GBP: 52.1 },
       plans: [
-        { id: 'monthly', type: 'pro', plan: 'monthly', amount: 149, usdDisplay: '4.99' },
-        { id: 'yearly', type: 'pro', plan: 'yearly', amount: 1079, usdDisplay: '36' },
-        { id: 'api', type: 'api', plan: 'monthly', amount: 799, usdDisplay: '19' },
+        { id: 'monthly', type: 'pro', plan: 'monthly', amount: 140, usd: 3.49 },
+        { id: 'yearly', type: 'pro', plan: 'yearly', amount: 1030, usd: 24.99 },
+        { id: 'api', type: 'api', plan: 'monthly', amount: 330, usd: 7.99 },
       ],
       tiers: {
         free: {
@@ -74,7 +78,7 @@ describe('Pro page', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText(/1079/)).toBeInTheDocument();
+      expect(screen.getByText(/1030/)).toBeInTheDocument();
     });
     expect(screen.getByText(/yearly/i)).toBeInTheDocument();
     expect(screen.getAllByText(/no account/i).length).toBeGreaterThan(0);
@@ -91,7 +95,7 @@ describe('Pro page', () => {
 
     expect(await screen.findByTestId('plan-comparison')).toBeInTheDocument();
     expect(screen.getByText('2 forwards per hour')).toBeInTheDocument();
-    expect(screen.getByText('$4.99 per month (149 UAH)')).toBeInTheDocument();
+    expect(screen.getByText('$3.49 per month (140 UAH)')).toBeInTheDocument();
   });
 
   test('shows remaining days for an active Pro license', async () => {
@@ -127,11 +131,11 @@ describe('Pro page', () => {
       </MemoryRouter>
     );
 
-    const apiPlan = await screen.findByText(/api for qa/i);
-    fireEvent.click(apiPlan.closest('button'));
+    const apiPlan = await screen.findByRole('button', { name: /api for qa/i });
+    fireEvent.click(apiPlan);
 
     await waitFor(() => {
-      expect(LicenseService.checkout).toHaveBeenCalledWith('monthly', 'api');
+      expect(LicenseService.checkout).toHaveBeenCalledWith('monthly', 'api', 'USD');
     });
   });
 
@@ -164,9 +168,44 @@ describe('Pro page', () => {
       </MemoryRouter>
     );
 
-    expect(await screen.findByText('$4.99')).toBeInTheDocument();
-    expect(screen.getByText('charged as 149 UAH')).toBeInTheDocument();
-    expect(screen.getByText('$4.99 per month (149 UAH)')).toBeInTheDocument();
+    expect(await screen.findByText('$3.49')).toBeInTheDocument();
+    expect(screen.getByText('charged as 140 UAH')).toBeInTheDocument();
+    expect(screen.getByText('$3.49 per month (140 UAH)')).toBeInTheDocument();
+  });
+
+  test('lets the visitor pick a display currency and sends it at checkout', async () => {
+    render(
+      <MemoryRouter>
+        <LicenseProvider>
+          <Pro />
+        </LicenseProvider>
+      </MemoryRouter>
+    );
+
+    const picker = await screen.findByLabelText(/display currency/i);
+    fireEvent.change(picker, { target: { value: 'EUR' } });
+    expect(screen.getByText('3.20 EUR')).toBeInTheDocument();
+    expect(localStorage.getItem('hidemail.displayCurrency')).toBe('EUR');
+
+    fireEvent.click(screen.getByRole('button', { name: /api for qa/i }));
+    await waitFor(() => {
+      expect(LicenseService.checkout).toHaveBeenCalledWith('monthly', 'api', 'EUR');
+    });
+  });
+
+  test('shows a rates error and does not offer checkout', async () => {
+    LicenseService.listPlans.mockRejectedValue(new Error('Currency rates are unavailable. Try again later.'));
+
+    render(
+      <MemoryRouter>
+        <LicenseProvider>
+          <Pro />
+        </LicenseProvider>
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/currency rates are unavailable/i);
+    expect(screen.queryByRole('button', { name: /monthly/i })).not.toBeInTheDocument();
   });
 
   test('lets an API subscriber pull a fresh key when the old one expires', async () => {

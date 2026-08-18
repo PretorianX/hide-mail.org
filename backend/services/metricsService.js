@@ -199,6 +199,27 @@ const billingCollectorErrorsTotal = new client.Counter({
   help: 'Total failed subscription gauge collections',
 });
 
+const billingFxUsdUah = new client.Gauge({
+  name: 'hidemail_billing_fx_usd_uah',
+  help: 'Last used WayForPay USD to UAH rate (hryvnia per 1 USD)',
+});
+
+const billingFxLastSuccessTimestampSeconds = new client.Gauge({
+  name: 'hidemail_billing_fx_last_success_timestamp_seconds',
+  help: 'Unix timestamp of the last successful WayForPay CURRENCY_RATES fetch',
+});
+
+const billingFxFetchErrorsTotal = new client.Counter({
+  name: 'hidemail_billing_fx_fetch_errors_total',
+  help: 'Total failed WayForPay CURRENCY_RATES fetches',
+});
+
+const billingFxCacheHitsTotal = new client.Counter({
+  name: 'hidemail_billing_fx_cache_hits_total',
+  help: 'Total FX cache hits by freshness',
+  labelNames: ['freshness'],
+});
+
 // ---------------------------------------------------------------------------
 // Redis connectivity gauge
 // ---------------------------------------------------------------------------
@@ -297,12 +318,16 @@ module.exports = {
   licenseValidationsTotal,
   apiKeyValidationsTotal,
   billingCollectorErrorsTotal,
+  billingFxFetchErrorsTotal,
+  billingFxCacheHitsTotal,
 
   // Billing gauges
   licensesActive,
   apiKeysActive,
   billingOrders,
   billingCollectorLastSuccessTimestampSeconds,
+  billingFxUsdUah,
+  billingFxLastSuccessTimestampSeconds,
 
   // Gauges
   redisConnected,

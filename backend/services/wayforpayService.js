@@ -27,22 +27,16 @@ const PRODUCTS = {
     monthly: {
       productName: 'Hide Mail Pro Monthly',
       regularMode: 'monthly',
-      amountKey: 'monthlyAmount',
-      usdKey: 'monthlyUsdDisplay',
     },
     yearly: {
       productName: 'Hide Mail Pro Yearly',
       regularMode: 'yearly',
-      amountKey: 'yearlyAmount',
-      usdKey: 'yearlyUsdDisplay',
     },
   },
   api: {
     monthly: {
       productName: 'Hide Mail API Monthly',
       regularMode: 'monthly',
-      amountKey: 'apiAmount',
-      usdKey: 'apiUsdDisplay',
     },
   },
 };
@@ -55,8 +49,6 @@ const resolveProduct = (type, plan) => {
   return {
     productName: product.productName,
     regularMode: product.regularMode,
-    amount: config.billing[product.amountKey],
-    usdDisplay: config.billing[product.usdKey],
   };
 };
 
@@ -120,9 +112,17 @@ const verifyCallbackSignature = (payload, secretKey) => {
   return timingSafeEqualHex(expected, payload.merchantSignature.toLowerCase());
 };
 
-const buildCheckoutPayload = ({ type, plan, orderReference, orderDate, dateNext }) => {
+const buildCheckoutPayload = ({
+  type,
+  plan,
+  orderReference,
+  orderDate,
+  dateNext,
+  amount,
+  alternativeAmount,
+  alternativeCurrency,
+}) => {
   const product = resolveProduct(type, plan);
-  const amount = product.amount;
   const payload = {
     merchantAccount: config.wayforpay.merchantAccount,
     merchantAuthType: 'SimpleSignature',
@@ -144,6 +144,12 @@ const buildCheckoutPayload = ({ type, plan, orderReference, orderDate, dateNext 
     language: 'EN',
     paymentUrl: PAYMENT_URL,
   };
+
+  // alternativeAmount is not in the HMAC purchase string; only USD/EUR are valid values.
+  if (alternativeCurrency && alternativeAmount !== undefined) {
+    payload.alternativeAmount = alternativeAmount;
+    payload.alternativeCurrency = alternativeCurrency;
+  }
 
   payload.merchantSignature = signPurchase(payload, config.wayforpay.secretKey);
   return payload;
@@ -175,6 +181,7 @@ const acknowledgeWebhook = (orderReference, time, secretKey) => ({
 });
 
 module.exports = {
+  hmacMd5,
   resolveProduct,
   signPurchase,
   signCallback,

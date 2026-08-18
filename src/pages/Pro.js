@@ -3,7 +3,14 @@ import LicenseService from '../services/LicenseService';
 import { useLicense } from '../context/LicenseContext';
 import DonateButton from '../components/DonateButton';
 import PlanComparison from '../components/PlanComparison';
-import { headlinePrice, chargedNote, priceLabel } from '../utils/planPricing';
+import {
+  headlinePrice,
+  chargedNote,
+  priceLabel,
+  displayCurrencies,
+  readStoredCurrency,
+  storeCurrency,
+} from '../utils/planPricing';
 import './Pro.css';
 
 const PLAN_LABELS = {
@@ -15,7 +22,8 @@ const PLAN_LABELS = {
 const Pro = () => {
   const { license, activate } = useLicense();
   const [plans, setPlans] = useState([]);
-  const [currency, setCurrency] = useState('UAH');
+  const [fx, setFx] = useState({ usdRate: null, rates: {} });
+  const [displayCurrency, setDisplayCurrency] = useState(readStoredCurrency);
   const [restoreKey, setRestoreKey] = useState('');
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -23,18 +31,28 @@ const Pro = () => {
   const [apiKeyDays, setApiKeyDays] = useState(null);
   const [tiers, setTiers] = useState(null);
 
+  const currencies = displayCurrencies(fx.rates);
+
   useEffect(() => {
     LicenseService.listPlans()
       .then((payload) => {
         setPlans(payload.plans || []);
-        setCurrency(payload.currency || 'UAH');
+        setFx({
+          usdRate: payload.usdRate,
+          rates: payload.rates || {},
+        });
         setTiers(payload.tiers || null);
+        const allowed = displayCurrencies(payload.rates);
+        setDisplayCurrency((current) => (allowed.includes(current) ? current : 'USD'));
       })
-      .catch((err) => setError(err.message));
+      .catch((err) => {
+        setPlans([]);
+        setError(err.message);
+      });
   }, []);
 
   const labelFor = (planId, period) =>
-    priceLabel(plans.find((item) => item.id === planId), currency, period);
+    priceLabel(plans.find((item) => item.id === planId), displayCurrency, period, fx);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -73,11 +91,17 @@ const Pro = () => {
     };
   }, [activate]);
 
+  const handleCurrencyChange = (event) => {
+    const next = event.target.value;
+    storeCurrency(next);
+    setDisplayCurrency(next);
+  };
+
   const handleCheckout = async (plan) => {
     setError(null);
     setBusy(true);
     try {
-      const checkout = await LicenseService.checkout(plan.plan, plan.type);
+      const checkout = await LicenseService.checkout(plan.plan, plan.type, displayCurrency);
       LicenseService.submitWayforpayCheckout(checkout);
     } catch (err) {
       setError(err.message);
@@ -144,25 +168,45 @@ const Pro = () => {
         </div>
       ) : null}
 
-      <div className="pro-plans">
-        {plans.map((plan) => (
-          <button
-            key={plan.id}
-            type="button"
-            className={`pro-plan ${plan.id === 'yearly' ? 'pro-plan-featured' : ''}`}
-            disabled={busy}
-            onClick={() => handleCheckout(plan)}
-          >
-            <strong>{PLAN_LABELS[plan.id] || plan.id}</strong>
-            <span>{headlinePrice(plan)}</span>
-            <small>{chargedNote(plan, currency)}</small>
-            <small>{plan.id === 'yearly' ? 'billed once a year' : 'billed every month'}</small>
-          </button>
-        ))}
-      </div>
-      <p className="pro-recurring-note">
-        Plans renew automatically until you cancel. Write to us to cancel or ask for a refund.
-      </p>
+      {plans.length > 0 ? (
+        <>
+          <label className="pro-currency" htmlFor="display-currency">
+            Display currency
+            <select
+              id="display-currency"
+              value={currencies.includes(displayCurrency) ? displayCurrency : 'USD'}
+              onChange={handleCurrencyChange}
+            >
+              {currencies.map((code) => (
+                <option key={code} value={code}>{code}</option>
+              ))}
+            </select>
+          </label>
+          <div className="pro-plans">
+            {plans.map((plan) => (
+              <button
+                key={plan.id}
+                type="button"
+                className={`pro-plan ${plan.id === 'yearly' ? 'pro-plan-featured' : ''}`}
+                disabled={busy}
+                onClick={() => handleCheckout(plan)}
+              >
+                <strong>{PLAN_LABELS[plan.id] || plan.id}</strong>
+                <span>{headlinePrice(plan, displayCurrency, fx)}</span>
+                <small>{chargedNote(plan)}</small>
+                <small>{plan.id === 'yearly' ? 'billed once a year' : 'billed every month'}</small>
+              </button>
+            ))}
+          </div>
+          <p className="pro-recurring-note">
+            Your card is charged the UAH amount. Other currencies are a converted display;
+            if your card is not in hryvnia, your bank converts from UAH.
+          </p>
+          <p className="pro-recurring-note">
+            Plans renew automatically until you cancel. Write to us to cancel or ask for a refund.
+          </p>
+        </>
+      ) : null}
 
       <form className="pro-restore" onSubmit={handleRestore}>
         <label htmlFor="license-key">Already paid? Paste your key</label>

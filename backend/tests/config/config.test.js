@@ -149,6 +149,20 @@ describe('config', () => {
       const config = require('../../config/config');
       expect(config.premiumDomains).toEqual(['inbox.pro.example', 'mail.pro.example']);
     });
+
+    it('parses USD list prices as decimals', () => {
+      process.env.PRO_PRICE_MONTHLY_USD = '3.49';
+      const config = require('../../config/config');
+      expect(config.billing.monthlyUsd).toBe(3.49);
+      expect(config.billing.currency).toBe('UAH');
+      expect(config.billing.fxCacheSeconds).toBe(7200);
+      expect(config.billing.fxStaleSeconds).toBe(86400);
+    });
+
+    it('rejects a non-positive USD list price', () => {
+      process.env.PRO_PRICE_MONTHLY_USD = '0';
+      expect(() => require('../../config/config')).toThrow(/PRO_PRICE_MONTHLY_USD/);
+    });
   });
 });
 
