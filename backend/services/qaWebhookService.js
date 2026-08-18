@@ -21,6 +21,7 @@ const notifyMailboxWebhook = async (email, message, fetchImpl) => {
           receivedAt: message.receivedAt,
         },
       }),
+      redirect: 'error',
     });
     return true;
   } catch (error) {

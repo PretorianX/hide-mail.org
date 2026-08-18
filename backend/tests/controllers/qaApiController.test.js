@@ -3,6 +3,10 @@ process.env.EMAIL_EXPIRATION_SECONDS = '1800';
 
 const redisService = require('../../services/redisService');
 const licenseService = require('../../services/licenseService');
+jest.mock('../../services/webhookUrlGuard', () => ({
+  validatePublicHttpsWebhookUrl: jest.fn(),
+}));
+const webhookUrlGuard = require('../../services/webhookUrlGuard');
 const qaApiController = require('../../controllers/qaApiController');
 
 const jsonRes = () => {
@@ -26,6 +30,7 @@ describe('QA API', () => {
   let apiKey;
 
   beforeEach(async () => {
+    jest.spyOn(webhookUrlGuard, 'validatePublicHttpsWebhookUrl').mockResolvedValue({ ok: true });
     redisService.client.data = {};
     await redisService.initializeDomains(['hide-mail.org']);
     apiLicense = await licenseService.createLicense({
@@ -101,8 +106,31 @@ describe('QA API', () => {
     );
 
     expect(res.statusCode).toBe(200);
+    expect(webhookUrlGuard.validatePublicHttpsWebhookUrl).toHaveBeenCalledWith(
+      'https://example.test/inbound'
+    );
     const stored = await redisService.getMailboxWebhook(email);
     expect(stored).toBe('https://example.test/inbound');
+  });
+
+  it('rejects a webhook URL that resolves to an internal address', async () => {
+    webhookUrlGuard.validatePublicHttpsWebhookUrl.mockRejectedValue(new Error('Invalid webhook URL'));
+    const email = 'hook@hide-mail.org';
+    await redisService.registerMailbox(email, 1800);
+
+    const res = jsonRes();
+    await qaApiController.setWebhook(
+      {
+        params: { email },
+        body: { url: 'https://internal.test/inbound' },
+        apiLicense,
+      },
+      res,
+      (err) => { throw err; }
+    );
+
+    expect(res.statusCode).toBe(400);
+    expect(res.body.code).toBe('INVALID_WEBHOOK_URL');
   });
 });
 

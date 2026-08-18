@@ -33,4 +33,22 @@ describe('qaWebhookService', () => {
     expect(sent).toBe(false);
     expect(fetchImpl).not.toHaveBeenCalled();
   });
+
+  it('prevents following redirects during webhook delivery', async () => {
+    await redisService.registerMailbox('hook@hide-mail.org', 1800);
+    await redisService.setMailboxWebhook('hook@hide-mail.org', 'https://example.test/inbound');
+    const fetchImpl = jest.fn().mockResolvedValue({ ok: true });
+
+    await notifyMailboxWebhook('hook@hide-mail.org', {
+      id: 'msg-1',
+      from: 'a@b.com',
+      subject: 'Test',
+      receivedAt: '2026-08-18T08:00:00.000Z',
+    }, fetchImpl);
+
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://example.test/inbound',
+      expect.objectContaining({ redirect: 'error' })
+    );
+  });
 });
