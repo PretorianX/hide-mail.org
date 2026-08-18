@@ -117,7 +117,10 @@ charged more than the price they were quoted, and review them when the rate move
    sent with a `application/x-www-form-urlencoded` content type, so the body is read as text
    and decoded as JSON before the generic parsers see it. The signature is verified with a
    timing-safe comparison, and the plan and price are read from the stored order rather
-   than from the callback, so a caller cannot claim a plan it did not pay for.
+   than from the callback, so a caller cannot claim a plan it did not pay for. WayForPay repeats
+   a callback until it is acknowledged, so the order records the `processingDate` it acted on and
+   a callback older than that one is acknowledged without being applied — otherwise a delayed
+   `Approved` replay could reactivate a licence that a later `Refunded` had already ended.
 4. The backend issues a license key (`HM-XXXX-XXXX-XXXX-XXXX`) and, for the API plan, an API
    key (`hm_api_...`) valid for `API_KEY_TTL_SECONDS`.
 5. WayForPay returns the browser with a POST, which static hosting answers with 405, so the
@@ -176,7 +179,7 @@ happen:
 | Metric | Labels | Meaning |
 |---|---|---|
 | `hidemail_billing_checkouts_total` | `type`, `plan` | Checkout sessions started |
-| `hidemail_billing_webhook_events_total` | `result` | Webhook outcome, including `invalid_signature`, `unknown_order` and `amount_mismatch` |
+| `hidemail_billing_webhook_events_total` | `result` | Webhook outcome, including `invalid_signature`, `unknown_order`, `amount_mismatch` and `superseded` |
 | `hidemail_billing_revenue_total` | `currency`, `type`, `plan` | Confirmed revenue, booked from the configured plan price rather than the callback amount |
 | `hidemail_licenses_created_total` | `type`, `plan` | First payments |
 | `hidemail_licenses_renewed_total` | `type`, `plan` | Recurring payments |

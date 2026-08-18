@@ -156,6 +156,24 @@ const activateLicense = async ({ orderReference, recToken, amount, currency }) =
   metrics.billingWebhookEventsTotal.inc({ result: 'license_created' });
 };
 
+/**
+ * WayForPay replays a callback until it is acknowledged, so a queue of replays can outlive the
+ * status it describes: a refunded order was activated once because an Approved replay landed 44
+ * minutes after the Refunded callback had settled the transaction. The processing date is the
+ * transaction's own clock, so a callback that is not newer than the one already applied has nothing
+ * left to say. Re-delivering the same date has to count as superseded too: the licence a duplicate
+ * would find by orderReference sends it down the renewal branch, extending the licence by another
+ * period and booking the sale a second time.
+ */
+const isSupersededCallback = async (orderReference, processingDate) => {
+  if (typeof processingDate !== 'number') {
+    return false;
+  }
+  const order = await orderService.getOrder(orderReference);
+  const applied = order?.lastCallbackProcessingDate;
+  return typeof applied === 'number' && processingDate <= applied;
+};
+
 const webhook = async (req, res, next) => {
   try {
     const callback = req.body;
@@ -183,6 +201,18 @@ const webhook = async (req, res, next) => {
 
     const { orderReference, recToken } = callback;
 
+    if (await isSupersededCallback(orderReference, callback.processingDate)) {
+      metrics.billingWebhookEventsTotal.inc({ result: 'superseded' });
+      logger.warn(`WayForPay webhook superseded order=${sanitizeForLog(orderReference)}`);
+      return res.status(200).json(
+        wayforpayService.acknowledgeWebhook(
+          orderReference,
+          Math.floor(Date.now() / 1000),
+          config.wayforpay.secretKey
+        )
+      );
+    }
+
     if (action === 'activate') {
       await activateLicense({
         orderReference,
@@ -198,6 +228,10 @@ const webhook = async (req, res, next) => {
     } else {
       // ignore: Declined / Expired / in-progress — payment is not a completed sale
       metrics.billingWebhookEventsTotal.inc({ result: 'ignored' });
+    }
+
+    if (typeof callback.processingDate === 'number') {
+      await orderService.markCallbackApplied(orderReference, callback.processingDate);
     }
 
     const ack = wayforpayService.acknowledgeWebhook(

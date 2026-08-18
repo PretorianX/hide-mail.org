@@ -51,4 +51,47 @@ describe('orderService', () => {
     expect(paid.status).toBe('paid');
     expect(paid.licenseKey).toBe('HM-TEST-KEY1-KEY2-KEY3');
   });
+
+  describe('markCallbackApplied', () => {
+    it('stamps the processing date on an existing order', async () => {
+      const created = await orderService.createOrder({
+        id: 'pro-monthly-3',
+        plan: 'monthly',
+        type: 'pro',
+        amount: 149,
+        currency: 'UAH',
+      });
+
+      await orderService.markCallbackApplied(created.id, 1786994135);
+
+      const loaded = await orderService.getOrder(created.id);
+      expect(loaded.lastCallbackProcessingDate).toBe(1786994135);
+      expect(loaded.status).toBe('pending');
+    });
+
+    // Two callbacks for one order can be in flight at once, and each awaits Redis, so the older
+    // one can be the last to write. Lowering the mark would let a stale replay look current again.
+    it('never lowers the mark once a newer callback has been applied', async () => {
+      const created = await orderService.createOrder({
+        id: 'pro-monthly-4',
+        plan: 'monthly',
+        type: 'pro',
+        amount: 149,
+        currency: 'UAH',
+      });
+
+      await orderService.markCallbackApplied(created.id, 1786994135);
+      await orderService.markCallbackApplied(created.id, 1786992999);
+
+      const loaded = await orderService.getOrder(created.id);
+      expect(loaded.lastCallbackProcessingDate).toBe(1786994135);
+    });
+
+    it('does not invent an order for a callback that has none', async () => {
+      await orderService.markCallbackApplied('pro-monthly-never-existed', 1786994135);
+
+      // A phantom order would be counted as pending by the billing metrics collector.
+      expect(await orderService.getOrder('pro-monthly-never-existed')).toBeNull();
+    });
+  });
 });

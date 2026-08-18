@@ -47,6 +47,7 @@ jest.mock('../../services/licenseService', () => ({
 jest.mock('../../services/orderService', () => ({
   createOrder: jest.fn().mockResolvedValue({ id: 'pro-monthly-test' }),
   markOrderPaid: jest.fn(),
+  markCallbackApplied: jest.fn(),
   getOrder: jest.fn(),
 }));
 
@@ -181,6 +182,174 @@ describe('billingController', () => {
         orderReference: 'pro-monthly-new',
         status: 'accept',
       }));
+    });
+
+    // WayForPay keeps retrying a callback until it is acknowledged, so a queue of replays can
+    // outlive the status they describe. On 2026-08-17 a refunded order was activated because an
+    // Approved replay arrived 44 minutes after the Refunded callback had settled the transaction.
+    describe('replayed callbacks', () => {
+      const approvedReplay = (processingDate) => {
+        const callback = {
+          merchantAccount: 'test_merchant',
+          orderReference: 'pro-monthly-replay',
+          amount: 149,
+          currency: 'UAH',
+          authCode: '541963',
+          cardPan: '41****8217',
+          transactionStatus: 'Approved',
+          reasonCode: '1100',
+          recToken: 'rec-replay',
+          processingDate,
+        };
+        callback.merchantSignature = wayforpayService.signCallback(
+          callback,
+          process.env.WAYFORPAY_SECRET_KEY
+        );
+        return callback;
+      };
+
+      it('ignores an Approved replay that a later callback has already superseded', async () => {
+        orderService.getOrder.mockResolvedValue({
+          id: 'pro-monthly-replay',
+          type: 'pro',
+          plan: 'monthly',
+          amount: 149,
+          currency: 'UAH',
+          lastCallbackProcessingDate: 1786994135,
+        });
+
+        const res = mockRes();
+        await billingController.webhook({ body: approvedReplay(1786992999) }, res);
+
+        expect(licenseService.createLicense).not.toHaveBeenCalled();
+        expect(licenseService.renewByPayment).not.toHaveBeenCalled();
+        // Acknowledged all the same, otherwise WayForPay retries the stale event forever.
+        expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ status: 'accept' }));
+      });
+
+      // A duplicate takes the renewal branch, because the licence it created is now findable by
+      // orderReference, so re-applying one would extend the licence and book the sale twice.
+      it('ignores a re-delivery of the callback it has already applied', async () => {
+        orderService.getOrder.mockResolvedValue({
+          id: 'pro-monthly-replay',
+          type: 'pro',
+          plan: 'monthly',
+          amount: 149,
+          currency: 'UAH',
+          lastCallbackProcessingDate: 1786994135,
+        });
+
+        const res = mockRes();
+        await billingController.webhook({ body: approvedReplay(1786994135) }, res);
+
+        expect(licenseService.createLicense).not.toHaveBeenCalled();
+        expect(licenseService.renewByPayment).not.toHaveBeenCalled();
+        expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ status: 'accept' }));
+      });
+
+      it('applies a callback that is newer than the one already recorded', async () => {
+        licenseService.findByRecToken.mockResolvedValue(null);
+        licenseService.findByOrderReference.mockResolvedValue(null);
+        orderService.getOrder.mockResolvedValue({
+          id: 'pro-monthly-replay',
+          type: 'pro',
+          plan: 'monthly',
+          amount: 149,
+          currency: 'UAH',
+          lastCallbackProcessingDate: 1786992999,
+        });
+        licenseService.createLicense.mockResolvedValue({
+          key: 'HM-AAAA-BBBB-CCCC-DDDD',
+          type: 'pro',
+          plan: 'monthly',
+        });
+
+        const res = mockRes();
+        await billingController.webhook({ body: approvedReplay(1786994135) }, res);
+
+        expect(licenseService.createLicense).toHaveBeenCalled();
+      });
+
+      it('records the processing date it applied, so the next replay can be recognised', async () => {
+        licenseService.findByRecToken.mockResolvedValue(null);
+        licenseService.findByOrderReference.mockResolvedValue(null);
+        orderService.getOrder.mockResolvedValue({
+          id: 'pro-monthly-replay',
+          type: 'pro',
+          plan: 'monthly',
+          amount: 149,
+          currency: 'UAH',
+        });
+        licenseService.createLicense.mockResolvedValue({
+          key: 'HM-AAAA-BBBB-CCCC-DDDD',
+          type: 'pro',
+          plan: 'monthly',
+        });
+
+        await billingController.webhook({ body: approvedReplay(1786994135) }, mockRes());
+
+        expect(orderService.markCallbackApplied).toHaveBeenCalledWith(
+          'pro-monthly-replay',
+          1786994135
+        );
+      });
+
+      it('still applies a callback that carries no processing date', async () => {
+        licenseService.findByRecToken.mockResolvedValue(null);
+        licenseService.findByOrderReference.mockResolvedValue(null);
+        orderService.getOrder.mockResolvedValue({
+          id: 'pro-monthly-replay',
+          type: 'pro',
+          plan: 'monthly',
+          amount: 149,
+          currency: 'UAH',
+          lastCallbackProcessingDate: 1786994135,
+        });
+        licenseService.createLicense.mockResolvedValue({
+          key: 'HM-AAAA-BBBB-CCCC-DDDD',
+          type: 'pro',
+          plan: 'monthly',
+        });
+
+        const callback = approvedReplay(undefined);
+        delete callback.processingDate;
+        callback.merchantSignature = wayforpayService.signCallback(
+          callback,
+          process.env.WAYFORPAY_SECRET_KEY
+        );
+
+        await billingController.webhook({ body: callback }, mockRes());
+
+        expect(licenseService.createLicense).toHaveBeenCalled();
+      });
+
+      it('ignores a superseded Refunded replay instead of revoking again', async () => {
+        const callback = {
+          merchantAccount: 'test_merchant',
+          orderReference: 'pro-monthly-replay',
+          amount: 149,
+          currency: 'UAH',
+          authCode: '541963',
+          cardPan: '41****8217',
+          transactionStatus: 'Refunded',
+          reasonCode: '1100',
+          recToken: 'rec-replay',
+          processingDate: 1786992999,
+        };
+        callback.merchantSignature = wayforpayService.signCallback(
+          callback,
+          process.env.WAYFORPAY_SECRET_KEY
+        );
+
+        orderService.getOrder.mockResolvedValue({
+          id: 'pro-monthly-replay',
+          lastCallbackProcessingDate: 1786994135,
+        });
+
+        await billingController.webhook({ body: callback }, mockRes());
+
+        expect(licenseService.revokeByPayment).not.toHaveBeenCalled();
+      });
     });
 
     it('rejects a callback with a bad signature', async () => {
