@@ -49,6 +49,13 @@ docker pull ghcr.io/pretorianx/hide-mail.org/frontend:latest
 docker pull ghcr.io/pretorianx/hide-mail.org/backend:latest
 ```
 
+### Deployment
+
+CI publishes those tags on every push to `main`, and a systemd timer on the production host pulls
+them, so a merge reaches production on its own within about five minutes. CI holds no credentials
+for the host and never connects to it. See [deploy/README.md](deploy/README.md) for the install and
+for reading the journal when a deploy fails.
+
 ## Development
 
 ### Prerequisites

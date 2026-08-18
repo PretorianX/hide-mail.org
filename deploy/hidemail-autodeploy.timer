@@ -1,0 +1,11 @@
+[Unit]
+Description=Check GHCR for newly published Hide Mail images
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+# A manifest check is cheap, so the window only exists to avoid waking the host on the dot.
+AccuracySec=30s
+
+[Install]
+WantedBy=timers.target
