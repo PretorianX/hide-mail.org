@@ -37,10 +37,10 @@ describe('AdSlot', () => {
     expect(screen.getByTestId('ad-slot')).toHaveClass('ad-in-footer');
   });
 
-  test('renders no ad-container for a Pro user so no Advertisement label is left behind', () => {
+  // Nothing at all, so a paid page is not left with a stray "Advertisement" label or its margin.
+  test('renders nothing for a Pro user', () => {
     const { container } = renderWithLicense(true);
 
     expect(container).toBeEmptyDOMElement();
-    expect(container.querySelector('.ad-container')).toBeNull();
   });
 });
