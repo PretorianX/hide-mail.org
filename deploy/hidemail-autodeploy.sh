@@ -44,29 +44,35 @@ docker compose up -d "${SERVICES[@]}"
 
 after=$(running_images)
 
+deployed=no
 if [ "$before" = "$after" ]; then
   echo "Already running the published images, nothing to deploy."
-  exit 0
+else
+  deployed=yes
+  while read -r service image; do
+    previous=$(printf '%s\n' "$before" | awk -v s="$service" '$1 == s { print $2 }')
+    if [ "$previous" != "$image" ]; then
+      echo "Deployed ${service}: ${previous} -> ${image}"
+    fi
+  done <<< "$after"
 fi
 
-while read -r service image; do
-  previous=$(printf '%s\n' "$before" | awk -v s="$service" '$1 == s { print $2 }')
-  if [ "$previous" != "$image" ]; then
-    echo "Deployed ${service}: ${previous} -> ${image}"
-  fi
-done <<< "$after"
-
-# Both services were just replaced, so both are checked, and the backend has to say so in the body:
-# matching only a status code would accept any process that answers on the port.
+# Both services are checked, and the backend has to say so in its body: matching only a status code
+# would accept any process answering on the port.
 healthy() {
   curl -fsS --max-time 5 "$BACKEND_HEALTH_URL" | grep -q '"status":"ok"' \
     && curl -fsS --max-time 5 -o /dev/null "$FRONTEND_URL"
 }
 
+# Checked on every run, not only after a deploy. A failed deploy leaves the unit failed and the
+# containers broken, and the next run finds the same image IDs; exiting early on "no change" would
+# report success and erase the only lasting sign that production is down.
 for attempt in $(seq 1 "$HEALTH_ATTEMPTS"); do
   if healthy; then
     echo "Health check passed after ${attempt} attempt(s)."
-    docker image prune --force --filter 'until=168h' > /dev/null
+    if [ "$deployed" = yes ]; then
+      docker image prune --force --filter 'until=168h' > /dev/null
+    fi
     exit 0
   fi
   sleep "$HEALTH_INTERVAL"

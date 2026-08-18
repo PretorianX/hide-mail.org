@@ -29,14 +29,16 @@ systemctl start hidemail-autodeploy               # deploy now, without waiting
 journalctl -u hidemail-autodeploy -n 50           # what the last runs did
 ```
 
-A run that changed nothing says so and exits; a run that deployed prints the old and new image ID
-per service.
+A run that changed nothing says so; a run that deployed prints the old and new image ID per service.
+Either way the run ends with the health check, so the unit's state always reflects whether
+production is answering, not merely whether the last pull found something new.
 
 ## When a deploy fails
 
-After recreating the containers the script checks both of them and fails the unit if either does not
-come back, which leaves `systemctl status hidemail-autodeploy` reporting failed and the reason in the
-journal. The backend check reads the response body, not just the status code, because host port 3001
+The script checks both containers on every run and fails the unit if either does not answer, which
+leaves `systemctl status hidemail-autodeploy` reporting failed and the reason in the journal. The
+check runs even when nothing was deployed, so a broken production keeps the unit failed instead of
+being reported healthy by the next run that finds no new image. The backend check reads the response body, not just the status code, because host port 3001
 belongs to the frontend and answers `/health` with the SPA's `index.html` and a 200. It does not
 roll back. Restoring a previous image is a decision about which version is
 correct, and a script cannot make it: pin the working tag in `docker-compose.yml` and deploy that.
