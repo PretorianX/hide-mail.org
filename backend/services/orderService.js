@@ -56,6 +56,12 @@ const markOrderPaid = async (orderId, licenseKey, extra = {}) => {
  * acknowledged, so a queue of replays can outlive the status it describes, and the transaction's
  * own processing date is the only thing that orders them.
  *
+ * The mark only ever moves forward. Two callbacks for one order can be in flight together, and each
+ * awaits Redis, so the older one can be the last to write; letting it lower the mark would make a
+ * stale replay look current again. It is written after the callback is applied rather than before,
+ * because claiming it up front would turn a transient failure mid-apply into a payment that is
+ * never applied at all: WayForPay retries with the same processing date.
+ *
  * An order that is not there is left alone rather than created: a callback can name an order that
  * checkout never stored or that has since expired, and inventing one would leave a pending order
  * behind for the metrics collector to count.
@@ -65,6 +71,12 @@ const markCallbackApplied = async (orderId, processingDate) => {
   if (!order) {
     return null;
   }
+
+  const applied = order.lastCallbackProcessingDate;
+  if (typeof applied === 'number' && processingDate <= applied) {
+    return order;
+  }
+
   order.lastCallbackProcessingDate = processingDate;
   return persist(order);
 };
