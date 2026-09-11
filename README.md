@@ -114,6 +114,10 @@ counts deliveries that arrived through a site address rather than the mailbox it
 
 Site addresses expire with the mailbox that owns them, so their useful life is the plan's mailbox
 lifetime: 30 minutes on the free tier, up to 30 days on Pro under a name of the subscriber's choice.
+The capability itself is free on every tier.
+
+See [docs/site-addresses.md](./docs/site-addresses.md) for the routing walkthrough, the reasoning
+behind the `.` separator and screenshots of the flow.
 
 ## Hide Mail Pro
 
