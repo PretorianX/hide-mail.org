@@ -6,13 +6,14 @@ A temporary email service that provides disposable email addresses for privacy a
 
 - Generate temporary email addresses instantly
 - Receive and view emails in real-time
+- Download attachments that arrive with a message
 - Select from multiple domains
 - Auto-refresh mailbox
 - Copy email address to clipboard
 - Mobile-friendly responsive design
 - Dark/Light theme support
 - Optional Hide Mail Pro plan: no ads, longer mailbox lifetimes, custom aliases, premium domains, higher forwarding limits
-- Optional API plan for QA automation: create mailboxes, read messages, register inbound webhooks
+- Optional API plan for QA automation: create mailboxes, read messages, download attachments, register inbound webhooks
 
 ## Quick Start
 
@@ -167,6 +168,48 @@ advertised limits are the same numbers the backend enforces. Two of them are eas
 Ads are suppressed for paying users in two places: the React ad components render nothing, and
 `public/adsense-config.js` skips loading the AdSense tag entirely when a licence key is present,
 so auto-ads cannot place anything either.
+
+## Attachments
+
+Inbound mail is parsed by the SMTP listener and every part is stored base64-encoded inside the
+message JSON in Redis, so an attachment lives exactly as long as the mailbox that received it.
+Two routes read those parts back out, and both are served by `attachmentController`:
+
+| Route | Authentication |
+|-------|----------------|
+| `GET /api/emails/:email/:id/attachments/:index` | none, same as the rest of the mailbox API |
+| `GET /api/qa/mailboxes/:email/messages/:id/attachments/:index` | `Authorization: Bearer <api-key>` |
+
+`:index` is the position of the part in the message's `attachments` array. Message responses
+describe attachments rather than inlining them, so `GET /api/emails/:email` stays small enough
+for the inbox to poll every few seconds:
+
+```json
+{
+  "attachments": [
+    { "index": 0, "filename": "invoice.pdf", "contentType": "application/pdf", "size": 20480, "inline": false }
+  ]
+}
+```
+
+`inline` marks a part the message body already references by `cid:`, such as a logo. The web
+inbox and the paperclip count leave those out of the file list; an API client that wants the
+embedded images can still fetch them by index.
+
+Attachments come from unauthenticated senders, so downloads are hardened rather than trusted.
+The filename is stripped of path separators and control characters before it reaches a header,
+`Content-Disposition: attachment` and `X-Content-Type-Options: nosniff` stop the browser from
+rendering the file in place, and a content type a browser could execute — HTML, XML, SVG,
+JavaScript — is replaced with `application/octet-stream` so nothing can run against the origin
+that serves the API. Responses are `private, no-store`.
+
+A QA suite can assert on a generated document without an SMTP client:
+
+```bash
+curl -sS -H "Authorization: Bearer $HIDE_MAIL_API_KEY" \
+  "https://hide-mail.org/api/qa/mailboxes/$MAILBOX/messages/$MESSAGE_ID/attachments/0" \
+  -o invoice.pdf
+```
 
 ## Monitoring
 
