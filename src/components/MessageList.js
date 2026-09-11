@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import './MessageList.css';
 import EmailModal from './EmailModal';
 import ForwardButton from './ForwardButton';
+import { siteLabelOf } from '../utils/siteAddress';
 
 const MessageList = ({ messages, onSelectMessage, selectedMessageId, tempMailbox }) => {
   const [modalOpen, setModalOpen] = useState(false);
@@ -65,6 +66,11 @@ const MessageList = ({ messages, onSelectMessage, selectedMessageId, tempMailbox
             onClick={() => handleMessageClick(message)}
           >
             <div className="message-sender">{message.from}</div>
+            {siteLabelOf(message.deliveredTo, tempMailbox) && (
+              <div className="message-delivered-to" data-testid={`delivered-to-${message.id}`}>
+                to {message.deliveredTo}
+              </div>
+            )}
             <div className="message-subject">{message.subject}</div>
             <div className="message-preview">{formatPreview(message)}</div>
             <div className="message-footer">

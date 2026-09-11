@@ -22,6 +22,7 @@ import AdSlot from './components/AdSlot.js';
 import PageAds from './components/PageAds.js';
 import CookieConsent from './components/CookieConsent.js';
 import MessageList from './components/MessageList.js';
+import SiteAddressPanel from './components/SiteAddressPanel.js';
 import ProCta from './components/ProCta.js';
 import Pro from './pages/Pro.js';
 import { LicenseProvider, useLicense } from './context/LicenseContext.js';
@@ -174,6 +175,11 @@ function AppContent() {
   const [selectedDomain, setSelectedDomain] = useState('');
   const [selectedMessageId, setSelectedMessageId] = useState(null);
   const [rateLimitCountdown, setRateLimitCountdown] = useState(0);
+  const [siteAddressFilter, setSiteAddressFilter] = useState(null);
+
+  const visibleMessages = siteAddressFilter
+    ? messages.filter((message) => message.deliveredTo === siteAddressFilter)
+    : messages;
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -345,6 +351,7 @@ function AppContent() {
       });
       setEmail(newEmail);
       setMessages([]);
+      setSiteAddressFilter(null);
       // Track analytics
       if (isChange) {
         analytics.changeEmail();
@@ -416,6 +423,7 @@ function AppContent() {
     // Instead of setting an error message, just clear the email and messages
     setEmail(null);
     setMessages([]);
+    setSiteAddressFilter(null);
     // Don't set an error message here
   };
 
@@ -580,6 +588,12 @@ function AppContent() {
                                     {refreshing ? 'Checking...' : 'Check Messages'}
                                   </button>
                                 </div>
+                                <SiteAddressPanel
+                                  mailbox={email}
+                                  messages={messages}
+                                  activeAddress={siteAddressFilter}
+                                  onFilterChange={setSiteAddressFilter}
+                                />
                               </>
                             ) : (
                               <div className="email-actions">
@@ -626,11 +640,19 @@ function AppContent() {
                               {error !== 'PRO_REQUIRED' && error !== 'ALIAS_TAKEN' && error !== 'PREMIUM_DOMAIN' && error}
                             </div>
                           )}
+                          {siteAddressFilter && (
+                            <div className="inbox-filter" data-testid="inbox-filter">
+                              <span>
+                                Showing messages sent to <strong>{siteAddressFilter}</strong>
+                              </span>
+                              <button onClick={() => setSiteAddressFilter(null)}>Show all</button>
+                            </div>
+                          )}
                           {loading ? (
                             <p>Loading...</p>
-                          ) : messages.length > 0 ? (
+                          ) : visibleMessages.length > 0 ? (
                             <MessageList
-                              messages={messages}
+                              messages={visibleMessages}
                               onSelectMessage={handleSelectMessage}
                               selectedMessageId={selectedMessageId}
                               tempMailbox={email}
