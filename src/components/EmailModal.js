@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import SafeEmailViewer from './SafeEmailViewer';
 import EmailService from '../services/EmailService';
 import ForwardButton from './ForwardButton';
+import AttachmentList from './AttachmentList';
 
 const ModalOverlay = styled.div`
   position: fixed;
@@ -144,10 +145,17 @@ const EmailModal = ({ message, isOpen, onClose, tempMailbox }) => {
           {loading ? (
             <LoadingIndicator>Loading email content...</LoadingIndicator>
           ) : (
-            <SafeEmailViewer 
-              htmlContent={message.html || ''} 
-              textContent={message.text || ''} 
-            />
+            <>
+              <SafeEmailViewer 
+                htmlContent={message.html || ''} 
+                textContent={message.text || ''} 
+              />
+              <AttachmentList
+                attachments={message.attachments}
+                mailbox={tempMailbox}
+                messageId={message.id}
+              />
+            </>
           )}
         </ModalBody>
       </ModalContent>

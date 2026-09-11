@@ -382,6 +382,20 @@ class EmailService {
     }
   }
   
+  /**
+   * Address of a stored attachment. The browser fetches it directly through an anchor, so the
+   * bytes never pass through React state.
+   *
+   * @param {string} mailbox - Temporary mailbox that received the message
+   * @param {string} messageId - Message the attachment belongs to
+   * @param {number} index - Position of the attachment in the message
+   * @returns {string} - Download URL
+   */
+  static attachmentUrl(mailbox, messageId, index) {
+    return `${API_URL}/emails/${encodeURIComponent(mailbox)}/${encodeURIComponent(messageId)}`
+      + `/attachments/${encodeURIComponent(index)}`;
+  }
+
   static async getMessageDetails(email, messageId) {
     try {
       console.log(`Getting message details for email: ${email}, messageId: ${messageId}`);

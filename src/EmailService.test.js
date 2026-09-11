@@ -329,4 +329,16 @@ describe('EmailService', () => {
       expect(axios.post).not.toHaveBeenCalled();
     });
   });
+
+  describe('attachmentUrl', () => {
+    test('points at the attachment download endpoint', () => {
+      expect(EmailService.attachmentUrl('john.doe@tempmail.com', 'msg-1', 0))
+        .toBe('/api/emails/john.doe%40tempmail.com/msg-1/attachments/0');
+    });
+
+    test('escapes a message id that would otherwise change the path', () => {
+      expect(EmailService.attachmentUrl('john.doe@tempmail.com', '../../domains', 0))
+        .toBe('/api/emails/john.doe%40tempmail.com/..%2F..%2Fdomains/attachments/0');
+    });
+  });
 }); 

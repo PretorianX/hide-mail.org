@@ -138,4 +138,39 @@ describe('MessageList', () => {
     // Modal should still not be visible (click should be stopped)
     expect(screen.queryByTestId('email-modal')).not.toBeInTheDocument();
   });
+
+  describe('attachment indicator', () => {
+    const withAttachments = (attachments) => [{ ...mockMessages[0], attachments }];
+
+    test('shows how many files a message carries', () => {
+      render(
+        <MessageList
+          messages={withAttachments([
+            { index: 0, filename: 'invoice.pdf', contentType: 'application/pdf', size: 2048, inline: false },
+            { index: 1, filename: 'terms.txt', contentType: 'text/plain', size: 512, inline: false }
+          ])}
+        />
+      );
+
+      expect(screen.getByTestId('attachment-indicator-msg1')).toHaveTextContent('2');
+    });
+
+    test('does not count inline parts of the message body', () => {
+      render(
+        <MessageList
+          messages={withAttachments([
+            { index: 0, filename: 'logo.png', contentType: 'image/png', size: 2048, inline: true }
+          ])}
+        />
+      );
+
+      expect(screen.queryByTestId('attachment-indicator-msg1')).not.toBeInTheDocument();
+    });
+
+    test('shows no indicator for a message without attachments', () => {
+      render(<MessageList messages={mockMessages} />);
+
+      expect(screen.queryByTestId('attachment-indicator-msg1')).not.toBeInTheDocument();
+    });
+  });
 }); 

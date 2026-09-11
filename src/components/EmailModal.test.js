@@ -5,7 +5,8 @@ import EmailService from '../services/EmailService';
 
 // Mock the EmailService
 jest.mock('../services/EmailService', () => ({
-  getMessageDetails: jest.fn()
+  getMessageDetails: jest.fn(),
+  attachmentUrl: jest.fn()
 }));
 
 describe('EmailModal', () => {
@@ -20,6 +21,10 @@ describe('EmailModal', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    // Create React App resets mock implementations between tests.
+    EmailService.attachmentUrl.mockImplementation(
+      (mailbox, messageId, index) => `/api/emails/${mailbox}/${messageId}/attachments/${index}`
+    );
   });
 
   test('renders the modal when isOpen is true', () => {
@@ -96,5 +101,51 @@ describe('EmailModal', () => {
     // The HTML content will be rendered in an iframe, so we can't easily check its content
     // But we can verify that the SafeEmailViewer is rendered
     expect(screen.queryByText('No content available for this email.')).not.toBeInTheDocument();
+  });
+
+  describe('attachments', () => {
+    const messageWithInvoice = {
+      ...mockMessage,
+      attachments: [
+        {
+          index: 0,
+          filename: 'invoice.pdf',
+          contentType: 'application/pdf',
+          size: 20480,
+          inline: false
+        }
+      ]
+    };
+
+    test('offers the attachment as a download', () => {
+      render(
+        <EmailModal
+          message={messageWithInvoice}
+          isOpen={true}
+          onClose={() => {}}
+          tempMailbox="shopper@hide-mail.org"
+        />
+      );
+
+      const link = screen.getByTestId('attachment-download-0');
+      expect(screen.getByText('invoice.pdf')).toBeInTheDocument();
+      expect(link).toHaveAttribute(
+        'href',
+        '/api/emails/shopper@hide-mail.org/test-id-123/attachments/0'
+      );
+    });
+
+    test('shows no attachment panel for a message without files', () => {
+      render(
+        <EmailModal
+          message={mockMessage}
+          isOpen={true}
+          onClose={() => {}}
+          tempMailbox="shopper@hide-mail.org"
+        />
+      );
+
+      expect(screen.queryByText(/^Attachments/)).not.toBeInTheDocument();
+    });
   });
 }); 

@@ -47,6 +47,10 @@ const EmailService = {
     return EmailService.domains;
   }),
 
+  attachmentUrl: jest.fn(
+    (mailbox, messageId, index) => `/api/emails/${mailbox}/${messageId}/attachments/${index}`
+  ),
+
   loadFromStorage: jest.fn(() => {}),
   saveToStorage: jest.fn(() => {}),
   clearStorage: jest.fn(() => {})
