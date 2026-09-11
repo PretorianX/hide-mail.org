@@ -108,10 +108,13 @@ class LicenseService {
     if (!response.ok || !payload.success) {
       return null;
     }
-    this.saveKey(payload.licenseKey || payload.data?.licenseKey);
+    const licenseKey = payload.licenseKey || payload.data?.licenseKey || null;
+    if (licenseKey) {
+      this.saveKey(licenseKey);
+    }
     return {
       ...payload,
-      licenseKey: payload.licenseKey || payload.data?.licenseKey,
+      licenseKey,
       apiKey: payload.apiKey || payload.data?.apiKey || null,
     };
   }
