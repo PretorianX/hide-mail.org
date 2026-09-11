@@ -57,10 +57,18 @@ describe('CRACO Configuration', () => {
     expect(optionalChainingPlugin).toBeDefined();
   });
   
-  test('CRACO jest configuration includes necessary transformIgnorePatterns', () => {
-    // Verify Jest configuration
-    expect(cracoConfig.jest.configure.transformIgnorePatterns).toContain(
-      'node_modules/(?!axios|@faker-js/faker)/'
+  test('CRACO jest configuration transforms axios and Faker ESM packages', () => {
+    const jestConfig = cracoConfig.jest.configure({
+      transformIgnorePatterns: [
+        '[/\\\\]node_modules[/\\\\].+\\.(js|jsx|mjs|cjs|ts|tsx)$',
+      ],
+      moduleNameMapper: {},
+    });
+
+    expect(jestConfig.transformIgnorePatterns[0]).toMatch(/@faker-js/);
+    expect(jestConfig.transformIgnorePatterns[0]).toMatch(/axios/);
+    expect(jestConfig.moduleNameMapper['^axios$']).toBe(
+      '<rootDir>/node_modules/axios/dist/axios.js'
     );
   });
 
