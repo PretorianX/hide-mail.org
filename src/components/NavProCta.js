@@ -2,8 +2,6 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import { Link } from 'react-router';
 import styled, { css } from 'styled-components';
-import { PAYPAL_ORDER_URL } from '../utils/paypal';
-import { analytics } from '../services/analytics';
 
 /*
  * The header bar is painted with --duck-orange in both themes, so this CTA is deliberately
@@ -38,7 +36,7 @@ const pillBase = css`
   }
 `;
 
-const ProUpgrade = styled.a`
+const ProUpgrade = styled(Link)`
   ${pillBase}
   margin-left: 8px;
   padding: 8px 20px;
@@ -69,12 +67,9 @@ const NavProCta = ({ isPro, daysLeft }) => {
     return (
       <ProUpgrade
         className="nav-pro-cta"
-        href={PAYPAL_ORDER_URL}
-        target="_blank"
-        rel="noopener noreferrer"
-        onClick={() => analytics.donateClick()}
+        to="/pro"
       >
-        PayPal
+        Go Pro
       </ProUpgrade>
     );
   }

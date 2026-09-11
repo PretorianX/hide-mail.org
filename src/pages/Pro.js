@@ -17,7 +17,7 @@ const remainingDaysOf = (item) => {
 };
 
 const HANDOFF_POLL_MS = 1000;
-const HANDOFF_POLL_ATTEMPTS = 30;
+const HANDOFF_POLL_ATTEMPTS = 18;
 const HANDOFF_STORAGE_KEY = 'hidemail_handoff_token';
 
 const readHandoffToken = () => {
@@ -92,7 +92,6 @@ const Pro = () => {
       if (cancelled) {
         return;
       }
-      setConfirmingPayment(false);
       if (paid?.licenseKey) {
         clearHandoffToken();
         try {
@@ -105,12 +104,15 @@ const Pro = () => {
             setApiKey(paid.apiKey || paid.data.apiKey);
             setApiKeyDays(paid.apiKeyRemainingDays || paid.data?.apiKeyRemainingDays || null);
           }
+          setConfirmingPayment(false);
         } catch (err) {
+          setConfirmingPayment(false);
           setError(err.message);
           restoreHandoffInUrl();
         }
         return;
       }
+      setConfirmingPayment(false);
       setError('Payment is still confirming. Refresh this page in a moment.');
       restoreHandoffInUrl();
     })();
