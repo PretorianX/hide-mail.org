@@ -4,7 +4,7 @@ import ProCta from './ProCta';
 import './AdBlockDonateMessage.css';
 
 /**
- * Shown in ad slots when adblock is detected. Sells Pro instead of PayPal donate.
+ * Shown in ad slots when adblock is detected. Offers a PayPal order while card checkout is paused.
  */
 const AdBlockDonateMessage = ({
   width = 300,
@@ -25,7 +25,7 @@ const AdBlockDonateMessage = ({
       <div className="adblock-donate-content">
         <h3 className="adblock-title">Ad Blocker Detected</h3>
         <p className="adblock-text">
-          Ads fund the free inbox. Disable your blocker, or go Pro — no ads, longer addresses.
+          Ads fund the free inbox. Disable your blocker, or support Hide Mail on PayPal.
         </p>
         <ProCta className="adblock-donate-button" compact />
       </div>

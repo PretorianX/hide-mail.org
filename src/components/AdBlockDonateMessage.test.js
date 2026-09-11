@@ -24,14 +24,17 @@ describe('AdBlockDonateMessage', () => {
     expect(screen.getByText(/ads fund the free inbox/i)).toBeInTheDocument();
   });
 
-  test('renders Pro CTA instead of PayPal donate', () => {
+  test('renders a PayPal order instead of Pro checkout', () => {
     render(
       <MemoryRouter>
         <AdBlockDonateMessage />
       </MemoryRouter>
     );
 
-    expect(screen.getByTestId('pro-cta-link')).toHaveAttribute('href', '/pro');
+    expect(screen.getByTestId('pro-cta-link')).toHaveAttribute(
+      'href',
+      'https://www.paypal.com/donate/?hosted_button_id=ES5RX8BKH3P5G'
+    );
   });
 
   test('applies custom width and height', () => {

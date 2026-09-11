@@ -1,18 +1,26 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import { Link } from 'react-router';
+import { PAYPAL_ORDER_URL } from '../utils/paypal';
+import { analytics } from '../services/analytics.js';
 import './ProCta.css';
 
 const ProCta = ({ className = '', compact = false }) => (
   <div className={`pro-cta ${compact ? 'pro-cta-compact' : ''} ${className}`.trim()}>
     <p className="pro-cta-text">
       {compact
-        ? 'Keep this inbox with Hide Mail Pro'
-        : 'Ads keep Hide Mail free. Go Pro for no ads, longer inboxes, custom aliases and premium domains.'}
+        ? 'Ads keep this inbox free. Support Hide Mail on PayPal.'
+        : 'Ads keep Hide Mail free. Support the project on PayPal while card checkout is paused.'}
     </p>
-    <Link to="/pro" className="pro-cta-button" data-testid="pro-cta-link">
-      Get Hide Mail Pro
-    </Link>
+    <a
+      href={PAYPAL_ORDER_URL}
+      className="pro-cta-button"
+      data-testid="pro-cta-link"
+      target="_blank"
+      rel="noopener noreferrer"
+      onClick={() => analytics.donateClick()}
+    >
+      Pay with PayPal
+    </a>
   </div>
 );
 
