@@ -5,7 +5,6 @@ import Header from './Header';
 import { ThemeProvider } from '../styles/ThemeContext';
 import { HEADER_INK, HEADER_INK_STRONG } from '../styles/headerInk';
 import { cssRulesFor } from '../test-utils/styledCss';
-import { PAYPAL_ORDER_URL } from '../utils/paypal';
 
 jest.mock('../context/LicenseContext', () => ({
   useLicense: () => ({ isPro: false, license: null }),
@@ -45,24 +44,24 @@ describe('Header Component', () => {
     expect(nav.getByRole('link', { name: 'Blog' })).toHaveAttribute('href', '/blog');
     expect(nav.getByRole('link', { name: 'About' })).toHaveAttribute('href', '/about-us');
     expect(nav.getByRole('link', { name: 'Contact' })).toHaveAttribute('href', '/contact-us');
-    expect(nav.getByRole('link', { name: 'PayPal' })).toHaveAttribute('href', PAYPAL_ORDER_URL);
+    expect(nav.getByRole('link', { name: 'Go Pro' })).toHaveAttribute('href', '/pro');
 
     // Check that theme toggle button is present
     expect(screen.getByRole('button', { name: /switch to (dark|light) mode/i })).toBeInTheDocument();
   });
 
-  test('presents PayPal as a call to action and the other entries as plain links', () => {
+  test('presents Pro as a call to action and the other entries as plain links', () => {
     renderHeader();
     const nav = within(screen.getByRole('navigation'));
 
-    expect(nav.getByRole('link', { name: 'PayPal' })).toHaveClass('nav-pro-cta');
+    expect(nav.getByRole('link', { name: 'Go Pro' })).toHaveClass('nav-pro-cta');
 
     ['Home', 'Blog', 'About', 'Contact'].forEach(label => {
       expect(nav.getByRole('link', { name: label })).not.toHaveClass('nav-pro-cta');
     });
   });
 
-  test('renders the PayPal entry last so it sits at the trailing edge of the nav', () => {
+  test('renders the Pro entry last so it sits at the trailing edge of the nav', () => {
     renderHeader();
 
     const navLinks = within(screen.getByRole('navigation')).getAllByRole('link');
@@ -109,9 +108,9 @@ describe('Header ink on the orange bar', () => {
     expect(inkOf(screen.getByText('Your friendly temporary email service'))).toBe(toRgb(HEADER_INK));
   });
 
-  test('the PayPal CTA keeps its own ink on its white fill', () => {
+  test('the Pro CTA keeps its own ink on its white fill', () => {
     renderHeader();
-    const proCta = within(screen.getByRole('navigation')).getByRole('link', { name: 'PayPal' });
+    const proCta = within(screen.getByRole('navigation')).getByRole('link', { name: 'Go Pro' });
 
     expect(inkOf(proCta)).not.toBe(toRgb(HEADER_INK));
     expect(window.getComputedStyle(proCta).backgroundColor).toBe('rgb(255, 255, 255)');

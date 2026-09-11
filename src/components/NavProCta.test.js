@@ -2,7 +2,6 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { BrowserRouter } from 'react-router';
 import NavProCta from './NavProCta';
-import { PAYPAL_ORDER_URL } from '../utils/paypal';
 
 const renderCta = (props) =>
   render(
@@ -13,18 +12,17 @@ const renderCta = (props) =>
 
 describe('NavProCta', () => {
   describe('when the visitor is not a Pro subscriber', () => {
-    test('renders an action-worded link to the PayPal order', () => {
+    test('renders an action-worded link to the Pro page', () => {
       renderCta({ isPro: false, daysLeft: null });
 
-      const cta = screen.getByRole('link', { name: /paypal/i });
-      expect(cta).toHaveAttribute('href', PAYPAL_ORDER_URL);
-      expect(cta).toHaveAttribute('target', '_blank');
+      const cta = screen.getByRole('link', { name: /go pro/i });
+      expect(cta).toHaveAttribute('href', '/pro');
     });
 
     test('carries the CTA class so it is styled as a button, not a plain nav link', () => {
       renderCta({ isPro: false, daysLeft: null });
 
-      expect(screen.getByRole('link', { name: /paypal/i })).toHaveClass('nav-pro-cta');
+      expect(screen.getByRole('link', { name: /go pro/i })).toHaveClass('nav-pro-cta');
     });
 
     test('does not show subscription status', () => {
@@ -40,7 +38,7 @@ describe('NavProCta', () => {
 
       expect(screen.getByRole('link', { name: /pro active/i })).toBeInTheDocument();
       expect(screen.getByTestId('header-pro-days')).toHaveTextContent('12 days left');
-      expect(screen.queryByRole('link', { name: /paypal/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: /go pro/i })).not.toBeInTheDocument();
     });
 
     test('keeps the CTA class so dark-theme link overrides stay excluded', () => {
