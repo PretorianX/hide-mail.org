@@ -3,6 +3,7 @@ const config = require('../config/config');
 const logger = require('../utils/logger');
 const metrics = require('../services/metricsService');
 const entitlementService = require('../services/entitlementService');
+const { resolveActiveRecipient } = require('../services/recipientResolver');
 
 const ALIAS_PATTERN = /^[a-z0-9](?:[a-z0-9._-]{0,62}[a-z0-9])?$/;
 
@@ -212,7 +213,9 @@ const emailController = {
         });
       }
 
-      if (await redisService.isMailboxActive(email)) {
+      // Also refuses an address that is already a live mailbox's site address, so a dotted
+      // alias cannot be used to intercept somebody else's mail.
+      if (await resolveActiveRecipient(email)) {
         return res.status(409).json({
           success: false,
           error: 'This address is already in use. Choose another alias, or keep a private one with Hide Mail Pro.',
