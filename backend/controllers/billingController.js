@@ -43,6 +43,14 @@ const respondRateUnavailable = (res, error) =>
 
 const checkout = async (req, res, next) => {
   try {
+    if (config.billing.checkoutPaused) {
+      return res.status(503).json({
+        success: false,
+        error: 'Card checkout is paused',
+        code: 'CHECKOUT_PAUSED',
+      });
+    }
+
     const plan = req.body?.plan;
     const type = req.body?.type === 'api' ? 'api' : 'pro';
 

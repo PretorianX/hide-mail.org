@@ -61,12 +61,15 @@ describe('MailboxTimer', () => {
     jest.useRealTimers();
   });
 
-  test('upsells Pro when the mailbox is close to expiry', () => {
+  test('offers PayPal when the mailbox is close to expiry', () => {
     EmailService.getRemainingTime.mockReturnValue(5 * 60 * 1000);
 
     renderTimer(<MailboxTimer email="test@example.com" />);
 
-    expect(screen.getByTestId('pro-cta-link')).toBeInTheDocument();
+    expect(screen.getByTestId('pro-cta-link')).toHaveAttribute(
+      'href',
+      'https://www.paypal.com/donate/?hosted_button_id=ES5RX8BKH3P5G'
+    );
   });
 
   test('extends the mailbox when the button is clicked', async () => {

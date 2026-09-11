@@ -12,6 +12,7 @@ process.env.WAYFORPAY_RETURN_URL = 'https://hide-mail.org/?pro=return';
 process.env.PRO_PRICE_MONTHLY_USD = '3.49';
 process.env.PRO_PRICE_YEARLY_USD = '24.99';
 process.env.API_PRICE_MONTHLY_USD = '7.99';
+process.env.CHECKOUT_PAUSED = 'false';
 
 jest.mock('../../services/exchangeRateService', () => ({
   getRates: jest.fn(),

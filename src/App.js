@@ -613,19 +613,18 @@ function AppContent() {
                             <div className="error-message">
                               {error === 'PRO_REQUIRED' && (
                                 <>
-                                  <p>Custom aliases require Hide Mail Pro.</p>
+                                  <p>Custom aliases require Hide Mail Pro. Card checkout is paused.</p>
                                   <ProCta compact />
                                 </>
                               )}
                               {error === 'ALIAS_TAKEN' && (
                                 <>
-                                  <p>This address is already in use. Choose another alias, or go Pro to keep a private one.</p>
-                                  <ProCta compact />
+                                  <p>This address is already in use. Choose another alias.</p>
                                 </>
                               )}
                               {error === 'PREMIUM_DOMAIN' && (
                                 <>
-                                  <p>Premium domains are a Hide Mail Pro feature.</p>
+                                  <p>Premium domains are a Hide Mail Pro feature. Card checkout is paused.</p>
                                   <ProCta compact />
                                 </>
                               )}
@@ -661,7 +660,7 @@ function AppContent() {
                       <div className="email-section">
                         <h2>Why Use Hide Mail?</h2>
                         <ul>
-                          <li>🦆 Free inbox with ads, or Pro without</li>
+                          <li>🦆 Free inbox with ads</li>
                           <li>🦆 No registration required</li>
                           <li>🦆 Protect your privacy</li>
                           <li>🦆 Avoid spam in your personal inbox</li>
@@ -720,7 +719,7 @@ function AppContent() {
                       <div className="faq-grid">
                         <div className="faq-item">
                           <h4>Is Hide Mail completely free?</h4>
-                          <p>The inbox is free and paid for by the ads on this page. Hide Mail Pro is optional: it removes the ads, keeps an address for up to 30 days instead of 30 minutes, lets you choose the address yourself and raises the Forward &amp; Forget limit from 2 to 100 per address. There is no account either way. See the <Link to="/pro">full comparison on the Pro page</Link>.</p>
+                          <p>The inbox is free and paid for by the ads on this page. You can support Hide Mail with PayPal while card checkout is paused.</p>
                         </div>
                         <div className="faq-item">
                           <h4>How long do temporary emails last?</h4>
@@ -822,7 +821,6 @@ function AppContent() {
                 <FooterLink to="/about-us" onClick={(e) => { e.currentTarget.blur(); analytics.navigateTo('About Us'); }}>About Us</FooterLink>
                 <FooterLink to="/contact-us" onClick={(e) => { e.currentTarget.blur(); analytics.navigateTo('Contact Us'); }}>Contact Us</FooterLink>
                 <FooterLink to="/blog" onClick={(e) => { e.currentTarget.blur(); analytics.navigateTo('Blog'); }}>Blog</FooterLink>
-                <FooterLink to="/pro" onClick={(e) => { e.currentTarget.blur(); analytics.navigateTo('Pro'); }}>Pro</FooterLink>
               </FooterLinks>
               {!isPro ? <ProCta className="footer-donate" compact /> : null}
               <AdSlot

@@ -130,6 +130,8 @@ const config = {
     monthlyTtlSeconds: parseInt(process.env.PRO_LICENSE_MONTHLY_SECONDS || 30 * 24 * 60 * 60, 10),
     yearlyTtlSeconds: parseInt(process.env.PRO_LICENSE_YEARLY_SECONDS || 366 * 24 * 60 * 60, 10),
     apiKeyTtlSeconds: parseInt(process.env.API_KEY_TTL_SECONDS || 30 * 24 * 60 * 60, 10),
+    // Card checkout is paused after WayForPay refused the merchant. Existing keys still work.
+    checkoutPaused: process.env.CHECKOUT_PAUSED !== 'false',
     // The order reference travels in the WayForPay return URL, so the window in which that
     // reference can hand out the license key is much shorter than the order's own lifetime.
     keyHandoffSeconds: parseInt(process.env.LICENSE_KEY_HANDOFF_SECONDS || 60 * 60, 10),

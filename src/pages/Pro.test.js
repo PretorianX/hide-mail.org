@@ -107,34 +107,14 @@ describe('Pro page', () => {
     sessionStorage.clear();
   });
 
-  test('renders yearly as the featured checkout option', async () => {
-    render(
-      <MemoryRouter>
-        <LicenseProvider>
-          <Pro />
-        </LicenseProvider>
-      </MemoryRouter>
-    );
+  test('offers a PayPal order instead of card checkout', async () => {
+    renderPro();
 
-    await waitFor(() => {
-      expect(screen.getByText(/1030/)).toBeInTheDocument();
-    });
-    expect(screen.getByText(/yearly/i)).toBeInTheDocument();
-    expect(screen.getAllByText(/no account/i).length).toBeGreaterThan(0);
-  });
-
-  test('compares the free tier against the paid ones with real limits', async () => {
-    render(
-      <MemoryRouter>
-        <LicenseProvider>
-          <Pro />
-        </LicenseProvider>
-      </MemoryRouter>
-    );
-
-    expect(await screen.findByTestId('plan-comparison')).toBeInTheDocument();
-    expect(screen.getByText('2 forwards per hour')).toBeInTheDocument();
-    expect(screen.getByText('$3.49 per month (140 UAH)')).toBeInTheDocument();
+    expect(await screen.findByTestId('paypal-donate')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /yearly/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /monthly/i })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('plan-comparison')).not.toBeInTheDocument();
+    expect(screen.getByText(/card checkout is paused/i)).toBeInTheDocument();
   });
 
   test('shows remaining days for an active Pro license', async () => {
@@ -161,23 +141,6 @@ describe('Pro page', () => {
     expect(await screen.findByTestId('pro-days-left')).toHaveTextContent('12 days left');
   });
 
-  test('checks out the API tariff with its own type and plan', async () => {
-    render(
-      <MemoryRouter>
-        <LicenseProvider>
-          <Pro />
-        </LicenseProvider>
-      </MemoryRouter>
-    );
-
-    const apiPlan = await screen.findByRole('button', { name: /api for qa/i });
-    fireEvent.click(apiPlan);
-
-    await waitFor(() => {
-      expect(LicenseService.checkout).toHaveBeenCalledWith('monthly', 'api', 'USD');
-    });
-  });
-
   test('removes the handoff token from the URL after collecting the license key', async () => {
     window.history.replaceState({}, '', '/pro?handoffToken=token-abc');
     LicenseService.fetchPaidOrder.mockResolvedValue({
@@ -196,97 +159,6 @@ describe('Pro page', () => {
       expect(LicenseService.fetchPaidOrder).toHaveBeenCalledWith('token-abc');
     });
     expect(window.location.search).toBe('');
-  });
-
-  test('quotes plans in dollars and names the hryvnia amount that is charged', async () => {
-    render(
-      <MemoryRouter>
-        <LicenseProvider>
-          <Pro />
-        </LicenseProvider>
-      </MemoryRouter>
-    );
-
-    expect(await screen.findByText('$3.49')).toBeInTheDocument();
-    expect(screen.getByText('charged as 140 UAH')).toBeInTheDocument();
-    expect(screen.getByText('$3.49 per month (140 UAH)')).toBeInTheDocument();
-  });
-
-  test('lets the visitor pick a display currency and sends it at checkout', async () => {
-    render(
-      <MemoryRouter>
-        <LicenseProvider>
-          <Pro />
-        </LicenseProvider>
-      </MemoryRouter>
-    );
-
-    const picker = await screen.findByLabelText(/display currency/i);
-    fireEvent.change(picker, { target: { value: 'EUR' } });
-    expect(screen.getByText('3.20 EUR')).toBeInTheDocument();
-    expect(localStorage.getItem('hidemail.displayCurrency')).toBe('EUR');
-
-    fireEvent.click(screen.getByRole('button', { name: /api for qa/i }));
-    await waitFor(() => {
-      expect(LicenseService.checkout).toHaveBeenCalledWith('monthly', 'api', 'EUR');
-    });
-  });
-
-  test('shows USD list prices and the comparison table when rates are down', async () => {
-    LicenseService.listPlans.mockResolvedValue({
-      success: true,
-      rateUnavailable: true,
-      settlementCurrency: 'UAH',
-      defaultDisplayCurrency: 'USD',
-      usdRate: null,
-      rates: {},
-      plans: [
-        { id: 'monthly', type: 'pro', plan: 'monthly', amount: null, usd: 3.49 },
-        { id: 'yearly', type: 'pro', plan: 'yearly', amount: null, usd: 24.99 },
-        { id: 'api', type: 'api', plan: 'monthly', amount: null, usd: 7.99 },
-      ],
-      tiers: {
-        free: {
-          ads: true,
-          customAlias: false,
-          premiumDomains: false,
-          apiAccess: false,
-          forwardingLimit: 2,
-          mailboxTtlSeconds: 1800,
-          mailboxTtlOptions: [],
-        },
-        pro: {
-          ads: false,
-          customAlias: true,
-          premiumDomains: true,
-          apiAccess: false,
-          forwardingLimit: 100,
-          mailboxTtlSeconds: 86400,
-          mailboxTtlOptions: [86400, 604800, 2592000],
-        },
-        api: {
-          ads: false,
-          customAlias: true,
-          premiumDomains: true,
-          apiAccess: true,
-          forwardingLimit: 100,
-          mailboxTtlSeconds: 86400,
-          mailboxTtlOptions: [86400, 604800, 2592000],
-        },
-      },
-    });
-
-    render(
-      <MemoryRouter>
-        <LicenseProvider>
-          <Pro />
-        </LicenseProvider>
-      </MemoryRouter>
-    );
-
-    expect(await screen.findByRole('alert')).toHaveTextContent(/checkout is paused/i);
-    expect(screen.getByRole('button', { name: /monthly/i })).toBeDisabled();
-    expect(screen.getByRole('heading', { name: /what you actually get/i })).toBeInTheDocument();
   });
 
   test('lets an API subscriber pull a fresh key when the old one expires', async () => {
@@ -494,9 +366,8 @@ describe('Pro page', () => {
     renderPro();
 
     expect(await screen.findByText(/confirming payment/i)).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /yearly/i })).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/paste your key/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/last-resort paypal/i)).not.toBeInTheDocument();
+    expect(screen.queryByTestId('paypal-donate')).not.toBeInTheDocument();
   });
 
   test('collects a handoff token kept in session after the URL was stripped', async () => {

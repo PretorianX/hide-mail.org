@@ -150,6 +150,18 @@ describe('config', () => {
       expect(config.premiumDomains).toEqual(['inbox.pro.example', 'mail.pro.example']);
     });
 
+    it('pauses card checkout unless CHECKOUT_PAUSED is false', () => {
+      delete process.env.CHECKOUT_PAUSED;
+      const paused = require('../../config/config');
+      expect(paused.billing.checkoutPaused).toBe(true);
+
+      jest.resetModules();
+      process.env.VALID_DOMAINS = 'test.com';
+      process.env.CHECKOUT_PAUSED = 'false';
+      const open = require('../../config/config');
+      expect(open.billing.checkoutPaused).toBe(false);
+    });
+
     it('parses USD list prices as decimals', () => {
       process.env.PRO_PRICE_MONTHLY_USD = '3.49';
       const config = require('../../config/config');
