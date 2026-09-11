@@ -53,6 +53,7 @@ const Pro = () => {
   useEffect(() => {
     if (license?.active) {
       clearHandoffToken();
+      setConfirmingPayment(false);
       return undefined;
     }
     const handoffToken = readHandoffToken();
@@ -222,7 +223,7 @@ const Pro = () => {
           <p className="pro-key-label">Save this key:</p>
           <LicenseKeyCopy
             licenseKey={license.key}
-            copied={false}
+            copied={keyCopied}
             onCopy={copyLicenseKey}
             testId="pro-license-key"
           />
