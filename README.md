@@ -11,6 +11,7 @@ A temporary email service that provides disposable email addresses for privacy a
 - Copy email address to clipboard
 - Mobile-friendly responsive design
 - Dark/Light theme support
+- A separate address per site, all landing in the same inbox
 - Optional Hide Mail Pro plan: no ads, longer mailbox lifetimes, custom aliases, premium domains, higher forwarding limits
 - Optional API plan for QA automation: create mailboxes, read messages, register inbound webhooks
 
@@ -92,6 +93,27 @@ Key configuration options in `.env`:
 
 See [.env.example](./.env.example) for the full list with comments. For AdSense slot
 configuration, see [ADSENSE-SLOTS-CONFIG.md](./ADSENSE-SLOTS-CONFIG.md).
+
+## Site addresses
+
+A mailbox answers to more than its own address. Anything of the form
+`<mailbox-local-part>.<label>@<domain>` is delivered into that same mailbox, so a visitor can give
+`nova7.netflix@hide-mail.org` to one site and `nova7.shop@hide-mail.org` to the next without
+generating — and losing — a second inbox. Nothing has to be registered first: an address works the
+moment it is used, because routing is derived from the recipient.
+
+Recipients are matched longest-prefix-first by `services/subAddressing.js`, so an address spelled in
+full always wins over a sub-address route. A Pro mailbox called `john.doe@hide-mail.org` therefore
+keeps its own mail, and `john.doe.shop@hide-mail.org` still routes to it rather than to a shorter
+`john@hide-mail.org`. Registration refuses an alias that would land inside a live mailbox, so a
+dotted alias cannot be used to intercept somebody else's mail.
+
+Every stored message records `deliveredTo` (the address the sender actually used) and `siteLabel`,
+which is what the inbox tags messages with and filters on. `hidemail_emails_site_addressed_total`
+counts deliveries that arrived through a site address rather than the mailbox itself.
+
+Site addresses expire with the mailbox that owns them, so their useful life is the plan's mailbox
+lifetime: 30 minutes on the free tier, up to 30 days on Pro under a name of the subscriber's choice.
 
 ## Hide Mail Pro
 
