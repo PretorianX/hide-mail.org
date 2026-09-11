@@ -151,8 +151,8 @@ const SiteAddressPanel = ({
       )}
 
       <p className="site-address-footnote">
-        Site addresses live as long as the inbox does.{' '}
-        <Link to="/pro">Hide Mail Pro</Link> keeps one for up to 30 days under a name you choose.
+        Free on every plan. Site addresses live as long as the inbox does, so{' '}
+        <Link to="/pro">Hide Mail Pro</Link> keeps one for up to 30 days, under a name you choose.
       </p>
     </section>
   );

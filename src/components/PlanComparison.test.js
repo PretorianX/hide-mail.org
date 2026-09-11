@@ -83,6 +83,26 @@ describe('PlanComparison', () => {
     expect(screen.getByText(/buy the API plan/i)).toBeInTheDocument();
   });
 
+  test('says site addresses are included on every tier, free included', () => {
+    renderTable();
+
+    expect(screen.getByText('A different address for every site')).toBeInTheDocument();
+    expect(screen.getByText(/Included — add a suffix like \.netflix/)).toBeInTheDocument();
+  });
+
+  test('keeps the domains row above forwarding whatever else is in the table', () => {
+    renderTable();
+
+    const labels = screen
+      .getAllByRole('rowheader')
+      .map((cell) => cell.textContent);
+
+    expect(labels.indexOf('Domains')).toBeLessThan(labels.indexOf('Forward & Forget'));
+    expect(labels.indexOf('A different address for every site')).toBeLessThan(
+      labels.indexOf('Domains')
+    );
+  });
+
   test('promises premium domains only when some are configured', () => {
     renderTable();
     expect(screen.getByText('Domains')).toBeInTheDocument();

@@ -682,6 +682,7 @@ function AppContent() {
                           <li>🦆 Protect your privacy</li>
                           <li>🦆 Avoid spam in your personal inbox</li>
                           <li>🦆 Perfect for one-time signups</li>
+                          <li>🦆 A separate address per site, one inbox</li>
                           <li>🚀 <strong>Forward & Forget:</strong> Save important emails to your real inbox with one click</li>
                         </ul>
                       </div>
@@ -704,6 +705,7 @@ function AppContent() {
                           <li><strong>No Registration:</strong> Use our service instantly without creating an account or providing personal information.</li>
                           <li><strong>Security:</strong> Protect yourself from phishing attempts by using disposable emails for untrusted websites.</li>
                           <li><strong>Simplicity:</strong> Our user-friendly interface makes it easy to generate and manage temporary email addresses.</li>
+                          <li><strong>A different address per site:</strong> Add anything you like to the end of your address and it still arrives in the same inbox, so every signup can get its own address and you can see which one a message came in on.</li>
                           <li><strong>Forward & Forget:</strong> Our unique feature lets you save important emails to your real inbox with one click—stay anonymous while never missing what matters.</li>
                         </ul>
                       </div>
@@ -711,7 +713,7 @@ function AppContent() {
                         <h3>How Hide Mail Works</h3>
                         <ol>
                           <li><strong>Generate:</strong> Create a random email address with one click or customize your own.</li>
-                          <li><strong>Use:</strong> Provide this email address when signing up for services or newsletters.</li>
+                          <li><strong>Use:</strong> Provide this email address when signing up for services or newsletters, or give each site its own version of it.</li>
                           <li><strong>Receive:</strong> All incoming messages appear instantly in your temporary inbox.</li>
                           <li><strong>Read:</strong> View message content directly in our secure interface.</li>
                           <li><strong>Forward & Forget:</strong> Click to forward important emails to your real inbox—verify once via OTP, no account needed.</li>
@@ -741,6 +743,10 @@ function AppContent() {
                         <div className="faq-item">
                           <h4>How long do temporary emails last?</h4>
                           <p>A free address stays active for 30 minutes and you can extend it by 15 minutes at a time. With Hide Mail Pro you pick 24 hours, 7 days or 30 days up front. Either way the address and its emails are deleted when it expires.</p>
+                        </div>
+                        <div className="faq-item">
+                          <h4>Can I use a different address for every site?</h4>
+                          <p>Yes, and it is free on every plan. Put a dot and any word on the end of the name in your address—if your inbox is <code>nova7@hide-mail.org</code> then <code>nova7.netflix@hide-mail.org</code> and <code>nova7.shop@hide-mail.org</code> both arrive in that same inbox. Nothing has to be set up first; an address works the moment you use it, and each message is labelled with the address it was sent to, so you can tell which site passed your address on. The addresses last exactly as long as the inbox does, which is 30 minutes on the free plan and up to 30 days with <Link to="/pro">Hide Mail Pro</Link>, where you also choose the name so the addresses read as your own.</p>
                         </div>
                         <div className="faq-item">
                           <h4>Can I send emails from my temporary address?</h4>
