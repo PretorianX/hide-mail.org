@@ -22,6 +22,11 @@ const RATE_LIMITS = {
   mailboxRefresh: { requests: 30, windowSeconds: 60 },
   // Email fetching: 60 per minute per IP
   emailFetch: { requests: 60, windowSeconds: 60 },
+  // Restore key issue/rotate: 20 per minute per IP, in line with mailbox refresh
+  restoreKeyIssue: { requests: 20, windowSeconds: 60 },
+  // Restore key redemption: 10 per 5 minutes per IP. A restore key is guessable in principle,
+  // so this bucket is much tighter than the general one.
+  restoreRedeem: { requests: 10, windowSeconds: 300 },
   // License restore: 10 per 5 minutes per IP (a license key is a bearer credential)
   licenseValidate: { requests: 10, windowSeconds: 300 },
   // Order lookup after payment: separate bucket so guessing license keys cannot lock a
@@ -96,6 +101,8 @@ module.exports = {
   mailboxRegister: createRateLimiter('mailboxRegister'),
   mailboxRefresh: createRateLimiter('mailboxRefresh'),
   emailFetch: createRateLimiter('emailFetch'),
+  restoreKeyIssue: createRateLimiter('restoreKeyIssue'),
+  restoreRedeem: createRateLimiter('restoreRedeem'),
   licenseValidate: createRateLimiter('licenseValidate'),
   orderLookup: createRateLimiter('orderLookup'),
   default: createRateLimiter('default'),

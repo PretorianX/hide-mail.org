@@ -3,6 +3,7 @@ const config = require('../config/config');
 const logger = require('../utils/logger');
 const metrics = require('../services/metricsService');
 const entitlementService = require('../services/entitlementService');
+const restoreKeyService = require('../services/restoreKeyService');
 
 const ALIAS_PATTERN = /^[a-z0-9](?:[a-z0-9._-]{0,62}[a-z0-9])?$/;
 
@@ -266,6 +267,9 @@ const emailController = {
       if (!success) {
         return res.status(404).json({ error: 'Mailbox not found or expired' });
       }
+
+      // A restore key must never outlive the mailbox it points at, nor die before it.
+      await restoreKeyService.syncTtl(email, expirationSeconds);
       
       metrics.mailboxesRefreshedTotal.inc();
       res.status(200).json({
@@ -291,6 +295,7 @@ const emailController = {
       }
       
       await redisService.deactivateMailbox(email);
+      await restoreKeyService.revoke(email);
       metrics.mailboxesDeactivatedTotal.inc();
       
       res.status(200).json({

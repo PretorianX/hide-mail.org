@@ -36,6 +36,21 @@ const mailboxesDeactivatedTotal = new client.Counter({
 });
 
 // ---------------------------------------------------------------------------
+// Inbox restore keys
+// ---------------------------------------------------------------------------
+
+const restoreKeysIssuedTotal = new client.Counter({
+  name: 'hidemail_restore_keys_issued_total',
+  help: 'Total inbox restore keys created',
+});
+
+const restoreKeysRedeemedTotal = new client.Counter({
+  name: 'hidemail_restore_keys_redeemed_total',
+  help: 'Total inbox restore key redemptions by outcome',
+  labelNames: ['result'],
+});
+
+// ---------------------------------------------------------------------------
 // Email / SMTP metrics
 // ---------------------------------------------------------------------------
 
@@ -288,6 +303,10 @@ module.exports = {
   mailboxesRegisteredTotal,
   mailboxesRefreshedTotal,
   mailboxesDeactivatedTotal,
+
+  // Restore key counters
+  restoreKeysIssuedTotal,
+  restoreKeysRedeemedTotal,
 
   // SMTP / Email counters
   smtpConnectionsTotal,

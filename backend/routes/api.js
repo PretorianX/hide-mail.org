@@ -1,6 +1,7 @@
 const express = require('express');
 const emailController = require('../controllers/emailController');
 const forwardingController = require('../controllers/forwardingController');
+const restoreKeyController = require('../controllers/restoreKeyController');
 const billingRoutes = require('./billing');
 const qaApiRoutes = require('./qaApi');
 const redisService = require('../services/redisService');
@@ -50,6 +51,15 @@ router.post('/mailbox/register',
 );
 router.post('/mailbox/refresh', apiRateLimiter.mailboxRefresh, attachLicense, emailController.refreshMailbox);
 router.post('/mailbox/deactivate', apiRateLimiter.default, emailController.deactivateMailbox);
+
+// ============================================================================
+// Inbox restore keys
+// A mailbox lives in one browser's localStorage. A restore key is a short code that reopens it
+// on another device until the mailbox expires. See docs/inbox-restore-key.md.
+// ============================================================================
+router.post('/mailbox/restore-key', apiRateLimiter.restoreKeyIssue, restoreKeyController.issue);
+router.post('/mailbox/restore', apiRateLimiter.restoreRedeem, restoreKeyController.redeem);
+router.delete('/mailbox/restore-key', apiRateLimiter.default, restoreKeyController.revoke);
 
 // Add the missing /messages endpoint (with rate limiting)
 router.get('/messages', apiRateLimiter.emailFetch, async (req, res) => {
