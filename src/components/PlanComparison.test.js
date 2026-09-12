@@ -60,6 +60,18 @@ describe('PlanComparison', () => {
     ).toHaveLength(2);
   });
 
+  test('says how long a restore key keeps working on each tier', () => {
+    renderTable();
+
+    expect(screen.getByText('Reopening an inbox elsewhere')).toBeInTheDocument();
+    expect(
+      screen.getByText("A restore key, which works for the address's 30 minutes")
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByText('A restore key, which works for the whole lifetime you picked')
+    ).toHaveLength(2);
+  });
+
   test('spells out both forwarding limits as numbers', () => {
     renderTable();
 
