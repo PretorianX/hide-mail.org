@@ -284,6 +284,40 @@ describe('EmailService', () => {
     });
   });
 
+  describe('adoptMailbox', () => {
+    test('takes over a restored address with the lifetime the server reported', () => {
+      EmailService.adoptMailbox('restored@tempmail.com', 604800);
+
+      expect(EmailService.currentEmail).toBe('restored@tempmail.com');
+      expect(EmailService.mailboxTtlSeconds).toBe(604800);
+      const remainingMs = EmailService.expirationTime.getTime() - Date.now();
+      expect(remainingMs).toBeGreaterThan(604790 * 1000);
+      expect(remainingMs).toBeLessThanOrEqual(604800 * 1000);
+    });
+
+    test('persists the address so a reload keeps it', () => {
+      EmailService.adoptMailbox('restored@tempmail.com', 1800);
+
+      expect(localStorageMock.setItem).toHaveBeenCalledWith(
+        'mailduck_current_email',
+        'restored@tempmail.com'
+      );
+    });
+
+    test('never deactivates the mailbox the browser already held', async () => {
+      EmailService.currentEmail = 'previous@tempmail.com';
+
+      EmailService.adoptMailbox('restored@tempmail.com', 1800);
+
+      expect(axios.post).not.toHaveBeenCalled();
+    });
+
+    test('refuses a call without an address or a lifetime', () => {
+      expect(() => EmailService.adoptMailbox('', 1800)).toThrow();
+      expect(() => EmailService.adoptMailbox('restored@tempmail.com', 0)).toThrow();
+    });
+  });
+
   describe('refreshExpirationTime', () => {
     beforeEach(() => {
       EmailService.currentEmail = 'user@tempmail.com';

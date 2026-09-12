@@ -270,6 +270,30 @@ class EmailService {
     }
   }
 
+  /**
+   * Take over a mailbox this browser did not create, after a restore key was redeemed.
+   *
+   * The mailbox already exists server-side, so there is nothing to register. A mailbox this
+   * browser held before is deliberately left alone rather than deactivated: another device may
+   * have restored it too, and it expires on its own.
+   *
+   * @param {string} email Address the restore key resolved to.
+   * @param {number} ttlSeconds Lifetime the server reported for it.
+   * @returns {string} The adopted address.
+   */
+  static adoptMailbox(email, ttlSeconds) {
+    if (!email || !ttlSeconds) {
+      throw new Error('A restored mailbox needs an address and a remaining lifetime');
+    }
+
+    this.currentEmail = email;
+    this.mailboxTtlSeconds = ttlSeconds;
+    this.expirationTime = new Date(Date.now() + ttlSeconds * 1000);
+    this.saveToStorage();
+
+    return email;
+  }
+
   static async deactivateCurrentEmail() {
     if (!this.currentEmail) return;
     
