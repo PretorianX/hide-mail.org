@@ -56,12 +56,6 @@ const PlanComparison = ({ tiers, price }) => {
       api: mailboxLifetime(api),
     },
     {
-      label: 'Reopening an inbox elsewhere',
-      free: `A restore key, which works for the address's ${formatDuration(free.mailboxTtlSeconds)}`,
-      pro: 'A restore key, which works for the whole lifetime you picked',
-      api: 'A restore key, which works for the whole lifetime you picked',
-    },
-    {
       label: 'Choosing the address',
       free: 'A random address is generated for you',
       pro: 'Pick the name yourself, for example invoices@',
@@ -88,7 +82,7 @@ const PlanComparison = ({ tiers, price }) => {
   ];
 
   if (premiumDomainCount > 0) {
-    rows.splice(5, 0, {
+    rows.splice(4, 0, {
       label: 'Domains',
       free: 'Shared public domains',
       pro: `${premiumDomainCount} extra domain${premiumDomainCount === 1 ? '' : 's'} kept off blocklists`,
