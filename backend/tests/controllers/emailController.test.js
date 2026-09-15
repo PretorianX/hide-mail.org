@@ -77,4 +77,56 @@ describe('emailController', () => {
       });
     });
   });
+
+  describe('attachment metadata', () => {
+    const storedMessage = () => ({
+      id: 'msg-1',
+      from: 'billing@shop.test',
+      subject: 'Your invoice',
+      attachments: [
+        {
+          filename: 'invoice.pdf',
+          contentType: 'application/pdf',
+          contentDisposition: 'attachment',
+          cid: null,
+          content: Buffer.from('pdf-bytes').toString('base64'),
+          encoding: 'base64',
+        },
+      ],
+    });
+
+    const expectedMetadata = [
+      {
+        index: 0,
+        filename: 'invoice.pdf',
+        contentType: 'application/pdf',
+        size: Buffer.byteLength('pdf-bytes'),
+        inline: false,
+      },
+    ];
+
+    it('lists attachments as metadata instead of base64 content', async () => {
+      redisService.getEmails.mockResolvedValueOnce([storedMessage()]);
+      const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
+
+      await emailController.getEmails({ params: { email: 'a@domain1.com' } }, res);
+
+      const [payload] = res.json.mock.calls[0];
+      expect(payload.data[0].attachments).toEqual(expectedMetadata);
+    });
+
+    it('describes attachments on a single message without base64 content', async () => {
+      redisService.getEmailById.mockResolvedValueOnce(storedMessage());
+      const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
+
+      await emailController.getEmailById(
+        { params: { email: 'a@domain1.com', id: 'msg-1' } },
+        res
+      );
+
+      const [payload] = res.json.mock.calls[0];
+      expect(payload.data.attachments).toEqual(expectedMetadata);
+      expect(payload.data.subject).toBe('Your invoice');
+    });
+  });
 }); 

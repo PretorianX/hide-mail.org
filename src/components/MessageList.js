@@ -7,6 +7,10 @@ const MessageList = ({ messages, onSelectMessage, selectedMessageId, tempMailbox
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState(null);
 
+  // Inline parts belong to the message body, so only real files are worth announcing here.
+  const countFiles = (message) =>
+    (message.attachments || []).filter((attachment) => !attachment.inline).length;
+
   // Function to format the message preview with proper length
   const formatPreview = (message) => {
     let preview = message.preview || '';
@@ -68,8 +72,20 @@ const MessageList = ({ messages, onSelectMessage, selectedMessageId, tempMailbox
             <div className="message-subject">{message.subject}</div>
             <div className="message-preview">{formatPreview(message)}</div>
             <div className="message-footer">
-              <div className="message-date">
-                {new Date(message.date).toLocaleString()}
+              <div className="message-footer-meta">
+                <div className="message-date">
+                  {new Date(message.date).toLocaleString()}
+                </div>
+                {countFiles(message) > 0 && (
+                  <div
+                    className="message-attachment-count"
+                    data-testid={`attachment-indicator-${message.id}`}
+                    title={`${countFiles(message)} attachment(s)`}
+                  >
+                    <span aria-hidden="true">📎</span>
+                    <span>{countFiles(message)}</span>
+                  </div>
+                )}
               </div>
               {tempMailbox && (
                 <div className="message-actions" onClick={(e) => e.stopPropagation()}>

@@ -3,6 +3,7 @@ const config = require('../config/config');
 const logger = require('../utils/logger');
 const metrics = require('../services/metricsService');
 const entitlementService = require('../services/entitlementService');
+const attachmentService = require('../services/attachmentService');
 
 const ALIAS_PATTERN = /^[a-z0-9](?:[a-z0-9._-]{0,62}[a-z0-9])?$/;
 
@@ -21,7 +22,8 @@ const isPremiumOnlyDomain = (domain) =>
 
 const emailController = {
   /**
-   * Get all emails for a recipient
+   * Get all emails for a recipient. Attachments are described, not inlined: the inbox polls
+   * this endpoint every few seconds and downloads go through attachmentController instead.
    * @param {Object} req - Express request object
    * @param {Object} res - Express response object
    * @param {Function} next - Express next middleware function
@@ -39,7 +41,7 @@ const emailController = {
       
       res.status(200).json({
         success: true,
-        data: emails
+        data: emails.map(attachmentService.withAttachmentMetadata)
       });
     } catch (error) {
       logger.error('Error in getEmails controller:', error);
@@ -75,7 +77,7 @@ const emailController = {
       
       res.status(200).json({
         success: true,
-        data: foundEmail
+        data: attachmentService.withAttachmentMetadata(foundEmail)
       });
     } catch (error) {
       logger.error('Error in getEmailById controller:', error);

@@ -1,5 +1,6 @@
 const express = require('express');
 const emailController = require('../controllers/emailController');
+const attachmentController = require('../controllers/attachmentController');
 const forwardingController = require('../controllers/forwardingController');
 const billingRoutes = require('./billing');
 const qaApiRoutes = require('./qaApi');
@@ -25,6 +26,11 @@ router.get('/challenge', apiRateLimiter.default, powService.challengeHandler);
 
 // Email routes (with rate limiting)
 router.get('/emails/:email', apiRateLimiter.emailFetch, emailController.getEmails);
+router.get(
+  '/emails/:email/:id/attachments/:index',
+  apiRateLimiter.emailFetch,
+  attachmentController.downloadAttachment
+);
 router.get('/emails/:email/:id', apiRateLimiter.emailFetch, emailController.getEmailById);
 router.delete('/emails/:email/:id', apiRateLimiter.default, emailController.deleteEmail);
 router.delete('/emails/:email', apiRateLimiter.default, emailController.deleteAllEmails);

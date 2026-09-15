@@ -1,5 +1,6 @@
 const express = require('express');
 const qaApiController = require('../controllers/qaApiController');
+const attachmentController = require('../controllers/attachmentController');
 const { requireApiKey } = require('../middleware/apiKeyAuth');
 const apiRateLimiter = require('../services/apiRateLimiter');
 
@@ -10,6 +11,10 @@ router.use(apiRateLimiter.default);
 
 router.post('/mailboxes', qaApiController.createMailbox);
 router.get('/mailboxes/:email/messages', qaApiController.listMessages);
+router.get(
+  '/mailboxes/:email/messages/:id/attachments/:index',
+  attachmentController.downloadAttachment
+);
 router.get('/mailboxes/:email/messages/:id', qaApiController.getMessage);
 router.put('/mailboxes/:email/webhook', qaApiController.setWebhook);
 router.delete('/mailboxes/:email', qaApiController.deleteMailbox);

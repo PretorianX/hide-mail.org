@@ -1,0 +1,84 @@
+/* The message modal keeps a light surface of its own, so these colours are explicit
+   instead of theme variables that would turn invisible in dark mode. */
+
+.attachment-panel {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #eee;
+}
+
+.attachment-panel-title {
+  margin: 0 0 12px 0;
+  font-size: 1rem;
+  color: #333;
+}
+
+.attachment-panel-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.attachment-panel-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background-color: #f7f8fa;
+  border: 1px solid #e8eaed;
+  border-radius: 6px;
+}
+
+.attachment-panel-icon {
+  flex-shrink: 0;
+  font-size: 1rem;
+}
+
+.attachment-panel-name {
+  flex: 1;
+  min-width: 0;
+  font-weight: 500;
+  color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.attachment-panel-size {
+  flex-shrink: 0;
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.attachment-panel-download {
+  flex-shrink: 0;
+  padding: 6px 14px;
+  border-radius: 4px;
+  background-color: var(--primary-color);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.attachment-panel-download:hover {
+  background-color: var(--primary-color-dark);
+}
+
+.attachment-panel-download:focus-visible {
+  outline: 2px solid var(--primary-color-dark);
+  outline-offset: 2px;
+}
+
+@media (max-width: 480px) {
+  .attachment-panel-item {
+    flex-wrap: wrap;
+  }
+
+  .attachment-panel-name {
+    flex-basis: 100%;
+  }
+}

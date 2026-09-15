@@ -6,6 +6,7 @@
  * POST   /api/qa/mailboxes
  * GET    /api/qa/mailboxes/:email/messages
  * GET    /api/qa/mailboxes/:email/messages/:id
+ * GET    /api/qa/mailboxes/:email/messages/:id/attachments/:index (attachmentController)
  * PUT    /api/qa/mailboxes/:email/webhook
  */
 
