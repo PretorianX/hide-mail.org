@@ -83,6 +83,11 @@ export const analytics = {
   selectMessage: (messageId) => trackEvent('select_message', { message_id: messageId }),
   forwardEmail: () => trackButtonClick('Forward Email', 'email'),
   
+  // Inbox restore keys
+  restoreKeyIssued: (rotated = false) => trackEvent('restore_key_issued', { rotated }),
+  restoreKeyRedeemed: (result) => trackEvent('restore_key_redeemed', { result }),
+  restoreKeyProClick: () => trackButtonClick('Restore key Pro lifetime', 'billing'),
+  
   // Navigation
   navigateTo: (page) => trackButtonClick(page, 'navigation'),
   

@@ -6,12 +6,15 @@ process.env.VALID_DOMAINS = 'domain1.com,domain2.com';
 const redisService = require('../../services/redisService');
 const emailController = require('../../controllers/emailController');
 const emailService = require('../../services/emailService');
+const restoreKeyService = require('../../services/restoreKeyService');
 const config = require('../../config/config');
 
 // Mock redisService
 jest.mock('../../services/redisService');
 // Mock emailService
 jest.mock('../../services/emailService');
+// Mock restoreKeyService
+jest.mock('../../services/restoreKeyService');
 // Mock config
 jest.mock('../../config/config', () => {
   const originalConfig = jest.requireActual('../../config/config');
@@ -75,6 +78,57 @@ describe('emailController', () => {
         success: false,
         error: 'Failed to fetch domains'
       });
+    });
+  });
+
+  describe('restore key follows the mailbox lease', () => {
+    const mailbox = 'jane.doe@domain1.com';
+
+    const mockResponse = () => ({
+      status: jest.fn().mockReturnThis(),
+      json: jest.fn()
+    });
+
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it('extends the restore key when the mailbox is refreshed', async () => {
+      redisService.getMailboxTtl.mockResolvedValue(600);
+      redisService.refreshMailbox.mockResolvedValue(true);
+
+      await emailController.refreshMailbox(
+        { body: { email: mailbox } },
+        mockResponse(),
+        jest.fn()
+      );
+
+      expect(restoreKeyService.syncTtl).toHaveBeenCalledWith(mailbox, 1500);
+    });
+
+    it('leaves the restore key alone when the refresh found no mailbox', async () => {
+      redisService.getMailboxTtl.mockResolvedValue(-2);
+      redisService.refreshMailbox.mockResolvedValue(false);
+
+      await emailController.refreshMailbox(
+        { body: { email: mailbox } },
+        mockResponse(),
+        jest.fn()
+      );
+
+      expect(restoreKeyService.syncTtl).not.toHaveBeenCalled();
+    });
+
+    it('revokes the restore key when the mailbox is deactivated', async () => {
+      redisService.deactivateMailbox.mockResolvedValue(true);
+
+      await emailController.deactivateMailbox(
+        { body: { email: mailbox } },
+        mockResponse(),
+        jest.fn()
+      );
+
+      expect(restoreKeyService.revoke).toHaveBeenCalledWith(mailbox);
     });
   });
 }); 

@@ -25,6 +25,8 @@ import MessageList from './components/MessageList.js';
 import ProCta from './components/ProCta.js';
 import HomeProBadge from './components/HomeProBadge.js';
 import Pro from './pages/Pro.js';
+import RestoreInbox from './pages/RestoreInbox.js';
+import RestoreKeyPanel from './components/RestoreKeyPanel.js';
 import { LicenseProvider, useLicense } from './context/LicenseContext.js';
 import { trackPageView, analytics } from './services/analytics.js';
 
@@ -41,6 +43,7 @@ function PageViewTracker() {
       '/contact-us': 'Contact Us',
       '/blog': 'Blog',
       '/pro': 'Pro',
+      '/restore': 'Reopen an inbox',
     };
     
     const title = pageTitles[location.pathname] || 
@@ -424,6 +427,18 @@ function AppContent() {
     // Don't set an error message here
   };
 
+  /**
+   * A restore key was redeemed on this device. The mailbox already exists server-side, so it is
+   * adopted rather than registered, and its stored messages are pulled straight away.
+   */
+  const handleMailboxRestored = (restoredEmail, ttlSeconds) => {
+    EmailService.adoptMailbox(restoredEmail, ttlSeconds);
+    setEmail(restoredEmail);
+    setMessages([]);
+    setError(null);
+    fetchMessages(restoredEmail);
+  };
+
   const toggleAutoRefresh = () => {
     setAutoRefresh(!autoRefresh);
   };
@@ -586,6 +601,7 @@ function AppContent() {
                                     {refreshing ? 'Checking...' : 'Check Messages'}
                                   </button>
                                 </div>
+                                <RestoreKeyPanel email={email} isPro={isPro} />
                               </>
                             ) : (
                               <div className="email-actions">
@@ -666,6 +682,7 @@ function AppContent() {
                           <li>🦆 Avoid spam in your personal inbox</li>
                           <li>🦆 Perfect for one-time signups</li>
                           <li>🚀 <strong>Forward & Forget:</strong> Save important emails to your real inbox with one click</li>
+                          <li>🔑 <strong>Restore key:</strong> Reopen the same inbox on your phone or in another browser</li>
                         </ul>
                       </div>
                       {!isPro ? <ProCta /> : null}
@@ -698,6 +715,7 @@ function AppContent() {
                           <li><strong>Receive:</strong> All incoming messages appear instantly in your temporary inbox.</li>
                           <li><strong>Read:</strong> View message content directly in our secure interface.</li>
                           <li><strong>Forward & Forget:</strong> Click to forward important emails to your real inbox—verify once via OTP, no account needed.</li>
+                          <li><strong>Reopen:</strong> Take a restore key and enter it on another device to pick the same inbox up there.</li>
                           <li><strong>Expire:</strong> After the set period, the email address expires and all data is deleted.</li>
                         </ol>
                         
@@ -732,6 +750,10 @@ function AppContent() {
                         <div className="faq-item">
                           <h4>What is Forward &amp; Forget?</h4>
                           <p>Forward &amp; Forget is our unique feature that lets you save important emails to your real inbox with one click. Simply verify your real email address via OTP (no account needed), and you can forward any email you want to keep—staying anonymous while never missing what matters. A free address can forward 2 emails; Hide Mail Pro raises that to 100.</p>
+                        </div>
+                        <div className="faq-item">
+                          <h4>Can I open the same inbox on another device?</h4>
+                          <p>Yes. Press <strong>Get a restore key</strong> under your address and you get a short code such as HMR-4F7K-2QMT-9XB3. Enter it on <Link to="/restore">the reopen page</Link> in any other browser or on your phone and the same address, with the messages already delivered to it, opens there. The key is free and needs no account. It expires with the address, so on a free address that is 30 minutes; <Link to="/pro">Hide Mail Pro</Link> keeps an address for 24 hours, 7 days or 30 days, and the key keeps working that whole time.</p>
                         </div>
                         <div className="faq-item">
                           <h4>Is using a temporary email legal?</h4>
@@ -811,6 +833,7 @@ function AppContent() {
               <Route path="/blog" element={<Blog />} />
               <Route path="/blog/:postId" element={<BlogPost />} />
               <Route path="/pro" element={<Pro />} />
+              <Route path="/restore" element={<RestoreInbox onRestored={handleMailboxRestored} />} />
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>
             

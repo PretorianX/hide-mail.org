@@ -9,6 +9,7 @@ A temporary email service that provides disposable email addresses for privacy a
 - Select from multiple domains
 - Auto-refresh mailbox
 - Copy email address to clipboard
+- Reopen an inbox on another device with a restore key
 - Mobile-friendly responsive design
 - Dark/Light theme support
 - Optional Hide Mail Pro plan: no ads, longer mailbox lifetimes, custom aliases, premium domains, higher forwarding limits
@@ -167,6 +168,41 @@ advertised limits are the same numbers the backend enforces. Two of them are eas
 Ads are suppressed for paying users in two places: the React ad components render nothing, and
 `public/adsense-config.js` skips loading the AdSense tag entirely when a licence key is present,
 so auto-ads cannot place anything either.
+
+## Inbox restore keys
+
+A mailbox exists twice: as `active_mailbox:{address}` in Redis, and as an address in one
+browser's local storage. The Redis side routinely outlives the browser side — a cleared cache, a
+private window, or simply a second device leaves an address that is still accepting mail with
+nothing pointing at it.
+
+A **restore key** is a short code bound to the mailbox lease that closes that gap. The holder
+presses *Get a restore key* under the address, gets something like `HMR-4F7K-2QMT-9XB3`, and
+enters it on `/restore` in any other browser. That browser adopts the address, its remaining
+lifetime and the messages already stored for it.
+
+| Method | Endpoint | Notes |
+| --- | --- | --- |
+| `POST` | `/api/mailbox/restore-key` | Issues the key, or re-shows it. `rotate: true` replaces it |
+| `POST` | `/api/mailbox/restore` | Redeems a key, answers with the address and its TTL |
+| `DELETE` | `/api/mailbox/restore-key` | Revokes the key |
+
+Keys are 12 symbols from a 32-symbol alphabet that omits `I`, `L`, `O` and `U`, since people
+retype them; normalisation maps the substitutions they make anyway. One key is live per mailbox
+at a time. `mailbox_restore:{key}` and `mailbox_restore_key:{address}` both carry the mailbox
+TTL, extending the mailbox extends them, and deactivating the mailbox revokes them, so a key can
+never outlive the data it points at.
+
+`GET /api/emails/:address` has no auth: knowing a Hide Mail address is already enough to read its
+inbox. A restore key is a typeable handle for a secret the service already treats that way, not
+a weaker one. Redemption has its own per-IP bucket (10 per 5 minutes, versus 100 per minute for
+the general API), and a key never carries the licence key — restoring an inbox does not move a
+Pro entitlement to the second device.
+
+The capability is free on every tier. Its reach is the mailbox lifetime, which is what a paid
+plan changes: 30 minutes on a free address, 24 hours / 7 days / 30 days on Pro. Counters
+`hidemail_restore_keys_issued_total` and `hidemail_restore_keys_redeemed_total{result}` track
+use. Design notes live in [docs/inbox-restore-key.md](./docs/inbox-restore-key.md).
 
 ## Monitoring
 
