@@ -63,14 +63,18 @@ module.exports = {
     },
   },
   jest: {
-    configure: {
-      // Configure Jest to handle ES modules
-      transformIgnorePatterns: [
-        "node_modules/(?!axios|@faker-js/faker)/"
-      ],
-      moduleNameMapper: {
-        "^axios$": "<rootDir>/node_modules/axios/dist/axios.js"
-      }
-    }
+    // Function form replaces CRA's default node_modules ignore. Object merge
+    // left that default in place, so Faker 10's ESM dist never went through babel-jest.
+    configure: (jestConfig) => {
+      jestConfig.transformIgnorePatterns = [
+        '[/\\\\]node_modules[/\\\\](?!(axios|@faker-js[/\\\\]faker)[/\\\\]).+\\.(js|jsx|mjs|cjs|ts|tsx)$',
+        '^.+\\.module\\.(css|sass|scss)$',
+      ];
+      jestConfig.moduleNameMapper = {
+        ...jestConfig.moduleNameMapper,
+        '^axios$': '<rootDir>/node_modules/axios/dist/axios.js',
+      };
+      return jestConfig;
+    },
   }
 }; 

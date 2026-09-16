@@ -25,6 +25,7 @@ jest.mock('../../config/config', () => {
       monthlyUsd: 3.49,
       yearlyUsd: 24.99,
       apiUsd: 7.99,
+      checkoutPaused: false,
     },
   };
 });
@@ -127,6 +128,28 @@ describe('billingController', () => {
   });
 
   describe('checkout', () => {
+    it('rejects checkout while card payments are paused', async () => {
+      const config = require('../../config/config');
+      config.billing.checkoutPaused = true;
+
+      try {
+        const req = { body: { plan: 'monthly' } };
+        const res = mockRes();
+
+        await billingController.checkout(req, res);
+
+        expect(res.status).toHaveBeenCalledWith(503);
+        expect(res.json).toHaveBeenCalledWith({
+          success: false,
+          error: 'Card checkout is paused',
+          code: 'CHECKOUT_PAUSED',
+        });
+        expect(orderService.createOrder).not.toHaveBeenCalled();
+      } finally {
+        config.billing.checkoutPaused = false;
+      }
+    });
+
     it('returns a signed WayForPay payload for a monthly Pro subscription', async () => {
       const req = { body: { plan: 'monthly' } };
       const res = mockRes();

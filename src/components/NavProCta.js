@@ -65,7 +65,10 @@ const ProMember = styled(Link)`
 const NavProCta = ({ isPro, daysLeft }) => {
   if (!isPro) {
     return (
-      <ProUpgrade className="nav-pro-cta" to="/pro">
+      <ProUpgrade
+        className="nav-pro-cta"
+        to="/pro"
+      >
         Go Pro
       </ProUpgrade>
     );
@@ -73,7 +76,7 @@ const NavProCta = ({ isPro, daysLeft }) => {
 
   return (
     <ProMember className="nav-pro-cta nav-pro-cta--member" to="/pro">
-      Pro
+      Pro active
       {typeof daysLeft === 'number' && (
         <span data-testid="header-pro-days">&nbsp;· {daysLeft} days left</span>
       )}

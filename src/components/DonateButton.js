@@ -1,8 +1,8 @@
 import React, { useEffect, useRef } from 'react';
 import './DonateButton.css';
 import { analytics } from '../services/analytics.js';
+import { PAYPAL_HOSTED_BUTTON_ID } from '../utils/paypal';
 
-const PAYPAL_BUTTON_ID = 'ES5RX8BKH3P5G';
 const PAYPAL_SDK_URL = 'https://www.paypalobjects.com/donate/sdk/donate-sdk.js';
 
 // Track if SDK is loaded globally
@@ -61,7 +61,7 @@ const DonateButton = ({ className = '' }) => {
         if (window.PayPal && window.PayPal.Donation) {
           window.PayPal.Donation.Button({
             env: 'production',
-            hosted_button_id: PAYPAL_BUTTON_ID,
+            hosted_button_id: PAYPAL_HOSTED_BUTTON_ID,
             image: {
               src: 'https://www.paypalobjects.com/en_US/i/btn/btn_donate_SM.gif',
               alt: 'Donate with PayPal button',

@@ -111,4 +111,19 @@ describe('LicenseService', () => {
       expect.objectContaining({ headers: expect.any(Object) })
     );
   });
+
+  test('does not persist a license key when the handoff is not paid yet', async () => {
+    fetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        success: true,
+        licenseKey: null,
+        data: { paidAt: null },
+      }),
+    });
+
+    const payload = await LicenseService.fetchPaidOrder('token-abc');
+    expect(payload.licenseKey == null).toBe(true);
+    expect(LicenseService.getKey()).toBeNull();
+  });
 });
