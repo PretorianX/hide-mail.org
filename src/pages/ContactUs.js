@@ -277,7 +277,7 @@ const ContactUs = () => {
           
           <h3 className="SectionTitle">Can I send emails from my temporary address?</h3>
           <Paragraph className="Paragraph">
-            No, Hide Mail is a receive-only service. You cannot send emails from the temporary addresses.
+            You can reply to a message you received. Open it, press Reply, and the answer is sent from your Hide Mail address into the same conversation, so the other side can keep writing to you. Hide Mail will not send to an address that has not written to you first — that limit is what keeps the service from being used as a spam relay. A free address can send 1 reply; Hide Mail Pro raises the allowance to 50 per address.
           </Paragraph>
           
           <h3 className="SectionTitle">Are my emails private?</h3>

@@ -6,6 +6,7 @@ A temporary email service that provides disposable email addresses for privacy a
 
 - Generate temporary email addresses instantly
 - Receive and view emails in real-time
+- Reply to anyone who writes to you, from the temporary address they wrote to
 - Download attachments that arrive with a message
 - Select from multiple domains
 - Auto-refresh mailbox
@@ -164,6 +165,9 @@ advertised limits are the same numbers the backend enforces. Two of them are eas
   mailbox **per hour** by `rateLimiter`, not per mailbox lifetime. The limit is resolved from the
   licence key stored with the mailbox when it was created, so activating Pro does not raise the
   limit on a mailbox generated beforehand.
+- **Replies.** `REPLY_FREE_LIMIT` and `REPLY_PRO_LIMIT` are counted per mailbox **lifetime**, not
+  per hour, and the counter expires with the mailbox lease. Like forwarding, the limit is
+  resolved from the licence stored with the mailbox at registration.
 
 Ads are suppressed for paying users in two places: the React ad components render nothing, and
 `public/adsense-config.js` skips loading the AdSense tag entirely when a licence key is present,
@@ -210,6 +214,44 @@ curl -sS -H "Authorization: Bearer $HIDE_MAIL_API_KEY" \
   "https://hide-mail.org/api/qa/mailboxes/$MAILBOX/messages/$MESSAGE_ID/attachments/0" \
   -o invoice.pdf
 ```
+
+## Replies
+
+A mailbox can answer the people who write to it. `POST /api/reply/:email/:messageId` takes the
+typed text and nothing else:
+
+```bash
+curl -sS -X POST "https://hide-mail.org/api/reply/$MAILBOX/$MESSAGE_ID" \
+  -H 'Content-Type: application/json' \
+  -d '{"body":"Yes, that address is correct."}'
+```
+
+| Route | Purpose |
+|-------|---------|
+| `GET /api/reply/status/:email` | remaining replies, the body cap, and whether replying is possible |
+| `GET /api/reply/:email/:messageId` | replies already sent for a message |
+| `POST /api/reply/:email/:messageId` | send a reply |
+
+**The recipient is never taken from the request.** It is resolved server-side from the
+`Reply-To`/`From` of the stored message being answered, so an address can only write to someone
+who has already written to it, and the endpoint cannot be driven as an open relay. On top of
+that: one recipient with no CC or BCC, replies into the service's own domains refused, plain
+text only capped at `REPLY_MAX_BODY_CHARS`, CR/LF stripped from every header value echoed out of
+stored mail, and a per-IP bucket (`replySend`) over the per-mailbox allowance.
+
+The reply leaves as `From: <the temporary address>` with `In-Reply-To`/`References` copied from
+the original, so it threads into the conversation the correspondent already has open and their
+answer comes back to the same inbox. No SRS rewriting applies — unlike a forward, the sender is
+a domain this service is already authorised to send for, and DKIM signs it the same way.
+Sending therefore needs the same `SMTP_HOST` that Forward & Forget uses; when it is unset the
+status endpoint reports `smtpConfigured: false` and the UI says replying is unavailable rather
+than accepting text it cannot deliver.
+
+Sent replies are logged against the message under `reply_sent:{mailbox}:{messageId}` and the
+allowance under `reply_quota:{mailbox}`, both on the mailbox TTL, so everything disappears with
+the inbox. `hidemail_replies_total{result}` counts the outcomes (`sent`, `quota`, `failed`).
+
+Design notes and the reasoning behind the limits live in [`docs/replies.md`](docs/replies.md).
 
 ## Monitoring
 
