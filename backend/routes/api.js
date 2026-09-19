@@ -2,6 +2,7 @@ const express = require('express');
 const emailController = require('../controllers/emailController');
 const attachmentController = require('../controllers/attachmentController');
 const forwardingController = require('../controllers/forwardingController');
+const replyController = require('../controllers/replyController');
 const billingRoutes = require('./billing');
 const qaApiRoutes = require('./qaApi');
 const redisService = require('../services/redisService');
@@ -310,6 +311,21 @@ router.get('/forwarding/status/:email', apiRateLimiter.default, forwardingContro
 // Clear forwarding configuration
 // DELETE /api/forwarding/:email
 router.delete('/forwarding/:email', apiRateLimiter.default, forwardingController.clearForwarding);
+
+// ============================================================================
+// Reply Routes
+// Answering a correspondent from the temporary address they wrote to. The recipient is always
+// resolved from stored mail, never from the request body.
+// ============================================================================
+
+// GET /api/reply/status/:email - remaining replies for this address
+router.get('/reply/status/:email', apiRateLimiter.default, replyController.getStatus);
+
+// GET /api/reply/:email/:messageId - replies already sent for a message
+router.get('/reply/:email/:messageId', apiRateLimiter.emailFetch, replyController.listReplies);
+
+// POST /api/reply/:email/:messageId - send a reply { body: "..." }
+router.post('/reply/:email/:messageId', apiRateLimiter.replySend, replyController.sendReply);
 
 router.use('/billing', billingRoutes);
 router.use('/qa', qaApiRoutes);

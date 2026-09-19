@@ -104,6 +104,16 @@ const forwardingEmailsTotal = new client.Counter({
 });
 
 // ---------------------------------------------------------------------------
+// Reply metrics
+// ---------------------------------------------------------------------------
+
+const repliesTotal = new client.Counter({
+  name: 'hidemail_replies_total',
+  help: 'Total replies sent from a temporary address, by outcome',
+  labelNames: ['result'],
+});
+
+// ---------------------------------------------------------------------------
 // HTTP metrics
 // ---------------------------------------------------------------------------
 
@@ -303,6 +313,9 @@ module.exports = {
   forwardingOtpRequestsTotal,
   forwardingOtpVerificationsTotal,
   forwardingEmailsTotal,
+
+  // Reply counters
+  repliesTotal,
 
   // HTTP counters
   httpRequestsTotal,

@@ -107,6 +107,14 @@ const config = {
     otpLength: parseInt(process.env.OTP_LENGTH || 6),
   },
 
+  // Replying from a temporary address. The recipient is always taken from stored mail, so the
+  // only thing these limit is how much a single address may say back.
+  reply: {
+    freeLimit: parseInt(process.env.REPLY_FREE_LIMIT || 1), // teaser replies per mailbox
+    proLimit: parseInt(process.env.REPLY_PRO_LIMIT || 50), // Pro replies per mailbox lifetime
+    maxBodyChars: parseInt(process.env.REPLY_MAX_BODY_CHARS || 5000),
+  },
+
   // Premium domains are Pro-only. Empty list means Pro uses VALID_DOMAINS.
   premiumDomains: parseDomainList(process.env.PREMIUM_DOMAINS),
 

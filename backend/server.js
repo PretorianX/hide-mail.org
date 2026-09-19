@@ -270,6 +270,10 @@ const smtpServer = new SMTPServer({
         const email = {
           id: require('uuid').v4(),
           from: parsedMail.from?.text || 'unknown',
+          // Kept so a reply can be addressed and threaded into the sender's conversation
+          replyTo: parsedMail.replyTo?.text || null,
+          messageId: parsedMail.messageId || null,
+          references: parsedMail.references || null,
           subject: parsedMail.subject || '(No Subject)',
           preview: parsedMail.text ? parsedMail.text.substring(0, 100) : '(No content)',
           text: parsedMail.text || '',
