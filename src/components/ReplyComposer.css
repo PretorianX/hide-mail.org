@@ -1,0 +1,165 @@
+/* The message modal keeps a light surface of its own, so these colours are explicit
+   instead of theme variables that would turn invisible in dark mode. */
+
+.reply-panel {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #eee;
+}
+
+.reply-panel-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.reply-panel-title {
+  margin: 0;
+  font-size: 1rem;
+  color: #333;
+}
+
+.reply-panel-quota {
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.reply-panel-sent {
+  list-style: none;
+  margin: 0 0 12px 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.reply-panel-sent-item {
+  padding: 10px 12px;
+  background-color: #f2f7f2;
+  border: 1px solid #d9e7d9;
+  border-left: 3px solid #4c9a4c;
+  border-radius: 6px;
+}
+
+.reply-panel-sent-meta {
+  display: block;
+  font-size: 0.78rem;
+  color: #4a6b4a;
+}
+
+.reply-panel-sent-body {
+  margin: 6px 0 0 0;
+  color: #333;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.reply-panel-note {
+  margin: 0;
+  padding: 12px;
+  background-color: #f7f8fa;
+  border: 1px solid #e8eaed;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.reply-panel-upgrade {
+  color: var(--primary-color);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.reply-panel-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.reply-panel-to {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #666;
+  word-break: break-word;
+}
+
+.reply-panel-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid #d5d8dd;
+  border-radius: 6px;
+  font: inherit;
+  font-size: 0.95rem;
+  color: #333;
+  background-color: #fff;
+  resize: vertical;
+}
+
+.reply-panel-input:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 1px;
+}
+
+.reply-panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.reply-panel-count {
+  flex: 1;
+  font-size: 0.78rem;
+  color: #888;
+}
+
+.reply-panel-open,
+.reply-panel-send {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  background-color: var(--primary-color);
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.reply-panel-open:hover:not(:disabled),
+.reply-panel-send:hover:not(:disabled) {
+  background-color: var(--primary-color-dark);
+}
+
+.reply-panel-open:disabled,
+.reply-panel-send:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.reply-panel-cancel {
+  padding: 8px 14px;
+  border: 1px solid #d5d8dd;
+  border-radius: 4px;
+  background-color: #fff;
+  color: #555;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.reply-panel-error {
+  margin: 10px 0 0 0;
+  color: #b3261e;
+  font-size: 0.85rem;
+}
+
+@media (max-width: 480px) {
+  .reply-panel-actions {
+    flex-wrap: wrap;
+  }
+
+  .reply-panel-count {
+    flex-basis: 100%;
+  }
+}

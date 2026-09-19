@@ -4,6 +4,7 @@ import SafeEmailViewer from './SafeEmailViewer';
 import EmailService from '../services/EmailService';
 import ForwardButton from './ForwardButton';
 import AttachmentList from './AttachmentList';
+import ReplyComposer from './ReplyComposer';
 
 const ModalOverlay = styled.div`
   position: fixed;
@@ -155,6 +156,7 @@ const EmailModal = ({ message, isOpen, onClose, tempMailbox }) => {
                 mailbox={tempMailbox}
                 messageId={message.id}
               />
+              <ReplyComposer mailbox={tempMailbox} message={message} />
             </>
           )}
         </ModalBody>
