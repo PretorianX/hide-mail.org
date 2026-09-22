@@ -27,6 +27,9 @@ const RATE_LIMITS = {
   // Order lookup after payment: separate bucket so guessing license keys cannot lock a
   // paying customer out of collecting the key they just bought
   orderLookup: { requests: 20, windowSeconds: 300 },
+  // Sending a reply puts mail on the wire from our domains, so it gets a tight bucket of its
+  // own on top of the per-mailbox allowance
+  replySend: { requests: 10, windowSeconds: 300 },
   // Default: 100 per minute per IP
   default: { requests: 100, windowSeconds: 60 },
 };
@@ -98,6 +101,7 @@ module.exports = {
   emailFetch: createRateLimiter('emailFetch'),
   licenseValidate: createRateLimiter('licenseValidate'),
   orderLookup: createRateLimiter('orderLookup'),
+  replySend: createRateLimiter('replySend'),
   default: createRateLimiter('default'),
   RATE_LIMITS,
 };

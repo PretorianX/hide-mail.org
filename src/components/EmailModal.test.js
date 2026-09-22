@@ -9,6 +9,14 @@ jest.mock('../services/EmailService', () => ({
   attachmentUrl: jest.fn()
 }));
 
+jest.mock('../services/ReplyService', () => ({
+  getStatus: jest.fn(),
+  listReplies: jest.fn(),
+  sendReply: jest.fn()
+}));
+
+const ReplyService = require('../services/ReplyService');
+
 describe('EmailModal', () => {
   const mockMessage = {
     id: 'test-id-123',
@@ -25,6 +33,17 @@ describe('EmailModal', () => {
     EmailService.attachmentUrl.mockImplementation(
       (mailbox, messageId, index) => `/api/emails/${mailbox}/${messageId}/attachments/${index}`
     );
+    ReplyService.getStatus.mockResolvedValue({
+      active: true,
+      smtpConfigured: true,
+      canReply: true,
+      limit: 1,
+      used: 0,
+      remaining: 1,
+      proReplyLimit: 50,
+      maxBodyChars: 5000
+    });
+    ReplyService.listReplies.mockResolvedValue([]);
   });
 
   test('renders the modal when isOpen is true', () => {
@@ -146,6 +165,29 @@ describe('EmailModal', () => {
       );
 
       expect(screen.queryByText(/^Attachments/)).not.toBeInTheDocument();
+    });
+  });
+
+  describe('replying', () => {
+    test('offers a reply to the sender when the mailbox is known', async () => {
+      render(
+        <EmailModal
+          message={mockMessage}
+          isOpen={true}
+          onClose={() => {}}
+          tempMailbox="shopper@hide-mail.org"
+        />
+      );
+
+      expect(await screen.findByTestId('reply-open'))
+        .toHaveTextContent('Reply to sender@example.com');
+    });
+
+    test('offers no reply box before an address has been generated', () => {
+      render(<EmailModal message={mockMessage} isOpen={true} onClose={() => {}} />);
+
+      expect(screen.queryByTestId('reply-composer')).not.toBeInTheDocument();
+      expect(ReplyService.getStatus).not.toHaveBeenCalled();
     });
   });
 }); 

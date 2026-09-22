@@ -727,7 +727,7 @@ function AppContent() {
                         </div>
                         <div className="faq-item">
                           <h4>Can I send emails from my temporary address?</h4>
-                          <p>Hide Mail is primarily designed for receiving emails. While some temporary email services offer sending capabilities, our focus is on providing secure, anonymous inboxes for receiving messages.</p>
+                          <p>You can reply to anyone who has written to you. Open a message, press Reply, and your answer goes out from your Hide Mail address and lands in the same thread — their next message comes straight back to your inbox. You cannot start a new conversation with a stranger, which is what keeps Hide Mail from being used to send spam. A free address gets 1 reply; Hide Mail Pro raises that to 50 per address.</p>
                         </div>
                         <div className="faq-item">
                           <h4>What is Forward &amp; Forget?</h4>

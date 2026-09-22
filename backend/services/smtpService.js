@@ -309,6 +309,49 @@ ${originalEmail.text || ''}
 };
 
 /**
+ * Whether outbound mail can be sent at all. Callers use this to tell the user that replying is
+ * unavailable instead of accepting a reply they cannot deliver.
+ * @returns {boolean}
+ */
+const isConfigured = () => transporter !== null;
+
+/**
+ * Send a reply from a temporary address to the correspondent who wrote to it.
+ *
+ * Unlike forwarding, the sender is the user's own Hide Mail address rather than the service
+ * address, so no SRS rewriting applies: the mailbox domain is one we are already authorised to
+ * send for, and DKIM signs it the same way.
+ *
+ * @param {Object} reply - The reply as assembled by replyPolicy.buildReply
+ * @returns {Promise<Object>} - Send result
+ */
+const sendReply = async ({ from, to, replyTo, subject, text, headers, envelope }) => {
+  if (!transporter) {
+    throw new Error('SMTP Service not initialized');
+  }
+
+  try {
+    const result = await transporter.sendMail({
+      from,
+      to,
+      replyTo,
+      subject,
+      text,
+      headers,
+      envelope,
+    });
+    logger.info(
+      `SMTP Service: Reply sent from ${sanitizeEmail(from)} to ${sanitizeEmail(to)}, `
+      + `messageId: ${sanitizeMessageId(result.messageId)}`
+    );
+    return result;
+  } catch (error) {
+    logger.error(`SMTP Service: Failed to send reply to ${sanitizeEmail(to)}`, error);
+    throw error;
+  }
+};
+
+/**
  * Verify SMTP connection
  * @returns {Promise<boolean>} - True if connection is valid
  */
@@ -329,9 +372,11 @@ const verifyConnection = async () => {
 
 module.exports = {
   initialize,
+  isConfigured,
   sendEmail,
   sendOTPEmail,
   forwardEmail,
+  sendReply,
   verifyConnection,
 };
 

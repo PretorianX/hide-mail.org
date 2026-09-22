@@ -19,6 +19,7 @@
 const logger = require('../utils/logger');
 const config = require('../config/config');
 const { sanitizeEmail, sanitizeMessageId } = require('../utils/sanitize');
+const { classifySmtpError } = require('../utils/smtpErrors');
 const redisService = require('./redisService');
 const otpService = require('./otpService');
 const rateLimiter = require('./rateLimiter');
@@ -28,44 +29,7 @@ const metrics = require('./metricsService');
 const licenseService = require('./licenseService');
 const entitlementService = require('./entitlementService');
 
-/**
- * Map SMTP errors to user-friendly error codes
- * @param {Error} error - Original error from SMTP service
- * @returns {string} - Error code for frontend handling
- */
-const getSmtpErrorCode = (error) => {
-  const message = error.message?.toLowerCase() || '';
-  const code = error.code?.toLowerCase() || '';
-  const responseCode = error.responseCode;
-
-  // SMTP not initialized
-  if (message.includes('not initialized')) {
-    return 'SMTP_NOT_CONFIGURED';
-  }
-
-  // Connection errors
-  if (code === 'econnrefused' || code === 'enotfound' || code === 'etimedout') {
-    return 'SMTP_CONNECTION_FAILED';
-  }
-
-  // Authentication errors
-  if (responseCode === 535 || message.includes('authentication') || message.includes('auth')) {
-    return 'SMTP_AUTH_FAILED';
-  }
-
-  // Recipient rejected
-  if (responseCode === 550 || responseCode === 551 || responseCode === 552 || responseCode === 553) {
-    return 'RECIPIENT_REJECTED';
-  }
-
-  // Temporary failures (should retry)
-  if (responseCode >= 400 && responseCode < 500) {
-    return 'SMTP_TEMPORARY_FAILURE';
-  }
-
-  // Generic SMTP error
-  return 'SMTP_SEND_FAILED';
-};
+const getSmtpErrorCode = classifySmtpError;
 
 /**
  * Map SMTP errors to user-friendly messages
