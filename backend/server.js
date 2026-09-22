@@ -3,8 +3,9 @@ const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
 const { SMTPServer } = require('smtp-server');
-const { simpleParser } = require('mailparser');
 const redisService = require('./services/redisService');
+const inboundMailService = require('./services/inboundMailService');
+const { resolveKnownRecipient } = require('./services/recipientResolver');
 const forwardingService = require('./services/forwardingService');
 const metrics = require('./services/metricsService');
 const billingMetricsCollector = require('./services/billingMetricsCollector');
@@ -14,7 +15,6 @@ const config = require('./config/config');
 const logger = require('./utils/logger');
 const apiRoutes = require('./routes/api');
 const billingController = require('./controllers/billingController');
-const qaWebhookService = require('./services/qaWebhookService');
 const attachLicense = require('./middleware/attachLicense');
 const { createOriginVerifier, parseAllowedOrigins } = require('./services/originVerifier');
 const { randomUUID } = require('node:crypto');
@@ -191,12 +191,12 @@ const smtpServer = new SMTPServer({
           return callback();
         }
         
-        // Check if mailbox is known (created by us, within grace period)
-        // We accept emails for any known mailbox to avoid 550 errors
-        // which can lead to domain blocklisting
-        const isMailboxKnown = await redisService.isMailboxKnown(address.address);
+        // Accept anything routing to a mailbox we created and that is still inside the grace
+        // period — including its site addresses — to avoid 550 errors, which can lead to
+        // domain blocklisting.
+        const knownRoute = await resolveKnownRecipient(address.address);
         
-        if (!isMailboxKnown) {
+        if (!knownRoute) {
           logger.warn(`SMTP: Rejecting unknown mailbox ${address.address} with code ${responseCode}`);
           metrics.smtpRecipientsRejectedTotal.inc({ reason: 'unknown_mailbox' });
           const err = new Error(`Unknown recipient: ${address.address}`);
@@ -234,60 +234,7 @@ const smtpServer = new SMTPServer({
         const recipient = session.envelope.rcptTo[0].address;
         logger.info(`SMTP: Processing email for recipient: ${recipient}`);
         
-        // Check if mailbox is active - only store emails for active mailboxes
-        // All other cases (expired, unknown in catch-all mode) are silently dropped
-        const isMailboxActive = await redisService.isMailboxActive(recipient);
-        
-        if (!isMailboxActive) {
-          // Silently drop emails for inactive/unknown mailboxes
-          // We already accepted the email in onRcptTo to avoid 550 errors
-          const isCatchAll = config.smtpUnknownMailboxCode === 250;
-          const reason = isCatchAll ? 'catch-all mode' : 'expired mailbox';
-          logger.info(`SMTP: Silently dropping email for ${reason}: ${recipient}`);
-          metrics.emailsDroppedTotal.inc({ reason });
-          callback();
-          return;
-        }
-        
-        // Parse email
-        const parsedMail = await simpleParser(mailData);
-        
-        // Store the full raw email body for debugging
-        const rawBody = mailData;
-        
-        // Serialize attachments with base64 content for JSON storage
-        const serializableAttachments = (parsedMail.attachments || []).map(att => ({
-          filename: att.filename || 'attachment',
-          contentType: att.contentType || 'application/octet-stream',
-          contentDisposition: att.contentDisposition || 'attachment',
-          cid: att.cid || null, // Content-ID for inline images
-          size: att.size || 0,
-          content: att.content ? att.content.toString('base64') : null,
-          encoding: 'base64', // Mark that content is base64 encoded
-        }));
-        
-        // Store email
-        const email = {
-          id: require('uuid').v4(),
-          from: parsedMail.from?.text || 'unknown',
-          subject: parsedMail.subject || '(No Subject)',
-          preview: parsedMail.text ? parsedMail.text.substring(0, 100) : '(No content)',
-          text: parsedMail.text || '',
-          html: parsedMail.html || '',
-          body: rawBody, // Store the full raw email
-          attachments: serializableAttachments,
-          receivedAt: new Date().toISOString(),
-          date: parsedMail.date ? new Date(parsedMail.date).toISOString() : new Date().toISOString(),
-          read: false
-        };
-        
-        logger.debug(`SMTP: Storing email with ID: ${email.id}`);
-        await redisService.storeEmail(recipient, email);
-        metrics.emailsStoredTotal.inc();
-        await qaWebhookService.notifyMailboxWebhook(recipient, email);
-        
-        logger.info(`SMTP: Email successfully processed and stored for: ${recipient}`);
-        logger.info(`SMTP: Email ID: ${email.id}, Subject: ${email.subject}`);
+        await inboundMailService.deliverInboundMessage({ recipient, rawBody: mailData });
         
         callback();
       } catch (error) {

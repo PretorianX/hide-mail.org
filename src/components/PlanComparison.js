@@ -62,6 +62,12 @@ const PlanComparison = ({ tiers, price }) => {
       api: 'Pick the name yourself, or let the API generate one',
     },
     {
+      label: 'A different address for every site',
+      free: 'Included — add a suffix like .netflix or .shop and it lands in the same inbox',
+      pro: 'Included, and short to read because you chose the base name: jane.netflix@',
+      api: 'Included, on mailboxes you create by hand or through the API',
+    },
+    {
       label: 'Forward & Forget',
       free: `${free.forwardingLimit} forwards per hour`,
       pro: `${pro.forwardingLimit} forwards per hour`,
@@ -82,7 +88,7 @@ const PlanComparison = ({ tiers, price }) => {
   ];
 
   if (premiumDomainCount > 0) {
-    rows.splice(4, 0, {
+    rows.splice(rows.findIndex((row) => row.label === 'Forward & Forget'), 0, {
       label: 'Domains',
       free: 'Shared public domains',
       pro: `${premiumDomainCount} extra domain${premiumDomainCount === 1 ? '' : 's'} kept off blocklists`,

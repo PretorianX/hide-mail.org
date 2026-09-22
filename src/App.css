@@ -837,6 +837,35 @@ button:disabled {
 }
 
 /* Dark Mode Specific Styles */
+.inbox-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  background-color: rgba(247, 148, 29, 0.12);
+  border: 1px solid var(--duck-orange);
+  border-radius: 6px;
+  color: var(--text-color);
+}
+
+.inbox-filter strong {
+  font-family: monospace;
+  word-break: break-all;
+}
+
+.inbox-filter button {
+  padding: 4px 10px;
+  font-size: 0.8rem;
+}
+
+[data-theme='dark'] .inbox-filter {
+  color: var(--dark-text-color);
+}
+
 [data-theme='dark'] .app {
   background-color: var(--background-color);
 }
