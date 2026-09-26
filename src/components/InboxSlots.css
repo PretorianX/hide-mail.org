@@ -1,0 +1,147 @@
+/* App.css paints every bare <button> solid orange, so each control in the strip resets the
+   properties it needs rather than inheriting a page-wide call-to-action look. */
+
+.inbox-slots {
+  margin: 0 0 15px;
+  padding: 12px 15px;
+  background-color: var(--duck-gray);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+}
+
+.inbox-slots-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.inbox-slots-title {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--text-color);
+}
+
+.inbox-slots-count {
+  font-size: 0.85rem;
+  font-weight: bold;
+  color: var(--duck-orange);
+}
+
+.inbox-slot-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.inbox-slot {
+  display: flex;
+  align-items: stretch;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  background-color: var(--card-background);
+}
+
+.inbox-slot.is-active {
+  border-color: var(--duck-orange);
+  box-shadow: 0 0 0 1px var(--duck-orange);
+}
+
+.inbox-slot-select {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 7px 14px;
+  background-color: transparent;
+  color: var(--text-color);
+  border: none;
+  border-radius: 0;
+  font-weight: normal;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.inbox-slot-select:hover {
+  background-color: var(--duck-gray);
+  transform: none;
+  box-shadow: none;
+}
+
+.inbox-slot-select:focus-visible {
+  outline: 3px solid var(--duck-orange);
+  outline-offset: -3px;
+}
+
+.inbox-slot-address {
+  font-weight: bold;
+  word-break: break-all;
+}
+
+.inbox-slot.is-active .inbox-slot-address {
+  color: var(--duck-orange);
+}
+
+.inbox-slot-remaining {
+  font-size: 0.75rem;
+  opacity: 0.75;
+}
+
+.inbox-slot-close {
+  padding: 0 12px;
+  background-color: transparent;
+  color: var(--text-color);
+  border: none;
+  border-left: 1px solid var(--border-color);
+  border-radius: 0;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.inbox-slot-close:hover {
+  background-color: var(--danger-color, #dc3545);
+  color: var(--duck-white);
+  transform: none;
+  box-shadow: none;
+}
+
+.inbox-slot-close:focus-visible {
+  outline: 3px solid var(--duck-orange);
+  outline-offset: -3px;
+}
+
+.inbox-slot-new {
+  display: flex;
+}
+
+.inbox-slot-add {
+  padding: 7px 16px;
+  font-size: 0.85rem;
+  border-radius: 999px;
+  background-color: var(--duck-orange);
+  color: var(--duck-white);
+}
+
+.inbox-slots-note {
+  margin: 12px 0 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--text-color);
+}
+
+.inbox-slots-note p {
+  margin: 0 0 8px;
+}
+
+.inbox-slots-error {
+  margin: 10px 0 0;
+  font-size: 0.85rem;
+  color: var(--danger-color, #dc3545);
+}

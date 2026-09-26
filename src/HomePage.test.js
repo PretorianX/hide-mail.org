@@ -29,6 +29,14 @@ jest.mock('./services/EmailService.js', () => ({
   isExpired: jest.fn().mockReturnValue(false),
 }));
 
+jest.mock('./services/InboxSlotService', () => ({
+  __esModule: true,
+  default: {
+    list: jest.fn().mockResolvedValue({ slots: [], used: 0, limit: 2, planType: 'free' }),
+    release: jest.fn().mockResolvedValue(undefined),
+  },
+}));
+
 // Mock the ContentAwareAd component
 jest.mock('./components/ContentAwareAd', () => {
   return function DummyContentAwareAd(props) {

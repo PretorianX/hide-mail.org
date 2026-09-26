@@ -43,6 +43,15 @@ jest.mock('./services/EmailService', () => {
   };
 });
 
+// The inbox strip reads the live slot set from the API; this suite is not about that.
+jest.mock('./services/InboxSlotService', () => ({
+  __esModule: true,
+  default: {
+    list: jest.fn().mockResolvedValue({ slots: [], used: 0, limit: 2, planType: 'free' }),
+    release: jest.fn().mockResolvedValue(undefined),
+  },
+}));
+
 // Mock react-router
 jest.mock('react-router', () => {
   const originalModule = jest.requireActual('react-router');

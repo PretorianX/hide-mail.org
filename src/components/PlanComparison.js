@@ -56,6 +56,12 @@ const PlanComparison = ({ tiers, price }) => {
       api: mailboxLifetime(api),
     },
     {
+      label: 'Inboxes open at once',
+      free: `${free.inboxSlots} — switch between them, close one to start another`,
+      pro: `${pro.inboxSlots} live inboxes side by side`,
+      api: `${api.inboxSlots} live inboxes side by side`,
+    },
+    {
       label: 'Choosing the address',
       free: 'A random address is generated for you',
       pro: 'Pick the name yourself, for example invoices@',

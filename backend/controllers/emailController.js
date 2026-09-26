@@ -4,6 +4,8 @@ const logger = require('../utils/logger');
 const metrics = require('../services/metricsService');
 const entitlementService = require('../services/entitlementService');
 const attachmentService = require('../services/attachmentService');
+const inboxSlotService = require('../services/inboxSlotService');
+const { groupIdFromHeaders } = require('../utils/inboxGroupId');
 
 const ALIAS_PATTERN = /^[a-z0-9](?:[a-z0-9._-]{0,62}[a-z0-9])?$/;
 
@@ -226,13 +228,36 @@ const emailController = {
         req.license,
         Number(ttlSeconds || mailboxTtlSeconds)
       );
-      await redisService.registerMailbox(email, expirationSeconds);
-      if (req.license) {
-        await redisService.setMailboxMeta(email, {
-          licenseKey: req.license.key,
-          alias: wantsAlias,
-        }, expirationSeconds);
+
+      // The slot is taken before the lease is written so a refused claim cannot leave a
+      // registered mailbox nobody can see.
+      const groupId = groupIdFromHeaders(req.headers);
+      if (groupId) {
+        try {
+          await inboxSlotService.claimSlot(groupId, email, {
+            limit: entitlements.inboxSlots,
+            ttlSeconds: expirationSeconds,
+          });
+          metrics.inboxSlotsOpenedTotal.inc({ result: 'opened' });
+        } catch (error) {
+          if (error.code !== 'SLOT_LIMIT') {
+            throw error;
+          }
+          metrics.inboxSlotsOpenedTotal.inc({ result: 'limit' });
+          return res.status(403).json({
+            success: false,
+            error: error.message,
+            code: 'SLOT_LIMIT',
+            limit: entitlements.inboxSlots,
+          });
+        }
       }
+
+      await redisService.registerMailbox(email, expirationSeconds);
+      await redisService.setMailboxMeta(email, {
+        lifetimeSeconds: expirationSeconds,
+        ...(req.license ? { licenseKey: req.license.key, alias: wantsAlias } : {}),
+      }, expirationSeconds);
       metrics.mailboxesRegisteredTotal.inc();
       
       res.status(200).json({

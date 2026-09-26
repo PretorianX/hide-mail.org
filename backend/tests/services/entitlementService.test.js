@@ -2,6 +2,8 @@ process.env.VALID_DOMAINS = process.env.VALID_DOMAINS || 'hide-mail.org';
 process.env.FORWARDING_FREE_LIMIT = '2';
 process.env.FORWARDING_PRO_LIMIT = '100';
 process.env.EMAIL_EXPIRATION_SECONDS = '1800';
+process.env.INBOX_SLOTS_FREE_LIMIT = '2';
+process.env.INBOX_SLOTS_PRO_LIMIT = '10';
 
 const entitlementService = require('../../services/entitlementService');
 
@@ -14,6 +16,7 @@ describe('entitlementService', () => {
     expect(entitlements.premiumDomains).toBe(false);
     expect(entitlements.apiAccess).toBe(false);
     expect(entitlements.forwardingLimit).toBe(2);
+    expect(entitlements.inboxSlots).toBe(2);
     expect(entitlements.mailboxTtlSeconds).toBe(1800);
     expect(entitlements.mailboxTtlOptions).toEqual([]);
   });
@@ -30,6 +33,7 @@ describe('entitlementService', () => {
     expect(entitlements.premiumDomains).toBe(true);
     expect(entitlements.apiAccess).toBe(false);
     expect(entitlements.forwardingLimit).toBe(100);
+    expect(entitlements.inboxSlots).toBe(10);
     expect(entitlements.mailboxTtlSeconds).toBe(86400);
     expect(entitlements.mailboxTtlOptions).toEqual([86400, 604800, 2592000]);
   });
@@ -63,6 +67,9 @@ describe('entitlementService', () => {
 
     expect(tiers.free).toEqual(entitlementService.getEntitlements(null));
     expect(tiers.pro.forwardingLimit).toBe(100);
+    expect(tiers.free.inboxSlots).toBe(2);
+    expect(tiers.pro.inboxSlots).toBe(10);
+    expect(tiers.api.inboxSlots).toBe(10);
     expect(tiers.pro.apiAccess).toBe(false);
     expect(tiers.api.apiAccess).toBe(true);
     expect(tiers.freeExtensionSeconds).toBe(900);

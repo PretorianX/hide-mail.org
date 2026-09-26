@@ -22,6 +22,8 @@ import AdSlot from './components/AdSlot.js';
 import PageAds from './components/PageAds.js';
 import CookieConsent from './components/CookieConsent.js';
 import MessageList from './components/MessageList.js';
+import InboxSlots from './components/InboxSlots.js';
+import useInboxSlots from './hooks/useInboxSlots.js';
 import ProCta from './components/ProCta.js';
 import HomeProBadge from './components/HomeProBadge.js';
 import Pro from './pages/Pro.js';
@@ -175,6 +177,14 @@ function AppContent() {
   const [selectedDomain, setSelectedDomain] = useState('');
   const [selectedMessageId, setSelectedMessageId] = useState(null);
   const [rateLimitCountdown, setRateLimitCountdown] = useState(0);
+  const [openingInbox, setOpeningInbox] = useState(false);
+  const {
+    slots,
+    limit: slotLimit,
+    error: slotError,
+    setError: setSlotError,
+    reload: reloadSlots,
+  } = useInboxSlots(email);
   const daysLeft = license?.remainingDays
     ?? (license?.expiresAt
       ? Math.max(0, Math.ceil((license.expiresAt - Date.now()) / 86400000))
@@ -373,6 +383,76 @@ function AppContent() {
     }
   };
 
+  const showInbox = (address) => {
+    setEmail(address);
+    setMessages([]);
+    setSelectedMessageId(null);
+  };
+
+  /**
+   * Open another inbox alongside the one on screen. Nothing is deactivated; the plan's slot
+   * allowance is the only thing that can refuse it.
+   */
+  const handleOpenInbox = async () => {
+    setOpeningInbox(true);
+    setSlotError(null);
+
+    try {
+      const newEmail = await EmailService.openAdditionalMailbox(selectedDomain || null, {
+        alias: isPro ? (customAlias.trim() || undefined) : undefined,
+        mailboxTtlSeconds: isPro ? mailboxTtl : undefined,
+        allowPremium: isPro,
+      });
+      showInbox(newEmail);
+      analytics.generateEmail();
+    } catch (err) {
+      setSlotError(err.message);
+    } finally {
+      setOpeningInbox(false);
+      await reloadSlots();
+    }
+  };
+
+  const handleSelectInbox = (slot) => {
+    if (slot.email === email) {
+      return;
+    }
+    EmailService.adoptMailbox(slot.email, slot);
+    showInbox(slot.email);
+    fetchMessages(slot.email);
+  };
+
+  /**
+   * Close one inbox for good. When it was the one being read, the most recently opened of the
+   * remaining inboxes takes over, so the page is never left pointing at nothing while slots
+   * are still in use.
+   */
+  const handleReleaseInbox = async (slot) => {
+    setSlotError(null);
+
+    try {
+      await EmailService.releaseMailbox(slot.email);
+    } catch (err) {
+      setSlotError(err.message);
+      await reloadSlots();
+      return;
+    }
+
+    if (slot.email === email) {
+      const remaining = slots.filter((item) => item.email !== slot.email);
+      const next = remaining[remaining.length - 1];
+      if (next) {
+        EmailService.adoptMailbox(next.email, next);
+        showInbox(next.email);
+        fetchMessages(next.email);
+      } else {
+        showInbox(null);
+      }
+    }
+
+    await reloadSlots();
+  };
+
   const handleRefreshMessages = () => {
     if (email) {
       analytics.checkMessages();
@@ -545,6 +625,17 @@ function AppContent() {
                                 </select>
                               </div>
                             )}
+                            <InboxSlots
+                              slots={slots}
+                              activeEmail={email}
+                              limit={slotLimit}
+                              isPro={isPro}
+                              opening={openingInbox}
+                              error={slotError}
+                              onSelect={handleSelectInbox}
+                              onRelease={handleReleaseInbox}
+                              onOpen={handleOpenInbox}
+                            />
                             {email ? (
                               <>
                                 <div 
@@ -665,6 +756,7 @@ function AppContent() {
                           <li>🦆 Protect your privacy</li>
                           <li>🦆 Avoid spam in your personal inbox</li>
                           <li>🦆 Perfect for one-time signups</li>
+                          <li>🗂️ <strong>Several inboxes at once:</strong> 2 on a free account, 10 with Pro</li>
                           <li>🚀 <strong>Forward & Forget:</strong> Save important emails to your real inbox with one click</li>
                         </ul>
                       </div>
@@ -694,6 +786,7 @@ function AppContent() {
                         <h3>How Hide Mail Works</h3>
                         <ol>
                           <li><strong>Generate:</strong> Create a random email address with one click or customize your own.</li>
+                          <li><strong>Open more:</strong> Keep several inboxes live at the same time and switch between them — 2 on a free account, 10 with Pro.</li>
                           <li><strong>Use:</strong> Provide this email address when signing up for services or newsletters.</li>
                           <li><strong>Receive:</strong> All incoming messages appear instantly in your temporary inbox.</li>
                           <li><strong>Read:</strong> View message content directly in our secure interface.</li>
@@ -724,6 +817,10 @@ function AppContent() {
                         <div className="faq-item">
                           <h4>How long do temporary emails last?</h4>
                           <p>A free address stays active for 30 minutes and you can extend it by 15 minutes at a time. With Hide Mail Pro you pick 24 hours, 7 days or 30 days up front. Either way the address and its emails are deleted when it expires.</p>
+                        </div>
+                        <div className="faq-item">
+                          <h4>Can I have more than one inbox at the same time?</h4>
+                          <p>Yes. A free account keeps 2 inboxes live at once, and Hide Mail Pro keeps 10. They appear as a row of chips above your address: click one to read it, press <strong>+ New inbox</strong> to open another, and press × to close one early. Opening a second inbox no longer throws the first one away, so you can run several signups side by side and every inbox keeps receiving while you look at the others.</p>
                         </div>
                         <div className="faq-item">
                           <h4>Can I send emails from my temporary address?</h4>

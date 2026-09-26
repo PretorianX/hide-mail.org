@@ -189,6 +189,61 @@ class RedisMock {
     
     return count;
   }
+
+  // Sorted sets are stored as a member -> score map. Real Redis removes a sorted set once its
+  // last member is gone, so the mock does too, otherwise `exists` would keep reporting the key.
+  async zadd(key, ...args) {
+    if (!this.data[key]) {
+      this.data[key] = {};
+    }
+
+    let added = 0;
+    for (let i = 0; i < args.length; i += 2) {
+      const member = String(args[i + 1]);
+      if (!(member in this.data[key])) {
+        added++;
+      }
+      this.data[key][member] = Number(args[i]);
+    }
+
+    return added;
+  }
+
+  async zrange(key, start, stop) {
+    const scores = this.data[key];
+    if (!scores) {
+      return [];
+    }
+
+    const ordered = Object.keys(scores).sort((a, b) => scores[a] - scores[b]);
+    const end = stop === -1 ? ordered.length : stop + 1;
+    return ordered.slice(start, end);
+  }
+
+  async zrem(key, ...members) {
+    const scores = this.data[key];
+    if (!scores) {
+      return 0;
+    }
+
+    let count = 0;
+    members.forEach(member => {
+      if (member in scores) {
+        delete scores[member];
+        count++;
+      }
+    });
+
+    if (Object.keys(scores).length === 0) {
+      delete this.data[key];
+    }
+
+    return count;
+  }
+
+  async zcard(key) {
+    return this.data[key] ? Object.keys(this.data[key]).length : 0;
+  }
 }
 
 module.exports = RedisMock; 
