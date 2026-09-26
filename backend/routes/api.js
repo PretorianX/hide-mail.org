@@ -1,6 +1,7 @@
 const express = require('express');
 const emailController = require('../controllers/emailController');
 const attachmentController = require('../controllers/attachmentController');
+const inboxSlotController = require('../controllers/inboxSlotController');
 const forwardingController = require('../controllers/forwardingController');
 const billingRoutes = require('./billing');
 const qaApiRoutes = require('./qaApi');
@@ -56,6 +57,12 @@ router.post('/mailbox/register',
 );
 router.post('/mailbox/refresh', apiRateLimiter.mailboxRefresh, attachLicense, emailController.refreshMailbox);
 router.post('/mailbox/deactivate', apiRateLimiter.default, emailController.deactivateMailbox);
+
+// Inbox slots: several live inboxes per browser, sized by the plan.
+// The group travels in the X-Inbox-Group header, the way a license travels in X-License-Key.
+router.post('/mailbox/slots/group', apiRateLimiter.inboxSlots, attachLicense, inboxSlotController.createGroup);
+router.get('/mailbox/slots', apiRateLimiter.inboxSlots, attachLicense, inboxSlotController.listSlots);
+router.delete('/mailbox/slots/:email', apiRateLimiter.inboxSlots, inboxSlotController.releaseSlot);
 
 // Add the missing /messages endpoint (with rate limiting)
 router.get('/messages', apiRateLimiter.emailFetch, async (req, res) => {

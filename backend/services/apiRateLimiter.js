@@ -27,6 +27,9 @@ const RATE_LIMITS = {
   // Order lookup after payment: separate bucket so guessing license keys cannot lock a
   // paying customer out of collecting the key they just bought
   orderLookup: { requests: 20, windowSeconds: 300 },
+  // Inbox slot bookkeeping: 30 per minute per IP. Reading the strip is cheap, and ten slots
+  // plus the switching a user does between them stays well inside this.
+  inboxSlots: { requests: 30, windowSeconds: 60 },
   // Default: 100 per minute per IP
   default: { requests: 100, windowSeconds: 60 },
 };
@@ -98,6 +101,7 @@ module.exports = {
   emailFetch: createRateLimiter('emailFetch'),
   licenseValidate: createRateLimiter('licenseValidate'),
   orderLookup: createRateLimiter('orderLookup'),
+  inboxSlots: createRateLimiter('inboxSlots'),
   default: createRateLimiter('default'),
   RATE_LIMITS,
 };

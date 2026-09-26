@@ -110,6 +110,13 @@ const config = {
   // Premium domains are Pro-only. Empty list means Pro uses VALID_DOMAINS.
   premiumDomains: parseDomainList(process.env.PREMIUM_DOMAINS),
 
+  // How many inboxes one browser may keep live at the same time. An allowance, not an abuse
+  // control: the per-IP mailboxRegister limiter is what bounds registration volume.
+  inboxSlots: {
+    freeLimit: parseInt(process.env.INBOX_SLOTS_FREE_LIMIT || 2, 10),
+    proLimit: parseInt(process.env.INBOX_SLOTS_PRO_LIMIT || 10, 10),
+  },
+
   // WayForPay is the only payment processor. Paddle can be added later; leave PADDLE_* unset.
   wayforpay: {
     merchantAccount: process.env.WAYFORPAY_MERCHANT_ACCOUNT || '',

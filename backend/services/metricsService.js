@@ -35,6 +35,19 @@ const mailboxesDeactivatedTotal = new client.Counter({
   help: 'Total number of mailbox deactivations',
 });
 
+// result=opened when a browser took another concurrent inbox, result=limit when its plan
+// allowance refused one. The ratio between the two is the conversion signal for Pro.
+const inboxSlotsOpenedTotal = new client.Counter({
+  name: 'hidemail_inbox_slots_opened_total',
+  help: 'Total concurrent inbox slot claims by outcome',
+  labelNames: ['result'],
+});
+
+const inboxSlotsReleasedTotal = new client.Counter({
+  name: 'hidemail_inbox_slots_released_total',
+  help: 'Total concurrent inbox slots given back by their holder',
+});
+
 // ---------------------------------------------------------------------------
 // Email / SMTP metrics
 // ---------------------------------------------------------------------------
@@ -288,6 +301,8 @@ module.exports = {
   mailboxesRegisteredTotal,
   mailboxesRefreshedTotal,
   mailboxesDeactivatedTotal,
+  inboxSlotsOpenedTotal,
+  inboxSlotsReleasedTotal,
 
   // SMTP / Email counters
   smtpConnectionsTotal,
