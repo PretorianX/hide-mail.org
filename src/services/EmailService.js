@@ -1,7 +1,9 @@
 import axios from 'axios';
 import { faker } from '@faker-js/faker';
 import { getProofOfWork } from '../utils/powSolver';
-import LicenseService from './LicenseService';
+import InboxGroupService from './InboxGroupService';
+import InboxSlotService from './InboxSlotService';
+import { licenseHeaders, inboxGroupHeaders } from './apiHeaders';
 
 // Backend API URL
 const API_URL = process.env.REACT_APP_API_URL || '/api';
@@ -29,15 +31,7 @@ class EmailService {
   static mailboxTtlSeconds = null;
 
   static licenseHeaders() {
-    const headers = {
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-    };
-    const key = LicenseService.getKey();
-    if (key) {
-      headers['X-License-Key'] = key;
-    }
-    return headers;
+    return licenseHeaders();
   }
 
   static async fetchDomains() {
@@ -98,6 +92,10 @@ class EmailService {
         localStorage.setItem(STORAGE_KEYS.EXPIRATION_TIME, this.expirationTime.toISOString());
         if (this.mailboxTtlSeconds) {
           localStorage.setItem(STORAGE_KEYS.MAILBOX_TTL, String(this.mailboxTtlSeconds));
+        } else {
+          // Switching to an inbox whose chosen lifetime is unknown must not replay the previous
+          // inbox's lifetime on the next extend.
+          localStorage.removeItem(STORAGE_KEYS.MAILBOX_TTL);
         }
       }
     } catch (error) {
@@ -197,76 +195,136 @@ class EmailService {
     return localPart;
   }
 
+  /**
+   * Pick an address, prove the work and take one of this browser's inbox slots for it. Shared by
+   * the two ways an inbox comes into existence: replacing the one on screen, and opening another
+   * one alongside it.
+   *
+   * @returns {Promise<{email: string, ttlSeconds: number}>}
+   */
+  static async registerNewAddress(domain, options) {
+    const pool = options.allowPremium
+      ? [...this.domains, ...this.premiumDomains]
+      : this.domains;
+    const localPart = options.alias || this.generateRandomLocalPart();
+    const emailDomain = domain && pool.includes(domain)
+      ? domain
+      : this.getRandomElement(pool);
+
+    const newEmail = `${localPart}@${emailDomain}`;
+
+    // Solve PoW challenge before registering (prevents automated abuse)
+    console.log('Solving PoW challenge...');
+    const pow = await getProofOfWork((progress) => {
+      // Log progress for debugging (every 1000 iterations)
+      if (progress.iterations % 10000 === 0) {
+        console.log(`PoW progress: ${progress.iterations} iterations, ${progress.elapsedMs}ms`);
+      }
+    });
+    console.log('PoW challenge solved');
+
+    const groupId = await InboxGroupService.ensureGroupId();
+
+    const registerResponse = await axios.post(`${API_URL}/mailbox/register`,
+      {
+        email: newEmail,
+        pow,
+        alias: options.alias,
+        ttlSeconds: options.mailboxTtlSeconds,
+      },
+      { headers: inboxGroupHeaders(groupId) }
+    );
+
+    return {
+      email: newEmail,
+      ttlSeconds: registerResponse.data?.data?.ttlSeconds || DEFAULT_LIFETIME_MINUTES * 60,
+    };
+  }
+
+  static registrationError(error) {
+    console.error('Error registering mailbox:', error);
+
+    // Handle rate limit errors specially
+    if (error.response?.status === 429) {
+      const errorData = error.response.data || {};
+      const rateLimitError = new Error(errorData.error || 'Too many requests. Please try again later.');
+      rateLimitError.code = 'RATE_LIMIT_EXCEEDED';
+      rateLimitError.retryAfter = errorData.retryAfter || 60;
+      return rateLimitError;
+    }
+
+    const apiError = new Error(error.response?.data?.error || error.message || 'Failed to generate email');
+    apiError.code = error.response?.data?.code || error.code;
+    apiError.limit = error.response?.data?.limit;
+    return apiError;
+  }
+
+  /**
+   * Replace the inbox on screen. The address it had is closed, which is what "Change Email
+   * Address" has always meant.
+   */
   static async generateEmail(domain = null, options = {}) {
     // Ensure service is initialized before generating email
     await this.initialize();
-    
+
     try {
-      // If we already have an email, deactivate it first
+      // Deactivating rather than releasing the slot: an address restored from a previous visit
+      // may predate its group, and a lease that is gone is pruned from the group on the next
+      // read anyway, which is what frees the allowance.
       if (this.currentEmail) {
-        try {
-          await this.deactivateCurrentEmail();
-        } catch (error) {
-          console.warn('Failed to deactivate previous email:', error);
-        }
+        await this.deactivateCurrentEmail();
       }
-      
-      const pool = options.allowPremium
-        ? [...this.domains, ...this.premiumDomains]
-        : this.domains;
-      const localPart = options.alias || this.generateRandomLocalPart();
-      const emailDomain = domain && pool.includes(domain)
-        ? domain
-        : this.getRandomElement(pool);
 
-      const newEmail = `${localPart}@${emailDomain}`;
-      
-      // Solve PoW challenge before registering (prevents automated abuse)
-      console.log('Solving PoW challenge...');
-      const pow = await getProofOfWork((progress) => {
-        // Log progress for debugging (every 1000 iterations)
-        if (progress.iterations % 10000 === 0) {
-          console.log(`PoW progress: ${progress.iterations} iterations, ${progress.elapsedMs}ms`);
-        }
-      });
-      console.log('PoW challenge solved');
-      
-      // Register the new email with the backend (including PoW solution)
-      const registerResponse = await axios.post(`${API_URL}/mailbox/register`,
-        {
-          email: newEmail,
-          pow,
-          alias: options.alias,
-          ttlSeconds: options.mailboxTtlSeconds,
-        },
-        { headers: this.licenseHeaders() }
-      );
-
-      const ttlSeconds = registerResponse.data?.data?.ttlSeconds
-        || DEFAULT_LIFETIME_MINUTES * 60;
-      this.expirationTime = new Date(Date.now() + ttlSeconds * 1000);
-      this.mailboxTtlSeconds = ttlSeconds;
-      
-      // Save the new email
-      this.currentEmail = newEmail;
-      this.saveToStorage();
-      
-      return newEmail;
+      const { email, ttlSeconds } = await this.registerNewAddress(domain, options);
+      return this.adoptMailbox(email, { remainingSeconds: ttlSeconds, lifetimeSeconds: ttlSeconds });
     } catch (error) {
-      console.error('Error generating email:', error);
-      
-      // Handle rate limit errors specially
-      if (error.response?.status === 429) {
-        const errorData = error.response.data || {};
-        const rateLimitError = new Error(errorData.error || 'Too many requests. Please try again later.');
-        rateLimitError.code = 'RATE_LIMIT_EXCEEDED';
-        rateLimitError.retryAfter = errorData.retryAfter || 60;
-        throw rateLimitError;
-      }
+      throw this.registrationError(error);
+    }
+  }
 
-      const apiError = new Error(error.response?.data?.error || error.message || 'Failed to generate email');
-      apiError.code = error.response?.data?.code || error.code;
-      throw apiError;
+  /**
+   * Open another inbox next to the one already on screen and select it. The previous inbox stays
+   * live and keeps receiving mail; only the plan's slot allowance limits how many there can be.
+   */
+  static async openAdditionalMailbox(domain = null, options = {}) {
+    await this.initialize();
+
+    try {
+      const { email, ttlSeconds } = await this.registerNewAddress(domain, options);
+      return this.adoptMailbox(email, { remainingSeconds: ttlSeconds, lifetimeSeconds: ttlSeconds });
+    } catch (error) {
+      throw this.registrationError(error);
+    }
+  }
+
+  /**
+   * Point the inbox view at one of the addresses this browser already holds.
+   *
+   * @param {string} email - Address to read
+   * @param {{remainingSeconds: number, lifetimeSeconds: ?number}} slot - As listed by the API
+   */
+  static adoptMailbox(email, slot) {
+    this.currentEmail = email;
+    this.expirationTime = new Date(Date.now() + slot.remainingSeconds * 1000);
+    this.mailboxTtlSeconds = slot.lifetimeSeconds || null;
+    this.saveToStorage();
+    return email;
+  }
+
+  /**
+   * Close one of this browser's inboxes for good. The address is deactivated server-side and its
+   * slot goes back to the allowance.
+   *
+   * @param {string} email - Address to close
+   */
+  static async releaseMailbox(email) {
+    await InboxSlotService.release(email);
+
+    if (this.currentEmail === email) {
+      this.currentEmail = null;
+      this.expirationTime = null;
+      this.mailboxTtlSeconds = null;
+      this.clearStorage();
     }
   }
 

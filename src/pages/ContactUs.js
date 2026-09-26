@@ -270,6 +270,11 @@ const ContactUs = () => {
             Our temporary email addresses automatically expire after 30 minutes of inactivity. After this period, any emails sent to that address will not be received.
           </Paragraph>
           
+          <h3 className="SectionTitle">Can I keep several inboxes open at once?</h3>
+          <Paragraph className="Paragraph">
+            Yes. A free account keeps 2 inboxes live at the same time and Hide Mail Pro keeps 10. Use the row of inbox chips above your address to switch between them, open another one, or close one early. Opening another inbox does not close the one you are already reading, and all of them keep receiving mail.
+          </Paragraph>
+
           <h3 className="SectionTitle">Is this service completely free?</h3>
           <Paragraph className="Paragraph">
             The basic inbox is free and funded by ads. You can support Hide Mail with PayPal while card checkout is paused.

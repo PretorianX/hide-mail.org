@@ -3,9 +3,18 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import App from './App';
 import EmailService from './services/EmailService';
+import InboxSlotService from './services/InboxSlotService';
 
 // Mock the EmailService
 jest.mock('./services/EmailService.js');
+
+jest.mock('./services/InboxSlotService', () => ({
+  __esModule: true,
+  default: {
+    list: jest.fn(),
+    release: jest.fn(),
+  },
+}));
 
 // Mock the App component's handleGenerateEmail function
 const originalGenerateEmail = EmailService.generateEmail;
@@ -31,6 +40,8 @@ describe('Domain Selection Tests', () => {
     EmailService.deactivateCurrentEmail = jest.fn().mockResolvedValue(undefined);
     EmailService.getExpirationTime = jest.fn().mockReturnValue(new Date(Date.now() + 30 * 60 * 1000));
     EmailService.getRemainingTime = jest.fn().mockReturnValue(30 * 60 * 1000);
+    InboxSlotService.list.mockResolvedValue({ slots: [], used: 0, limit: 2, planType: 'free' });
+    InboxSlotService.release.mockResolvedValue(undefined);
   });
 
   test('selecting a domain generates a new email with that domain', async () => {
