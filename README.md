@@ -5,6 +5,7 @@ A temporary email service that provides disposable email addresses for privacy a
 ## Features
 
 - Generate temporary email addresses instantly
+- Keep several inboxes live at the same time and switch between them
 - Receive and view emails in real-time
 - Download attachments that arrive with a message
 - Select from multiple domains
@@ -12,7 +13,7 @@ A temporary email service that provides disposable email addresses for privacy a
 - Copy email address to clipboard
 - Mobile-friendly responsive design
 - Dark/Light theme support
-- Optional Hide Mail Pro plan: no ads, longer mailbox lifetimes, custom aliases, premium domains, higher forwarding limits
+- Optional Hide Mail Pro plan: no ads, longer mailbox lifetimes, custom aliases, premium domains, higher forwarding limits, 10 concurrent inboxes instead of 2
 - Optional API plan for QA automation: create mailboxes, read messages, download attachments, register inbound webhooks
 
 ## Quick Start
@@ -168,6 +169,40 @@ advertised limits are the same numbers the backend enforces. Two of them are eas
 Ads are suppressed for paying users in two places: the React ad components render nothing, and
 `public/adsense-config.js` skips loading the AdSense tag entirely when a licence key is present,
 so auto-ads cannot place anything either.
+
+## Inbox slots
+
+One browser can hold several live inboxes at once. `INBOX_SLOTS_FREE_LIMIT` (2) and
+`INBOX_SLOTS_PRO_LIMIT` (10) size the set, and `entitlementService` exposes the number as
+`inboxSlots`, so `/pro` advertises exactly what the backend enforces.
+
+The set is called an *inbox group*. The API mints the group id — 32 hex characters from
+`crypto.randomBytes` — and the browser keeps it in `localStorage.hidemail_inbox_group` and sends it
+back in an `X-Inbox-Group` header, the same way a licence travels in `X-License-Key`.
+
+| Route | What it does |
+|-------|--------------|
+| `POST /api/mailbox/slots/group` | mint a group id and report the caller's allowance |
+| `GET /api/mailbox/slots` | list the live inboxes the group holds |
+| `DELETE /api/mailbox/slots/:email` | close one inbox and free its slot |
+
+`POST /api/mailbox/register` claims a slot when the request carries a group, and answers
+`403 SLOT_LIMIT` when the group is full. The claim happens **before** the Redis lease is written,
+so a refused registration can never leave a mailbox nobody can reach.
+
+In Redis a group is the sorted set `inbox_slots:{groupId}`: member is the address, score is the
+millisecond it was opened, which is what keeps the chips in a stable order. Every read prunes
+members whose `active_mailbox:*` lease has gone, so an expired inbox drops out of the strip and
+gives its allowance back without a separate sweep, and the group key's own TTL is re-derived from
+its longest-lived member. An empty group is deleted.
+
+`DELETE` checks membership before it deactivates anything, so a group can only ever close an
+address it opened itself. The limit is an allowance rather than an abuse control — clearing
+localStorage gets a fresh group, exactly as opening a second browser always has — and the per-IP
+`mailboxRegister` limiter is what bounds registration volume.
+
+Counters: `hidemail_inbox_slots_opened_total{result="opened"|"limit"}` and
+`hidemail_inbox_slots_released_total`.
 
 ## Attachments
 
