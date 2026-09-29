@@ -14,6 +14,7 @@ A temporary email service that provides disposable email addresses for privacy a
 - Dark/Light theme support
 - Optional Hide Mail Pro plan: no ads, longer mailbox lifetimes, custom aliases, premium domains, higher forwarding limits
 - Optional API plan for QA automation: create mailboxes, read messages, download attachments, register inbound webhooks
+- Mail Grade: paste a raw email and get a quality report, plus a separate Mail Grade API plan for scoring mail from a script
 
 ## Quick Start
 
@@ -88,6 +89,7 @@ Key configuration options in `.env`:
 | `WAYFORPAY_RETURN_URL` | Page the payer is redirected to after payment. WayForPay itself is given `/api/billing/return` on the same origin, because it returns the browser with a POST |
 | `PRO_PRICE_MONTHLY_USD` / `PRO_PRICE_YEARLY_USD` | Pro list prices in USD; UAH charged is derived from WayForPay rates |
 | `API_PRICE_MONTHLY_USD` | API plan list price in USD |
+| `GRADE_PRICE_MONTHLY_USD` | Mail Grade API list price in USD. This plan only scores raw email |
 | `FX_CACHE_SECONDS` / `FX_STALE_SECONDS` | Fresh FX cache TTL (default 2h) and maximum stale-cache age (default 24h) |
 | `PREMIUM_DOMAINS` | Pro-only domains; empty means Pro uses `VALID_DOMAINS` |
 
@@ -168,6 +170,29 @@ advertised limits are the same numbers the backend enforces. Two of them are eas
 Ads are suppressed for paying users in two places: the React ad components render nothing, and
 `public/adsense-config.js` skips loading the AdSense tag entirely when a licence key is present,
 so auto-ads cannot place anything either.
+
+## Mail Grade
+
+Mail Grade is a quality report for a message you are about to send. It is not a mailbox.
+Open `/grade`, paste the raw source (headers and body), and Hide Mail returns a letter grade
+with the reasons: missing headers, authentication results, a missing plain-text part, HTTP
+links, bulk mail without `List-Unsubscribe`, and a short list of spam-like phrases. The
+source is scored in memory and is not stored.
+
+The report on the page is free. The paid offer is the Mail Grade API, a monthly plan of its
+own (`GRADE_PRICE_MONTHLY_USD`, default $9):
+
+```bash
+curl -sS -H "Authorization: Bearer $MAIL_GRADE_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"source":"From: Ada <ada@example.com>\nSubject: Hello\n\nHi"}' \
+  https://hide-mail.org/api/mail-grade
+```
+
+A QA mailbox key is rejected on that route, and a Mail Grade key cannot create mailboxes.
+Buying Mail Grade does not remove ads or change inbox limits. Card checkout follows the same
+WayForPay pause as the other plans; while it is paused the page still grades mail for free.
+After a grade payment the browser returns to `/grade`.
 
 ## Attachments
 

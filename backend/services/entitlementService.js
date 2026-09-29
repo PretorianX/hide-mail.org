@@ -10,6 +10,7 @@ const freeEntitlements = () => ({
   customAlias: false,
   premiumDomains: false,
   apiAccess: false,
+  gradeApi: false,
   forwardingLimit: config.forwarding.freeLimit,
   mailboxTtlSeconds: config.emailExpirationSeconds,
   mailboxTtlOptions: [],
@@ -21,15 +22,31 @@ const paidEntitlements = (planType) => ({
   customAlias: true,
   premiumDomains: true,
   apiAccess: planType === 'api',
+  gradeApi: false,
   forwardingLimit: config.forwarding.proLimit,
   mailboxTtlSeconds: config.pro.defaultMailboxTtlSeconds,
   mailboxTtlOptions: mailboxTtlOptions(),
   planType,
 });
 
+const gradeEntitlements = () => ({
+  ads: true,
+  customAlias: false,
+  premiumDomains: false,
+  apiAccess: false,
+  gradeApi: true,
+  forwardingLimit: config.forwarding.freeLimit,
+  mailboxTtlSeconds: config.emailExpirationSeconds,
+  mailboxTtlOptions: [],
+  planType: 'grade',
+});
+
 const getEntitlements = (license) => {
   if (!licenseService.isActive(license)) {
     return freeEntitlements();
+  }
+  if (planTypeOf(license) === 'grade') {
+    return gradeEntitlements();
   }
   return paidEntitlements(planTypeOf(license));
 };
@@ -43,6 +60,7 @@ const describeTiers = () => ({
   free: freeEntitlements(),
   pro: paidEntitlements('pro'),
   api: paidEntitlements('api'),
+  grade: gradeEntitlements(),
   freeExtensionSeconds: config.emailExtensionSeconds,
   premiumDomainCount: config.premiumDomains.length,
   apiKeyTtlSeconds: config.billing.apiKeyTtlSeconds,

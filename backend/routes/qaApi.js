@@ -1,12 +1,13 @@
 const express = require('express');
 const qaApiController = require('../controllers/qaApiController');
 const attachmentController = require('../controllers/attachmentController');
-const { requireApiKey } = require('../middleware/apiKeyAuth');
+const { requireApiKey, requireLicenseType } = require('../middleware/apiKeyAuth');
 const apiRateLimiter = require('../services/apiRateLimiter');
 
 const router = express.Router();
 
 router.use(requireApiKey);
+router.use(requireLicenseType('api'));
 router.use(apiRateLimiter.default);
 
 router.post('/mailboxes', qaApiController.createMailbox);
