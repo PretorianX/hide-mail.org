@@ -126,6 +126,28 @@ describe('MessageList', () => {
     expect(screen.queryByTestId('forward-btn-msg2')).not.toBeInTheDocument();
   });
 
+  test('tags a message with the site address it arrived on', () => {
+    render(
+      <MessageList
+        messages={[{ ...mockMessages[0], deliveredTo: 'nova7.netflix@hide-mail.org' }]}
+        tempMailbox="nova7@hide-mail.org"
+      />
+    );
+
+    expect(screen.getByTestId('delivered-to-msg1')).toHaveTextContent('nova7.netflix@hide-mail.org');
+  });
+
+  test('does not tag a message that went to the mailbox itself', () => {
+    render(
+      <MessageList
+        messages={[{ ...mockMessages[0], deliveredTo: 'nova7@hide-mail.org' }]}
+        tempMailbox="nova7@hide-mail.org"
+      />
+    );
+
+    expect(screen.queryByTestId('delivered-to-msg1')).not.toBeInTheDocument();
+  });
+
   test('clicking ForwardButton does not open the modal', () => {
     render(<MessageList messages={mockMessages} tempMailbox="test@temp.com" />);
     

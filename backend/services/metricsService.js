@@ -65,6 +65,11 @@ const emailsStoredTotal = new client.Counter({
   help: 'Total emails successfully stored in Redis',
 });
 
+const emailsSiteAddressedTotal = new client.Counter({
+  name: 'hidemail_emails_site_addressed_total',
+  help: 'Total emails delivered through a mailbox site address rather than the mailbox itself',
+});
+
 const emailsDroppedTotal = new client.Counter({
   name: 'hidemail_emails_dropped_total',
   help: 'Total emails silently dropped',
@@ -295,6 +300,7 @@ module.exports = {
   smtpRecipientsRejectedTotal,
   emailsReceivedTotal,
   emailsStoredTotal,
+  emailsSiteAddressedTotal,
   emailsDroppedTotal,
   smtpErrorsTotal,
   emailSizeBytes,

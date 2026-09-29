@@ -14,8 +14,12 @@ const crypto = require('crypto');
 const config = require('../config/config');
 const redisService = require('../services/redisService');
 const entitlementService = require('../services/entitlementService');
+const { resolveActiveRecipient } = require('../services/recipientResolver');
 const { validatePublicHttpsWebhookUrl } = require('../services/webhookUrlGuard');
 const logger = require('../utils/logger');
+
+// Mirrors the Pro alias rules in emailController: lowercase, no edge separators.
+const ALIAS_PATTERN = /^[a-z0-9](?:[a-z0-9._-]{0,62}[a-z0-9])?$/;
 
 const randomLocalPart = () => `qa${crypto.randomBytes(6).toString('hex')}`;
 
@@ -43,9 +47,25 @@ const createMailbox = async (req, res, next) => {
       return res.status(500).json({ success: false, error: 'No domains configured' });
     }
 
-    const alias = req.body?.alias;
+    const alias = req.body?.alias ? String(req.body.alias).toLowerCase() : null;
+
+    if (alias && !ALIAS_PATTERN.test(alias)) {
+      return res.status(400).json({ success: false, error: 'Invalid alias', code: 'INVALID_ALIAS' });
+    }
+
     const localPart = alias || randomLocalPart();
     const email = `${localPart}@${domain}`;
+
+    // Refuses an address that is, or routes into, a live mailbox. A dotted alias such as
+    // `victim.netflix` must not intercept mail meant for the live `victim@` inbox.
+    if (await resolveActiveRecipient(email)) {
+      return res.status(409).json({
+        success: false,
+        error: 'This address is already in use. Choose another alias.',
+        code: 'ALIAS_TAKEN',
+      });
+    }
+
     const ttl = entitlementService.resolveMailboxTtl(req.apiLicense, req.body?.ttlSeconds);
 
     await redisService.registerMailbox(email, ttl);

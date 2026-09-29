@@ -132,6 +132,24 @@ describe('QA API', () => {
     expect(res.statusCode).toBe(400);
     expect(res.body.code).toBe('INVALID_WEBHOOK_URL');
   });
+
+  it('refuses an alias that would take over a live mailbox site address', async () => {
+    await redisService.registerMailbox('victim@hide-mail.org', 1800);
+
+    const res = jsonRes();
+    await qaApiController.createMailbox(
+      {
+        body: { domain: 'hide-mail.org', alias: 'victim.netflix' },
+        apiLicense,
+      },
+      res,
+      (err) => { throw err; }
+    );
+
+    expect(res.statusCode).toBe(409);
+    expect(res.body.code).toBe('ALIAS_TAKEN');
+    expect(await redisService.isMailboxActive('victim.netflix@hide-mail.org')).toBe(false);
+  });
 });
 
 describe('API key middleware', () => {
