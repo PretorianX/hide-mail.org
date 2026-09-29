@@ -1,0 +1,148 @@
+.site-address-panel {
+  margin: 15px 0 0;
+  padding: 15px;
+  background-color: var(--duck-gray);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  text-align: left;
+}
+
+.site-address-panel h3 {
+  margin: 0 0 6px;
+  font-size: 1rem;
+  color: var(--duck-black);
+}
+
+.site-address-intro {
+  margin: 0 0 12px;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.site-address-form label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.85rem;
+  color: var(--text-color);
+}
+
+.site-address-input-row {
+  display: flex;
+  gap: 8px;
+}
+
+.site-address-input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  font-size: 0.95rem;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background-color: var(--duck-white);
+  color: var(--text-color);
+}
+
+.site-address-input-row button {
+  padding: 8px 14px;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.site-address-preview {
+  margin: 8px 0 0;
+  font-family: monospace;
+  font-size: 0.95rem;
+  word-break: break-all;
+  color: var(--duck-orange);
+}
+
+.site-address-list {
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.site-address-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background-color: var(--duck-white);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+}
+
+.site-address-item.is-active {
+  border-color: var(--duck-orange);
+}
+
+.site-address-value {
+  flex: 1;
+  min-width: 0;
+  font-family: monospace;
+  font-size: 0.9rem;
+  word-break: break-all;
+  color: var(--text-color);
+}
+
+.site-address-count {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.site-address-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.site-address-actions button {
+  padding: 4px 10px;
+  font-size: 0.8rem;
+  background-color: var(--duck-orange-light);
+}
+
+.site-address-footnote {
+  margin: 12px 0 0;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+[data-theme='dark'] .site-address-panel {
+  background-color: var(--card-background);
+  border-color: var(--dark-border-color);
+}
+
+[data-theme='dark'] .site-address-panel h3,
+[data-theme='dark'] .site-address-form label,
+[data-theme='dark'] .site-address-value {
+  color: var(--dark-text-color);
+}
+
+[data-theme='dark'] .site-address-intro,
+[data-theme='dark'] .site-address-count,
+[data-theme='dark'] .site-address-footnote {
+  color: var(--dark-text-secondary);
+}
+
+[data-theme='dark'] .site-address-input,
+[data-theme='dark'] .site-address-item {
+  background-color: var(--background-color);
+  border-color: var(--dark-border-color);
+  color: var(--dark-text-color);
+}
+
+@media (max-width: 767px) {
+  .site-address-input-row {
+    flex-direction: column;
+  }
+
+  .site-address-input-row button {
+    width: 100%;
+  }
+}
