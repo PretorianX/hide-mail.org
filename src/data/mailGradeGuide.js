@@ -169,6 +169,76 @@ const ENTRIES = {
     cause: 'The body or subject uses wording common in junk mail.',
     fix: 'Rewrite the copy in plain language; drop phrases like “act now”, “free money”, or “you have won”.',
   },
+  spf_no_ip: {
+    title: 'SPF needs a sending IP',
+    cause: 'SPF evaluates whether a specific IP may send for the domain. A paste without Received headers has no public client IP.',
+    fix: 'Send a real copy to a Mail Grade address on this page so we can read Received and evaluate SPF fully.',
+  },
+  auth_inconclusive: {
+    title: 'Live auth checks timed out',
+    cause: 'DNS lookups for SPF, DKIM or DMARC did not finish in time.',
+    fix: 'Retry in a moment. If it keeps timing out, check that your DNS is reachable from the public internet.',
+  },
+  css_cloaking: {
+    title: 'CSS hides content',
+    cause: 'Hidden or near-invisible CSS is a classic spam and phishing trick.',
+    fix: 'Remove display:none, visibility:hidden, opacity:0, font-size:0, and off-screen positioning from marketing content you want trusted.',
+  },
+  hidden_link: {
+    title: 'Hidden link',
+    cause: 'A link is styled or attributed so people may not notice it.',
+    fix: 'Make every link visible and intentional; do not cloak anchors with CSS.',
+  },
+  hidden_link_mismatch: {
+    title: 'Link text disagrees with destination',
+    cause: 'The visible URL points at one host while href goes elsewhere. Providers treat that as phishing.',
+    fix: 'Make the visible text match the real destination host, or use plain non-URL labels like “Read the update”.',
+  },
+  tracking_pixel: {
+    title: 'Tracking pixel present',
+    cause: 'A 1×1 image is commonly used to track opens and can hurt trust.',
+    fix: 'Drop open-tracking pixels if you can, or keep them on a clearly branded domain.',
+  },
+  html_script: {
+    title: 'Script in HTML',
+    cause: 'JavaScript in email is blocked or filtered by almost every provider.',
+    fix: 'Remove every script tag. Put interactivity on a web page you link to instead.',
+  },
+  html_form: {
+    title: 'HTML form present',
+    cause: 'Forms inside messages are unusual and often filtered as phishing.',
+    fix: 'Link to a form on your website instead of embedding one in the message.',
+  },
+  image_only_body: {
+    title: 'Image-only body',
+    cause: 'Messages that are only images look like spam and fail accessibility checks.',
+    fix: 'Add a real text part and meaningful alt text; do not send image-only campaigns.',
+  },
+  link_shortener: {
+    title: 'URL shortener used',
+    cause: 'Shortened links hide the real destination and are a spam signal.',
+    fix: 'Link directly to your own https hostname.',
+  },
+  rbl_domain: {
+    title: 'Domain on a public blocklist',
+    cause: 'The From domain or a linked host is listed on a public domain blocklist (for example Spamhaus DBL, SURBL, or URIBL).',
+    fix: 'Check the listing reason with the blocklist operator, clean up abuse, and request delisting before you send again.',
+  },
+  rbl_ip: {
+    title: 'Sending IP on a public blocklist',
+    cause: 'A Received client IP or an MX/A address for the From domain is listed on a public IP DNSBL.',
+    fix: 'Stop sending from that IP, fix the abuse issue, and follow the list’s delisting process.',
+  },
+  rbl_inconclusive: {
+    title: 'Reputation checks incomplete',
+    cause: 'One or more public DNSBL lookups timed out or failed.',
+    fix: 'Retry the grade. Persistent timeouts usually mean DNS trouble, not a listing.',
+  },
+  rbl_clean: {
+    title: 'Not listed on checked RBLs',
+    cause: 'From-domain, sampled link hosts, and checked IPs were clean on the public lists we query.',
+    fix: 'No change needed. Keep monitoring; listings can appear after a send.',
+  },
 };
 
 export const guideFor = (findingId) => ENTRIES[findingId] || null;

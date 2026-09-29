@@ -200,6 +200,7 @@ const buildFindings = ({ parsed, source }) => {
     }
   }
 
+  // Presence only — live SPF/DKIM/DMARC verdicts come from authChecks.
   const dkimHeader = headerText(headers, 'dkim-signature');
   const verdicts = authVerdicts(headers);
   const dkimVerdict = verdicts.find((item) => item.kind === 'dkim');
@@ -220,30 +221,6 @@ const buildFindings = ({ parsed, source }) => {
       'This copy has neither a DKIM-Signature header nor a dkim=pass result.'
     );
   }
-
-  verdicts.forEach(({ kind, result }) => {
-    if (result === 'pass') {
-      push(findings, 'pass', `${kind}_pass`, `${kind.toUpperCase()} passed`, `Authentication-Results reports ${kind}=pass.`);
-      return;
-    }
-    if (result === 'fail' || result === 'softfail') {
-      push(
-        findings,
-        'fail',
-        `${kind}_fail`,
-        `${kind.toUpperCase()} failed`,
-        `Authentication-Results reports ${kind}=${result}.`
-      );
-      return;
-    }
-    push(
-      findings,
-      'warn',
-      `${kind}_weak`,
-      `${kind.toUpperCase()} is inconclusive`,
-      `Authentication-Results reports ${kind}=${result}.`
-    );
-  });
 
   const hasTextPart = /content-type:\s*text\/plain/i.test(source);
   const hasHtml = Boolean(parsed.html) || /content-type:\s*text\/html/i.test(source);
