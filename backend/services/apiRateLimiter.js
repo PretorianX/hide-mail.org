@@ -29,6 +29,10 @@ const RATE_LIMITS = {
   orderLookup: { requests: 20, windowSeconds: 300 },
   // Default: 100 per minute per IP
   default: { requests: 100, windowSeconds: 60 },
+  // Free in-browser Mail Grade reports. Tight enough to discourage scraping the page.
+  gradeReport: { requests: 20, windowSeconds: 600 },
+  // Paid Mail Grade API. A sender's pipeline buys this limit, not the free page.
+  mailGrade: { requests: 120, windowSeconds: 60 },
 };
 
 /**
@@ -98,6 +102,8 @@ module.exports = {
   emailFetch: createRateLimiter('emailFetch'),
   licenseValidate: createRateLimiter('licenseValidate'),
   orderLookup: createRateLimiter('orderLookup'),
+  gradeReport: createRateLimiter('gradeReport'),
+  mailGrade: createRateLimiter('mailGrade'),
   default: createRateLimiter('default'),
   RATE_LIMITS,
 };

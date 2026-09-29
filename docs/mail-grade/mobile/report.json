@@ -1,0 +1,196 @@
+[
+  {
+    "size": "iphone-se",
+    "nav": {
+      "viewport": 375,
+      "scrollWidth": 375,
+      "horizontalOverflow": false,
+      "links": [
+        {
+          "text": "Home",
+          "href": "/",
+          "left": 57,
+          "right": 115,
+          "top": 162,
+          "bottom": 194,
+          "width": 57,
+          "overflowed": false
+        },
+        {
+          "text": "Blog",
+          "href": "/blog",
+          "left": 125,
+          "right": 173,
+          "top": 162,
+          "bottom": 194,
+          "width": 48,
+          "overflowed": false
+        },
+        {
+          "text": "About",
+          "href": "/about-us",
+          "left": 183,
+          "right": 239,
+          "top": 162,
+          "bottom": 194,
+          "width": 57,
+          "overflowed": false
+        },
+        {
+          "text": "Contact",
+          "href": "/contact-us",
+          "left": 249,
+          "right": 318,
+          "top": 162,
+          "bottom": 194,
+          "width": 68,
+          "overflowed": false
+        },
+        {
+          "text": "Grade",
+          "href": "/grade",
+          "left": 158,
+          "right": 217,
+          "top": 204,
+          "bottom": 236,
+          "width": 59,
+          "overflowed": false
+        },
+        {
+          "text": "Go Pro",
+          "href": "/pro",
+          "left": 40,
+          "right": 335,
+          "top": 246,
+          "bottom": 290,
+          "width": 295,
+          "overflowed": false
+        }
+      ],
+      "gradeFullyVisible": true,
+      "grade": {
+        "text": "Grade",
+        "href": "/grade",
+        "left": 158,
+        "right": 217,
+        "top": 204,
+        "bottom": 236,
+        "width": 59,
+        "overflowed": false
+      }
+    },
+    "resultMeta": {
+      "stamp": "A",
+      "result": "Grade A score 100This message looks ready to send.From is presentFrom news@example.com.Subject is presentSubject is 17 characters.Date is presentThe message has"
+    },
+    "errorMeta": {
+      "alert": "That text has no email headers. Paste the raw source, including From or Subject.",
+      "stamp": "—",
+      "hasResult": false
+    },
+    "shots": {
+      "empty": "/tmp/mail-grade-iphone/iphone-se-01-empty.png",
+      "filled": "/tmp/mail-grade-iphone/iphone-se-02-filled.png",
+      "result": "/tmp/mail-grade-iphone/iphone-se-03-result.png",
+      "error": "/tmp/mail-grade-iphone/iphone-se-04-error.png",
+      "api": "/tmp/mail-grade-iphone/iphone-se-05-api.png"
+    }
+  },
+  {
+    "size": "iphone-14",
+    "nav": {
+      "viewport": 390,
+      "scrollWidth": 390,
+      "horizontalOverflow": false,
+      "links": [
+        {
+          "text": "Home",
+          "href": "/",
+          "left": 65,
+          "right": 122,
+          "top": 162,
+          "bottom": 194,
+          "width": 57,
+          "overflowed": false
+        },
+        {
+          "text": "Blog",
+          "href": "/blog",
+          "left": 132,
+          "right": 180,
+          "top": 162,
+          "bottom": 194,
+          "width": 48,
+          "overflowed": false
+        },
+        {
+          "text": "About",
+          "href": "/about-us",
+          "left": 190,
+          "right": 247,
+          "top": 162,
+          "bottom": 194,
+          "width": 57,
+          "overflowed": false
+        },
+        {
+          "text": "Contact",
+          "href": "/contact-us",
+          "left": 257,
+          "right": 325,
+          "top": 162,
+          "bottom": 194,
+          "width": 68,
+          "overflowed": false
+        },
+        {
+          "text": "Grade",
+          "href": "/grade",
+          "left": 166,
+          "right": 224,
+          "top": 204,
+          "bottom": 236,
+          "width": 59,
+          "overflowed": false
+        },
+        {
+          "text": "Go Pro",
+          "href": "/pro",
+          "left": 40,
+          "right": 350,
+          "top": 246,
+          "bottom": 290,
+          "width": 310,
+          "overflowed": false
+        }
+      ],
+      "gradeFullyVisible": true,
+      "grade": {
+        "text": "Grade",
+        "href": "/grade",
+        "left": 166,
+        "right": 224,
+        "top": 204,
+        "bottom": 236,
+        "width": 59,
+        "overflowed": false
+      }
+    },
+    "resultMeta": {
+      "stamp": "A",
+      "result": "Grade A score 100This message looks ready to send.From is presentFrom news@example.com.Subject is presentSubject is 17 characters.Date is presentThe message has"
+    },
+    "errorMeta": {
+      "alert": "That text has no email headers. Paste the raw source, including From or Subject.",
+      "stamp": "—",
+      "hasResult": false
+    },
+    "shots": {
+      "empty": "/tmp/mail-grade-iphone/iphone-14-01-empty.png",
+      "filled": "/tmp/mail-grade-iphone/iphone-14-02-filled.png",
+      "result": "/tmp/mail-grade-iphone/iphone-14-03-result.png",
+      "error": "/tmp/mail-grade-iphone/iphone-14-04-error.png",
+      "api": "/tmp/mail-grade-iphone/iphone-14-05-api.png"
+    }
+  }
+]

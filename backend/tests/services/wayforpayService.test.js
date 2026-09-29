@@ -175,6 +175,21 @@ describe('wayforpayService', () => {
     it('rejects a yearly API order because the API tariff is monthly only', () => {
       expect(() => wayforpayService.resolveProduct('api', 'yearly')).toThrow(/unsupported api plan/i);
     });
+
+    it('names the Mail Grade product on its own monthly tariff', () => {
+      const payload = wayforpayService.buildCheckoutPayload({
+        type: 'grade',
+        plan: 'monthly',
+        orderReference: 'grade-monthly-test',
+        orderDate: 1700000000,
+        dateNext: '18.09.2026',
+        amount: 370,
+      });
+
+      expect(payload.productName).toEqual(['Mail Grade API Monthly']);
+      expect(payload.productPrice).toEqual([370]);
+      expect(() => wayforpayService.resolveProduct('grade', 'yearly')).toThrow(/unsupported grade plan/i);
+    });
   });
 
   describe('classifyTransactionStatus', () => {

@@ -68,6 +68,30 @@ describe('WayForPay customer return', () => {
       expect(target.searchParams.get('handoffToken')).toMatch(/^[0-9a-f-]{36}$/i);
     });
 
+    it('sends a Mail Grade payer to /grade rather than the Pro page', async () => {
+      const orderService = require('../../services/orderService');
+      await orderService.createOrder({
+        id: 'grade-monthly-abc',
+        plan: 'monthly',
+        type: 'grade',
+        amount: 370,
+        currency: 'UAH',
+      });
+
+      const billingController = require('../../controllers/billingController');
+      const res = mockRes();
+
+      await billingController.customerReturn(
+        { query: { orderReference: 'grade-monthly-abc' }, body: {} },
+        res
+      );
+
+      const [, targetUrl] = res.redirect.mock.calls[0];
+      const target = new URL(targetUrl);
+      expect(target.origin + target.pathname).toBe('https://hide-mail.org/grade');
+      expect(target.searchParams.get('handoffToken')).toMatch(/^[0-9a-f-]{36}$/i);
+    });
+
     it('redirects to the Pro page even without an order reference', async () => {
       const billingController = require('../../controllers/billingController');
       const res = mockRes();

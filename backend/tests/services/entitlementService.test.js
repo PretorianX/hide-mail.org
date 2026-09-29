@@ -47,6 +47,23 @@ describe('entitlementService', () => {
     expect(entitlements.premiumDomains).toBe(true);
   });
 
+  it('sells Mail Grade without unlocking the inbox', () => {
+    const entitlements = entitlementService.getEntitlements({
+      type: 'grade',
+      status: 'active',
+      expiresAt: Date.now() + 60_000,
+    });
+
+    expect(entitlements.planType).toBe('grade');
+    expect(entitlements.gradeApi).toBe(true);
+    expect(entitlements.ads).toBe(true);
+    expect(entitlements.apiAccess).toBe(false);
+    expect(entitlements.customAlias).toBe(false);
+    expect(entitlements.premiumDomains).toBe(false);
+    expect(entitlements.mailboxTtlOptions).toEqual([]);
+    expect(entitlements.forwardingLimit).toBe(2);
+  });
+
   it('treats an expired license as free', () => {
     const entitlements = entitlementService.getEntitlements({
       type: 'pro',

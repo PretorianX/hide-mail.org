@@ -52,14 +52,20 @@ const checkout = async (req, res, next) => {
     }
 
     const plan = req.body?.plan;
-    const type = req.body?.type === 'api' ? 'api' : 'pro';
+    const requested = req.body?.type;
+    const type = requested === 'api' || requested === 'grade' ? requested : 'pro';
 
     try {
       wayforpayService.resolveProduct(type, plan);
     } catch {
+      const invalidPlan = {
+        api: 'API plan must be monthly',
+        grade: 'Mail Grade is a monthly plan',
+        pro: 'plan must be monthly or yearly',
+      };
       return res.status(400).json({
         success: false,
-        error: type === 'api' ? 'API plan must be monthly' : 'plan must be monthly or yearly',
+        error: invalidPlan[type],
         code: 'INVALID_PLAN',
       });
     }
@@ -175,7 +181,7 @@ const activateLicense = async ({ orderReference, recToken, amount, currency }) =
   });
 
   const extra = {};
-  if (license.type === 'api') {
+  if (license.type === 'api' || license.type === 'grade') {
     extra.apiKey = await licenseService.createApiKey(license.key);
     const issued = await licenseService.validateApiKey(extra.apiKey);
     extra.apiKeyRemainingDays = issued.remainingDays;
@@ -285,6 +291,12 @@ const customerReturn = async (req, res, next) => {
     const target = new URL(config.wayforpay.returnUrl);
     const { orderReference } = req.query || {};
     if (typeof orderReference === 'string' && orderReference) {
+      const order = await orderService.getOrder(orderReference);
+      if (order?.type === 'grade') {
+        target.pathname = '/grade';
+        target.search = '';
+        target.hash = '';
+      }
       const token = await orderService.createHandoffToken(orderReference);
       target.searchParams.set('handoffToken', token);
     }
@@ -335,10 +347,10 @@ const issueApiKey = async (req, res, next) => {
     if (!licenseService.isActive(license)) {
       return res.status(404).json({ success: false, error: 'License not found' });
     }
-    if (license.type !== 'api') {
+    if (license.type !== 'api' && license.type !== 'grade') {
       return res.status(403).json({
         success: false,
-        error: 'API keys are only issued for the QA API plan',
+        error: 'API keys are only issued for the QA API or Mail Grade plan',
         code: 'API_PLAN_REQUIRED',
       });
     }

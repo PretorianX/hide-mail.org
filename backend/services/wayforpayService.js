@@ -39,6 +39,12 @@ const PRODUCTS = {
       regularMode: 'monthly',
     },
   },
+  grade: {
+    monthly: {
+      productName: 'Mail Grade API Monthly',
+      regularMode: 'monthly',
+    },
+  },
 };
 
 const resolveProduct = (type, plan) => {

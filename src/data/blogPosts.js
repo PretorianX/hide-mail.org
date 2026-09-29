@@ -1,5 +1,39 @@
 const blogPosts = [
   {
+    id: 'mail-grade-deliverability',
+    title: 'Mail Grade: Check SPF, DKIM, DMARC, Hidden Links, and RBLs Before You Send',
+    date: 'September 29, 2026',
+    image: '/images/blog/email-security.jpg',
+    content: `
+      <p>Paste a raw email—or send one to a temporary Hide Mail address—and <a href="/grade">Mail Grade</a> returns a letter grade plus findings that mirror what modern mailbox providers look at: authentication, HTML tricks, and public reputation lists.</p>
+
+      <h2>Why grade the message itself?</h2>
+      <p>Inbox tools tell you what arrived. They rarely tell a sender whether the <em>next</em> message is likely to look trustworthy. Mail Grade scores the RFC822 source in memory and does not store it.</p>
+
+      <h2>What Mail Grade checks</h2>
+      <ul>
+        <li><strong>Live SPF, DKIM, and DMARC</strong> against public DNS (not only Authentication-Results headers already on the copy).</li>
+        <li><strong>HTML and CSS abuse</strong> such as cloaking styles, hidden links, link text that disagrees with the destination, tracking pixels, scripts, and forms.</li>
+        <li><strong>Public RBL reputation</strong> for the From domain, sampled link hosts, MX/A addresses, and Received client IPs.</li>
+        <li><strong>Basics</strong> like subject quality, List-Unsubscribe on bulk-looking mail, HTTPS links, and spam-like phrasing.</li>
+      </ul>
+
+      <h2>Paste or send</h2>
+      <p>On <a href="/grade">/grade</a> you can paste raw source, or click <strong>Create Mail Grade address</strong> to mint a <code>grade-…@</code> mailbox. Send a real test message there; when it arrives we grade the raw copy. That path also gives Received headers so SPF and IP RBLs can run fully.</p>
+
+      <h2>Fix with the findings guide</h2>
+      <p>Every finding links to the <a href="/grade/guide">Mail Grade findings guide</a>—why it matters and what to change before you send for real.</p>
+
+      <h2>API for pipelines</h2>
+      <p>Teams that grade in CI can use the Mail Grade API (<code>POST /api/mail-grade</code>) with a Mail Grade license. It is separate from the disposable-inbox QA key and does not change inbox limits or ads.</p>
+
+      <h2>What it is not</h2>
+      <p>Mail Grade cannot promise inbox placement. It does not fetch your links over HTTP (to avoid SSRF), and DNSBL timeouts show as inconclusive warnings rather than invented failures.</p>
+
+      <p>Try it on <a href="/grade">hide-mail.org/grade</a> before your next campaign goes out.</p>
+    `,
+  },
+  {
     id: 'email-forwarding-use-cases',
     title: 'Forward & Forget: 10 Smart Ways to Use Email Forwarding with Temporary Addresses',
     date: 'December 5, 2024',

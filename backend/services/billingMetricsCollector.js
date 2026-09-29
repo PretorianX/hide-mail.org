@@ -25,6 +25,7 @@ const TRACKED_PLANS = [
   { type: 'pro', plan: 'monthly' },
   { type: 'pro', plan: 'yearly' },
   { type: 'api', plan: 'monthly' },
+  { type: 'grade', plan: 'monthly' },
 ];
 
 const TRACKED_ORDER_STATUSES = ['pending', 'paid'];

@@ -7,6 +7,7 @@ process.env.VALID_DOMAINS = 'hide-mail.org';
 process.env.PRO_PRICE_MONTHLY_USD = '3.49';
 process.env.PRO_PRICE_YEARLY_USD = '24.99';
 process.env.API_PRICE_MONTHLY_USD = '7.99';
+process.env.GRADE_PRICE_MONTHLY_USD = '9';
 
 const pricingService = require('../../services/pricingService');
 
@@ -53,6 +54,15 @@ describe('pricingService', () => {
     it('derives yearly and API amounts from their own USD prices', () => {
       expect(pricingService.quotePlan('pro', 'yearly', rates).amountUah).toBe(1030);
       expect(pricingService.quotePlan('api', 'monthly', rates).amountUah).toBe(330);
+    });
+
+    it('prices Mail Grade from its own monthly USD list price', () => {
+      expect(pricingService.quotePlan('grade', 'monthly', rates)).toEqual({
+        usd: 9,
+        amountUah: 370,
+        currency: 'UAH',
+      });
+      expect(() => pricingService.quotePlan('grade', 'yearly', rates)).toThrow(/unsupported grade plan/i);
     });
   });
 

@@ -110,6 +110,10 @@ const createOriginVerifier = (options = {}) => {
     if (
       req.path === '/health'
       || req.path.startsWith('/qa')
+      // Mail Grade API is a paid machine client, same as the QA API. The free
+      // report stays on /grade/report and still has to come from the site.
+      || req.path === '/mail-grade'
+      || req.path.startsWith('/mail-grade/')
       || req.path === '/billing/webhook'
       || req.path === '/billing/return'
     ) {

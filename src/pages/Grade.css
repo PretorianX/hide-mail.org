@@ -1,0 +1,333 @@
+.grade-page {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 8px 12px 32px;
+  color: var(--text-color);
+}
+
+.grade-page h1 {
+  margin: 0 0 8px;
+}
+
+.grade-lead {
+  margin-top: 0;
+  color: var(--text-secondary);
+}
+
+.grade-work {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.grade-stamp {
+  width: 112px;
+  height: 112px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  border: 6px solid var(--duck-orange);
+  box-shadow: inset 0 0 0 4px rgba(247, 148, 29, 0.28);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3rem;
+  font-weight: 800;
+  line-height: 1;
+  background: var(--card-bg, #fff);
+}
+
+.grade-stamp-empty {
+  color: var(--text-secondary);
+}
+
+.grade-stamp-A,
+.grade-stamp-B {
+  color: var(--success-color);
+}
+
+.grade-stamp-C {
+  color: #5c2d00;
+}
+
+.grade-stamp-D,
+.grade-stamp-F {
+  color: var(--danger-color);
+}
+
+.grade-form {
+  flex: 1 1 280px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.grade-form textarea {
+  width: 100%;
+  min-height: 220px;
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font: 0.9rem/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: var(--text-color);
+  background: var(--card-bg, #fff);
+  resize: vertical;
+}
+
+.grade-submit {
+  align-self: flex-start;
+}
+
+.grade-empty {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.grade-error {
+  margin: 0;
+  color: var(--danger-color);
+  font-weight: 700;
+}
+
+.grade-result {
+  margin-top: 24px;
+}
+
+.grade-score {
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.grade-findings {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.grade-finding {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  padding: 10px 12px;
+  border-left: 4px solid var(--border-color);
+  background: var(--duck-gray);
+  border-radius: 0 8px 8px 0;
+}
+
+.grade-finding strong {
+  flex: 1 1 180px;
+}
+
+.grade-finding span {
+  flex: 2 1 220px;
+}
+
+.grade-finding-guide {
+  flex: 1 1 100%;
+  color: var(--duck-orange, #f7941d);
+  font-weight: 600;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.grade-guide-link {
+  color: var(--duck-orange, #f7941d);
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.grade-receive {
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-color);
+}
+
+.grade-receive h2 {
+  margin: 0 0 6px;
+  font-size: 1.15rem;
+}
+
+.grade-receive-lead {
+  margin: 0 0 12px;
+  color: var(--text-secondary);
+}
+
+.grade-receive-active {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.grade-receive-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.grade-receive-row input {
+  flex: 1 1 220px;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font: 0.95rem/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: var(--text-color);
+  background: var(--card-bg, #fff);
+}
+
+.grade-receive-status {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.grade-receive-create {
+  align-self: flex-start;
+}
+
+@media (max-width: 640px) {
+  .grade-receive {
+    margin-top: 20px;
+    padding-top: 16px;
+  }
+}
+
+.grade-finding-pass {
+  border-left-color: var(--success-color);
+}
+
+.grade-finding-warn {
+  border-left-color: var(--warning-color);
+}
+
+.grade-finding-fail {
+  border-left-color: var(--danger-color);
+}
+
+.grade-offer {
+  margin-top: 36px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.grade-offer-price {
+  font-size: 1.4rem;
+  font-weight: 800;
+  margin: 0;
+}
+
+.grade-restore {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+}
+
+.grade-restore input {
+  flex: 1 1 180px;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font: inherit;
+  color: var(--text-color);
+  background: var(--card-bg, #fff);
+}
+
+.grade-page textarea:focus-visible,
+.grade-page button:focus-visible,
+.grade-page input:focus-visible,
+.grade-page a:focus-visible {
+  outline: 3px solid var(--duck-orange);
+  outline-offset: 2px;
+}
+
+body[data-theme='dark'] .grade-page {
+  color: var(--dark-text-color);
+}
+
+body[data-theme='dark'] .grade-lead,
+body[data-theme='dark'] .grade-empty,
+body[data-theme='dark'] .grade-score {
+  color: var(--dark-text-secondary);
+}
+
+body[data-theme='dark'] .grade-stamp {
+  background: var(--background-color);
+  border-color: var(--dark-border-color);
+}
+
+/* Form controls keep a light-scheme CanvasText unless color-scheme and
+   -webkit-text-fill-color are set, which left black text on this dark field. */
+body[data-theme='dark'] .grade-page textarea,
+body[data-theme='dark'] .grade-page input {
+  background-color: #1a1a1a;
+  color: #e0e0e0;
+  -webkit-text-fill-color: #e0e0e0;
+  caret-color: #e0e0e0;
+  border-color: #444444;
+  color-scheme: dark;
+}
+
+body[data-theme='dark'] .grade-stamp-empty {
+  color: var(--dark-text-secondary);
+}
+
+body[data-theme='dark'] .grade-stamp-C {
+  color: var(--duck-orange-light);
+}
+
+body[data-theme='dark'] .grade-finding {
+  background: var(--background-color);
+}
+
+@media (max-width: 640px) {
+  .grade-page {
+    padding: 0 4px 24px;
+  }
+
+  .grade-page h1 {
+    font-size: 1.6rem;
+    margin-bottom: 4px;
+  }
+
+  .grade-lead {
+    margin-bottom: 10px;
+    font-size: 0.95rem;
+  }
+
+  /* Keep the stamp beside the form so Grade this email stays in the first viewport. */
+  .grade-work {
+    flex-wrap: nowrap;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .grade-stamp {
+    width: 72px;
+    height: 72px;
+    margin: 28px 0 0;
+    border-width: 4px;
+    box-shadow: inset 0 0 0 3px rgba(247, 148, 29, 0.28);
+    font-size: 2rem;
+  }
+
+  .grade-form textarea {
+    min-height: 120px;
+  }
+
+  .grade-submit,
+  .grade-offer button {
+    width: 100%;
+    min-height: 44px;
+  }
+}

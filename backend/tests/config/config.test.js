@@ -166,6 +166,7 @@ describe('config', () => {
       process.env.PRO_PRICE_MONTHLY_USD = '3.49';
       const config = require('../../config/config');
       expect(config.billing.monthlyUsd).toBe(3.49);
+      expect(config.billing.gradeUsd).toBe(9);
       expect(config.billing.currency).toBe('UAH');
       expect(config.billing.fxCacheSeconds).toBe(7200);
       expect(config.billing.fxStaleSeconds).toBe(86400);

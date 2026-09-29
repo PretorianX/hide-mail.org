@@ -25,6 +25,7 @@ jest.mock('../../config/config', () => {
       monthlyUsd: 3.49,
       yearlyUsd: 24.99,
       apiUsd: 7.99,
+      gradeUsd: 9,
       checkoutPaused: false,
     },
   };
@@ -69,6 +70,7 @@ const MOCK_RATES = { USD: 41.5, EUR: 45.2, GBP: 52.1 };
 const MONTHLY_UAH = 140;
 const YEARLY_UAH = 1030;
 const API_UAH = 330;
+const GRADE_UAH = 370;
 
 const mockRes = () => {
   const res = {};
@@ -189,6 +191,32 @@ describe('billingController', () => {
       expect(orderService.createOrder).toHaveBeenCalledWith(
         expect.objectContaining({ type: 'api', amount: API_UAH })
       );
+    });
+
+    it('charges the Mail Grade price for a Mail Grade order', async () => {
+      const req = { body: { plan: 'monthly', type: 'grade' } };
+      const res = mockRes();
+
+      await billingController.checkout(req, res);
+
+      const payload = res.json.mock.calls[0][0];
+      expect(payload.data.orderReference).toMatch(/^grade-monthly-/);
+      expect(payload.data.productName).toEqual(['Mail Grade API Monthly']);
+      expect(payload.data.amount).toBe(GRADE_UAH);
+      expect(orderService.createOrder).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'grade', amount: GRADE_UAH })
+      );
+    });
+
+    it('rejects a yearly Mail Grade order because that tariff is monthly only', async () => {
+      const req = { body: { plan: 'yearly', type: 'grade' } };
+      const res = mockRes();
+
+      await billingController.checkout(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json.mock.calls[0][0].error).toMatch(/Mail Grade is a monthly plan/);
+      expect(orderService.createOrder).not.toHaveBeenCalled();
     });
 
     it('rejects a yearly API order because the API tariff is monthly only', async () => {
@@ -687,6 +715,22 @@ describe('billingController', () => {
         apiKey: 'hm_api_newkey',
         remainingDays: 20,
       }));
+    });
+
+    it('hands a Mail Grade subscriber a fresh key without treating it as the QA API', async () => {
+      licenseService.getLicense.mockResolvedValue({ ...activeApiLicense, type: 'grade' });
+      licenseService.isActive.mockReturnValue(true);
+      licenseService.createApiKey.mockResolvedValue('hm_api_grade');
+      licenseService.validateApiKey.mockResolvedValue({
+        expiresAt: Date.now() + 20 * 24 * 60 * 60 * 1000,
+        remainingDays: 20,
+      });
+
+      const res = mockRes();
+      await billingController.issueApiKey({ body: { key: activeApiLicense.key } }, res);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json.mock.calls[0][0].apiKey).toBe('hm_api_grade');
     });
 
     it('refuses a Pro license, which carries no API access', async () => {

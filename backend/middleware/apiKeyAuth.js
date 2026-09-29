@@ -38,7 +38,22 @@ const requireApiKey = async (req, res, next) => {
   }
 };
 
+const requireLicenseType = (type) => (req, res, next) => {
+  if (req.apiLicense?.type !== type) {
+    const grade = type === 'grade';
+    return res.status(403).json({
+      success: false,
+      error: grade
+        ? 'This key is not a Mail Grade API key'
+        : 'This key is not a QA API key',
+      code: grade ? 'GRADE_PLAN_REQUIRED' : 'QA_PLAN_REQUIRED',
+    });
+  }
+  return next();
+};
+
 module.exports = {
   requireApiKey,
   extractApiKey,
+  requireLicenseType,
 };
