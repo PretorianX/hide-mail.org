@@ -37,17 +37,6 @@ const hostOf = (url) => {
 
 const looksLikeUrl = (text) => /^https?:\/\//i.test(String(text || '').trim());
 
-/** Strip HTML tags until the string stops changing (avoids incomplete single-pass sanitization). */
-const stripTags = (value) => {
-  let previous = String(value || '');
-  let next = previous.replace(/<[^>]*>/g, '');
-  while (next !== previous) {
-    previous = next;
-    next = previous.replace(/<[^>]*>/g, '');
-  }
-  return next;
-};
-
 const scanShorteners = (haystack) => {
   const found = String(haystack || '').match(/https?:\/\/[^\s<>"')]+/gi) || [];
   return found.some((link) => {
@@ -86,13 +75,18 @@ const buildHtmlFindings = ({ html, text }) => {
     const anchors = [...body.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi)];
     anchors.forEach((match) => {
       const attrs = match[1] || '';
-      const inner = stripTags(match[2] || '').trim();
+      const rawInner = String(match[2] || '');
       const hrefMatch = attrs.match(/href\s*=\s*["']([^"']+)["']/i);
       const href = hrefMatch ? hrefMatch[1] : '';
       const style = attrs.match(/style\s*=\s*["']([^"']+)["']/i);
       if ((style && CLOAK_CSS.test(style[1])) || /hidden/i.test(attrs)) {
         hiddenLink = true;
       }
+      // Nested markup is not compared as a display URL.
+      if (/</.test(rawInner)) {
+        return;
+      }
+      const inner = rawInner.trim();
       const hrefHost = hostOf(href);
       if (looksLikeUrl(inner)) {
         const textHost = hostOf(inner);
@@ -162,9 +156,9 @@ const buildHtmlFindings = ({ html, text }) => {
   }
 
   if (body) {
-    const withoutTags = stripTags(body).replace(/\s+/g, ' ').trim();
     const imgCount = (body.match(/<img\b/gi) || []).length;
-    if (imgCount > 0 && withoutTags.length < 20 && !plain.trim()) {
+    const withoutImages = body.replace(/<img\b[^>]*\/?>/gi, '').replace(/\s+/g, '');
+    if (imgCount > 0 && withoutImages === '' && !plain.trim()) {
       push(
         findings,
         'warn',
