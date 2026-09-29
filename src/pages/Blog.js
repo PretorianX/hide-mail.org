@@ -127,6 +127,13 @@ const AdContainer = styled.div`
 const Blog = () => {
   const blogPosts = [
     {
+      id: 'mail-grade-deliverability',
+      title: 'Mail Grade: Check SPF, DKIM, DMARC, Hidden Links, and RBLs Before You Send',
+      excerpt: 'Paste a raw email—or send one to a temporary Hide Mail address—and get a letter grade plus findings for authentication, HTML tricks, and public reputation lists.',
+      image: '/images/blog/email-security.jpg',
+      date: 'September 29, 2026'
+    },
+    {
       id: 'email-forwarding-use-cases',
       title: 'Forward & Forget: 10 Smart Ways to Use Email Forwarding with Temporary Addresses',
       excerpt: 'Discover how Hide Mail\'s unique Forward & Forget feature lets you stay anonymous while saving important emails to your real inbox—no account required.',
