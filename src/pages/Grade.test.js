@@ -40,6 +40,12 @@ describe('Mail Grade page', () => {
     expect(gradeCss).toMatch(/body\[data-theme='dark'\] \.grade-page textarea[\s\S]*color-scheme: dark/);
   });
 
+  test('keeps the stamp beside the form on narrow screens so the primary action can fit', () => {
+    expect(gradeCss).toMatch(/@media \(max-width: 640px\)[\s\S]*\.grade-work \{[\s\S]*flex-wrap: nowrap/);
+    expect(gradeCss).toMatch(/@media \(max-width: 640px\)[\s\S]*\.grade-stamp \{[\s\S]*width: 72px/);
+    expect(gradeCss).toMatch(/@media \(max-width: 640px\)[\s\S]*\.grade-form textarea \{[\s\S]*min-height: 120px/);
+  });
+
   test('starts empty, with the stamp waiting and one primary action', async () => {
     render(<Grade />);
 

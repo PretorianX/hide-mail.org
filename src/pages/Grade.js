@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import GradeService from '../services/GradeService';
 import GradeOffer from './GradeOffer';
 import './Grade.css';
@@ -8,6 +8,17 @@ const Grade = () => {
   const [report, setReport] = useState(null);
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!error && !report) {
+      return undefined;
+    }
+    const target = document.querySelector(error ? '[role="alert"]' : '[data-testid="grade-result"]');
+    if (typeof target?.scrollIntoView === 'function') {
+      target.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+    return undefined;
+  }, [error, report]);
 
   const onSubmit = async (event) => {
     event.preventDefault();

@@ -221,12 +221,43 @@ body[data-theme='dark'] .grade-finding {
 }
 
 @media (max-width: 640px) {
+  .grade-page {
+    padding: 0 4px 24px;
+  }
+
+  .grade-page h1 {
+    font-size: 1.6rem;
+    margin-bottom: 4px;
+  }
+
+  .grade-lead {
+    margin-bottom: 10px;
+    font-size: 0.95rem;
+  }
+
+  /* Keep the stamp beside the form so Grade this email stays in the first viewport. */
+  .grade-work {
+    flex-wrap: nowrap;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
   .grade-stamp {
-    margin: 0 auto;
+    width: 72px;
+    height: 72px;
+    margin: 28px 0 0;
+    border-width: 4px;
+    box-shadow: inset 0 0 0 3px rgba(247, 148, 29, 0.28);
+    font-size: 2rem;
+  }
+
+  .grade-form textarea {
+    min-height: 120px;
   }
 
   .grade-submit,
   .grade-offer button {
     width: 100%;
+    min-height: 44px;
   }
 }
