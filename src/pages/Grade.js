@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router';
 import GradeService from '../services/GradeService';
 import GradeOffer from './GradeOffer';
+import GradeReceive from '../components/GradeReceive';
+import { guidePathFor } from '../data/mailGradeGuide';
 import './Grade.css';
 
 const Grade = () => {
@@ -20,17 +23,16 @@ const Grade = () => {
     return undefined;
   }, [error, report]);
 
-  const onSubmit = async (event) => {
-    event.preventDefault();
+  const runGrade = async (rawSource) => {
     setError(null);
-    if (!source.trim()) {
+    if (!String(rawSource || '').trim()) {
       setReport(null);
       setError('Paste a raw email first.');
       return;
     }
     setBusy(true);
     try {
-      const next = await GradeService.grade(source);
+      const next = await GradeService.grade(rawSource);
       setReport(next);
     } catch (err) {
       setReport(null);
@@ -40,13 +42,26 @@ const Grade = () => {
     }
   };
 
+  const onSubmit = async (event) => {
+    event.preventDefault();
+    await runGrade(source);
+  };
+
+  const onReceiveSource = async (raw) => {
+    setSource(raw);
+    await runGrade(raw);
+  };
+
   const letter = report && /^[A-F]$/.test(report.grade) ? report.grade : null;
 
   return (
     <main className="grade-page">
       <h1>Mail Grade</h1>
       <p className="grade-lead">
-        Paste a raw email. Mail Grade returns a quality report before you send it.
+        Paste a raw email, or send one to a temporary Hide Mail address.
+        Mail Grade returns a quality report before you send it for real.
+        {' '}
+        <Link to="/grade/guide" className="grade-guide-link">Findings guide</Link>
       </p>
       <div className="grade-work">
         <div
@@ -76,6 +91,7 @@ const Grade = () => {
           ) : null}
         </form>
       </div>
+      <GradeReceive onSourceReady={onReceiveSource} />
       {report ? (
         <section className="grade-result" aria-live="polite" data-testid="grade-result">
           <h2>
@@ -88,6 +104,13 @@ const Grade = () => {
               <li key={finding.id} className={`grade-finding grade-finding-${finding.severity}`}>
                 <strong>{finding.title}</strong>
                 <span>{finding.detail}</span>
+                <Link
+                  className="grade-finding-guide"
+                  to={guidePathFor(finding.id)}
+                  data-testid={`grade-finding-guide-${finding.id}`}
+                >
+                  Why &amp; how to fix
+                </Link>
               </li>
             ))}
           </ul>

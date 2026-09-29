@@ -1,5 +1,6 @@
 import React from 'react';
 import { readFileSync } from 'fs';
+import { MemoryRouter } from 'react-router';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import Grade from './Grade';
 import GradeService from '../services/GradeService';
@@ -20,6 +21,16 @@ jest.mock('../services/LicenseService', () => ({
   checkout: jest.fn(),
   submitWayforpayCheckout: jest.fn(),
 }));
+
+jest.mock('../components/GradeReceive', () => () => (
+  <div data-testid="grade-receive">receive stub</div>
+));
+
+const renderGrade = () => render(
+  <MemoryRouter>
+    <Grade />
+  </MemoryRouter>
+);
 
 describe('Mail Grade page', () => {
   beforeEach(() => {
@@ -47,18 +58,20 @@ describe('Mail Grade page', () => {
   });
 
   test('starts empty, with the stamp waiting and one primary action', async () => {
-    render(<Grade />);
+    renderGrade();
 
     expect(screen.getByRole('heading', { name: 'Mail Grade' })).toBeInTheDocument();
     expect(screen.getByTestId('grade-stamp')).toHaveTextContent('—');
     expect(screen.getByTestId('grade-empty')).toHaveTextContent(/nothing you paste is stored/i);
     expect(screen.getByRole('button', { name: 'Grade this email' })).toBeEnabled();
+    expect(screen.getByRole('link', { name: 'Findings guide' })).toHaveAttribute('href', '/grade/guide');
+    expect(screen.getByTestId('grade-receive')).toBeInTheDocument();
     expect(await screen.findByTestId('grade-price')).toHaveTextContent('$9 per month');
     expect(screen.getByRole('button', { name: 'Buy the Mail Grade API' })).toBeDisabled();
   });
 
   test('shows an error and does not grade an empty paste', async () => {
-    render(<Grade />);
+    renderGrade();
 
     fireEvent.click(screen.getByRole('button', { name: 'Grade this email' }));
 
@@ -67,7 +80,7 @@ describe('Mail Grade page', () => {
     expect(screen.queryByTestId('grade-result')).not.toBeInTheDocument();
   });
 
-  test('stamps the letter returned for a pasted email', async () => {
+  test('stamps the letter returned for a pasted email and links each finding to the guide', async () => {
     GradeService.grade.mockResolvedValue({
       score: 96,
       grade: 'A',
@@ -77,7 +90,7 @@ describe('Mail Grade page', () => {
         { id: 'from_present', severity: 'pass', title: 'From is present', detail: 'From ada@example.com.' },
       ],
     });
-    render(<Grade />);
+    renderGrade();
 
     fireEvent.change(screen.getByLabelText('Raw email'), {
       target: { value: 'From: Ada <ada@example.com>\nSubject: Hello\n\nHi' },
@@ -88,6 +101,10 @@ describe('Mail Grade page', () => {
     expect(screen.getByTestId('grade-stamp')).toHaveTextContent('A');
     expect(screen.getByText('This message looks ready to send.')).toBeInTheDocument();
     expect(screen.getByText('From is present')).toBeInTheDocument();
+    expect(screen.getByTestId('grade-finding-guide-from_present')).toHaveAttribute(
+      'href',
+      '/grade/guide#from_present'
+    );
     await waitFor(() => {
       expect(GradeService.grade).toHaveBeenCalledWith(expect.stringContaining('From: Ada'));
     });
@@ -97,7 +114,7 @@ describe('Mail Grade page', () => {
     GradeService.grade.mockRejectedValue(new Error(
       'That text has no email headers. Paste the raw source, including From or Subject.'
     ));
-    render(<Grade />);
+    renderGrade();
 
     fireEvent.change(screen.getByLabelText('Raw email'), {
       target: { value: 'hello there' },

@@ -171,16 +171,11 @@ const ENTRIES = {
   },
 };
 
-const guideFor = (findingId) => ENTRIES[findingId] || null;
+export const guideFor = (findingId) => ENTRIES[findingId] || null;
 
-const guideEntries = () =>
+export const guideEntries = () =>
   Object.entries(ENTRIES).map(([id, entry]) => ({ id, ...entry }));
 
-const guidePathFor = (findingId) => `/grade/guide#${encodeURIComponent(findingId)}`;
+export const guidePathFor = (findingId) => `/grade/guide#${encodeURIComponent(findingId)}`;
 
-module.exports = {
-  ENTRIES,
-  guideFor,
-  guideEntries,
-  guidePathFor,
-};
+export default ENTRIES;
