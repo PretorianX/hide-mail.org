@@ -61,6 +61,24 @@ describe('recipientResolver', () => {
     await expect(resolveActiveRecipient('nova7.netflix@hide-mail.org')).resolves.toBeNull();
   });
 
+  it('drops an expired dotted mailbox instead of delivering it to a shorter live prefix', async () => {
+    activeMailboxes('john@hide-mail.org');
+    redisService.isMailboxKnown.mockImplementation(async (address) =>
+      address === 'john.doe@hide-mail.org' || address === 'john@hide-mail.org'
+    );
+
+    await expect(resolveActiveRecipient('john.doe@hide-mail.org')).resolves.toBeNull();
+  });
+
+  it('drops a site address of an expired mailbox instead of handing it to a shorter live prefix', async () => {
+    activeMailboxes('john@hide-mail.org');
+    redisService.isMailboxKnown.mockImplementation(async (address) =>
+      address === 'john.doe@hide-mail.org' || address === 'john@hide-mail.org'
+    );
+
+    await expect(resolveActiveRecipient('john.doe.shop@hide-mail.org')).resolves.toBeNull();
+  });
+
   it('stops looking as soon as a mailbox matches', async () => {
     activeMailboxes('nova7.netflix@hide-mail.org');
 
