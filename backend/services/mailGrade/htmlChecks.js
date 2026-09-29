@@ -37,6 +37,17 @@ const hostOf = (url) => {
 
 const looksLikeUrl = (text) => /^https?:\/\//i.test(String(text || '').trim());
 
+/** Strip HTML tags until the string stops changing (avoids incomplete single-pass sanitization). */
+const stripTags = (value) => {
+  let previous = String(value || '');
+  let next = previous.replace(/<[^>]*>/g, '');
+  while (next !== previous) {
+    previous = next;
+    next = previous.replace(/<[^>]*>/g, '');
+  }
+  return next;
+};
+
 const scanShorteners = (haystack) => {
   const found = String(haystack || '').match(/https?:\/\/[^\s<>"')]+/gi) || [];
   return found.some((link) => {
@@ -75,7 +86,7 @@ const buildHtmlFindings = ({ html, text }) => {
     const anchors = [...body.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi)];
     anchors.forEach((match) => {
       const attrs = match[1] || '';
-      const inner = String(match[2] || '').replace(/<[^>]+>/g, '').trim();
+      const inner = stripTags(match[2] || '').trim();
       const hrefMatch = attrs.match(/href\s*=\s*["']([^"']+)["']/i);
       const href = hrefMatch ? hrefMatch[1] : '';
       const style = attrs.match(/style\s*=\s*["']([^"']+)["']/i);
@@ -151,7 +162,7 @@ const buildHtmlFindings = ({ html, text }) => {
   }
 
   if (body) {
-    const withoutTags = body.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    const withoutTags = stripTags(body).replace(/\s+/g, ' ').trim();
     const imgCount = (body.match(/<img\b/gi) || []).length;
     if (imgCount > 0 && withoutTags.length < 20 && !plain.trim()) {
       push(

@@ -28,7 +28,7 @@ describe('reputationChecks', () => {
 
   it('fails when a Received IP is listed on an IP RBL', async () => {
     resolveDnsbl.mockImplementation(async (query) => {
-      if (query.includes('zen.spamhaus.org')) {
+      if (String(query).endsWith('.zen.spamhaus.org')) {
         return ['127.0.0.2'];
       }
       return null;

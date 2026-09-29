@@ -155,7 +155,7 @@ describe('mailGradeService', () => {
       authenticateFn: passAuth,
       resolveMxIps: noMx,
       resolveDnsbl: async (query) => {
-        if (query.includes('50.113.0.203') && query.includes('zen.spamhaus.org')) {
+        if (String(query).endsWith('.zen.spamhaus.org') && String(query).startsWith('50.113.0.203.')) {
           return ['127.0.0.2'];
         }
         return null;
