@@ -101,13 +101,50 @@ describe('Mail Grade page', () => {
     expect(screen.getByTestId('grade-stamp')).toHaveTextContent('A');
     expect(screen.getByText('This message looks ready to send.')).toBeInTheDocument();
     expect(screen.getByText('From is present')).toBeInTheDocument();
+    expect(screen.getByTestId('grade-group-pass')).toHaveTextContent('Looks good');
     expect(screen.getByTestId('grade-finding-guide-from_present')).toHaveAttribute(
       'href',
       '/grade/guide#from_present'
     );
+    expect(screen.getByTestId('grade-finding-guide-from_present')).toHaveTextContent('Why this passed');
     await waitFor(() => {
       expect(GradeService.grade).toHaveBeenCalledWith(expect.stringContaining('From: Ada'));
     });
+  });
+
+  test('splits findings into problems, warnings, and what already looks good', async () => {
+    GradeService.grade.mockResolvedValue({
+      score: 68,
+      grade: 'D',
+      summary: 'This message has serious quality problems.',
+      stored: false,
+      findings: [
+        { id: 'from_present', severity: 'pass', title: 'From is present', detail: 'From a@b.com.' },
+        { id: 'spf_no_ip', severity: 'warn', title: 'SPF needs a sending IP', detail: 'No public Received IP.' },
+        { id: 'rbl_domain', severity: 'fail', title: 'Domain on a public blocklist', detail: 'Listed: gmail.com.' },
+      ],
+    });
+    renderGrade();
+
+    fireEvent.change(screen.getByLabelText('Raw email'), {
+      target: { value: 'From: a@b.com\nSubject: Hi\n\nHi' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Grade this email' }));
+
+    const result = await screen.findByTestId('grade-result');
+    const fail = screen.getByTestId('grade-group-fail');
+    const warn = screen.getByTestId('grade-group-warn');
+    const pass = screen.getByTestId('grade-group-pass');
+
+    expect(fail).toHaveTextContent('Problems');
+    expect(fail).toHaveTextContent('Domain on a public blocklist');
+    expect(warn).toHaveTextContent('Warnings');
+    expect(warn).toHaveTextContent('SPF needs a sending IP');
+    expect(pass).toHaveTextContent('Looks good');
+    expect(pass).toHaveTextContent('From is present');
+    expect(result.textContent.indexOf('Problems')).toBeLessThan(result.textContent.indexOf('Warnings'));
+    expect(result.textContent.indexOf('Warnings')).toBeLessThan(result.textContent.indexOf('Looks good'));
+    expect(screen.getByTestId('grade-finding-guide-rbl_domain')).toHaveTextContent('Why & how to fix');
   });
 
   test('shows the grader error and clears any previous stamp', async () => {

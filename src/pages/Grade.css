@@ -99,9 +99,34 @@
   color: var(--text-secondary);
 }
 
+.grade-group {
+  margin-top: 20px;
+}
+
+.grade-group h3 {
+  margin: 0 0 8px;
+  font-size: 1rem;
+}
+
+.grade-group-fail h3 {
+  color: var(--danger-color, #dc3545);
+}
+
+.grade-group-warn h3 {
+  color: #b8860b;
+}
+
+.grade-group-pass h3 {
+  color: var(--success-color, #28a745);
+}
+
+body[data-theme='dark'] .grade-group-warn h3 {
+  color: #ffc107;
+}
+
 .grade-findings {
   list-style: none;
-  margin: 16px 0 0;
+  margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;

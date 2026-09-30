@@ -6,6 +6,12 @@ import GradeReceive from '../components/GradeReceive';
 import { guidePathFor } from '../data/mailGradeGuide';
 import './Grade.css';
 
+const FINDING_GROUPS = [
+  { severity: 'fail', title: 'Problems' },
+  { severity: 'warn', title: 'Warnings' },
+  { severity: 'pass', title: 'Looks good' },
+];
+
 const Grade = () => {
   const [source, setSource] = useState('');
   const [report, setReport] = useState(null);
@@ -53,6 +59,12 @@ const Grade = () => {
   };
 
   const letter = report && /^[A-F]$/.test(report.grade) ? report.grade : null;
+  const findingGroups = report
+    ? FINDING_GROUPS.map((group) => ({
+      ...group,
+      findings: report.findings.filter((finding) => finding.severity === group.severity),
+    })).filter((group) => group.findings.length > 0)
+    : [];
 
   return (
     <main className="grade-page">
@@ -99,21 +111,30 @@ const Grade = () => {
             <span className="grade-score"> score {report.score}</span>
           </h2>
           <p>{report.summary}</p>
-          <ul className="grade-findings">
-            {report.findings.map((finding) => (
-              <li key={finding.id} className={`grade-finding grade-finding-${finding.severity}`}>
-                <strong>{finding.title}</strong>
-                <span>{finding.detail}</span>
-                <Link
-                  className="grade-finding-guide"
-                  to={guidePathFor(finding.id)}
-                  data-testid={`grade-finding-guide-${finding.id}`}
-                >
-                  Why &amp; how to fix
-                </Link>
-              </li>
-            ))}
-          </ul>
+          {findingGroups.map((group) => (
+            <section
+              key={group.severity}
+              className={`grade-group grade-group-${group.severity}`}
+              data-testid={`grade-group-${group.severity}`}
+            >
+              <h3>{group.title}</h3>
+              <ul className="grade-findings">
+                {group.findings.map((finding) => (
+                  <li key={finding.id} className={`grade-finding grade-finding-${finding.severity}`}>
+                    <strong>{finding.title}</strong>
+                    <span>{finding.detail}</span>
+                    <Link
+                      className="grade-finding-guide"
+                      to={guidePathFor(finding.id)}
+                      data-testid={`grade-finding-guide-${finding.id}`}
+                    >
+                      {finding.severity === 'pass' ? 'Why this passed' : 'Why & how to fix'}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
         </section>
       ) : null}
       <GradeOffer />
