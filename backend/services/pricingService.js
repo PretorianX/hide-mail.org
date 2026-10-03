@@ -9,6 +9,7 @@ const USD_KEYS = {
   pro: { monthly: 'monthlyUsd', yearly: 'yearlyUsd' },
   api: { monthly: 'apiUsd' },
   grade: { monthly: 'gradeUsd' },
+  sender: { monthly: 'senderUsd' },
 };
 
 const usdPrice = (type, plan) => {
