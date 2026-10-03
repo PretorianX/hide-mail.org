@@ -38,15 +38,28 @@ const requireApiKey = async (req, res, next) => {
   }
 };
 
+const TYPE_DENIED = {
+  grade: {
+    error: 'This key is not a Mail Grade API key',
+    code: 'GRADE_PLAN_REQUIRED',
+  },
+  api: {
+    error: 'This key is not a QA API key',
+    code: 'QA_PLAN_REQUIRED',
+  },
+  sender: {
+    error: 'This key is not a Sender Check API key',
+    code: 'SENDER_PLAN_REQUIRED',
+  },
+};
+
 const requireLicenseType = (type) => (req, res, next) => {
   if (req.apiLicense?.type !== type) {
-    const grade = type === 'grade';
+    const denied = TYPE_DENIED[type] || TYPE_DENIED.api;
     return res.status(403).json({
       success: false,
-      error: grade
-        ? 'This key is not a Mail Grade API key'
-        : 'This key is not a QA API key',
-      code: grade ? 'GRADE_PLAN_REQUIRED' : 'QA_PLAN_REQUIRED',
+      error: denied.error,
+      code: denied.code,
     });
   }
   return next();

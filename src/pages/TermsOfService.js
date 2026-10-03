@@ -88,13 +88,13 @@ const TermsOfService = () => {
       <Section>
         <SectionTitle>Paid Plans, Renewals and Refunds</SectionTitle>
         <Paragraph>
-          Hide Mail is free to use with advertising. Hide Mail Pro and the Hide Mail API are optional paid plans. Prices are shown on the Pro page and are charged in Ukrainian hryvnia (UAH); amounts shown in other currencies are approximate and the UAH amount is what you are charged.
+          Hide Mail is free to use with advertising. Hide Mail Pro, the Hide Mail API, the Mail Grade API, and the Sender Check API are optional paid plans. Pro and the mailbox API are priced on the Pro page. Mail Grade and Sender Check are priced on their own pages. Prices are charged in Ukrainian hryvnia (UAH); amounts shown in other currencies are approximate and the UAH amount is what you are charged.
         </Paragraph>
         <Paragraph>
           <strong>Payment provider.</strong> Payments are processed by WayForPay. We do not receive or store your card details.
         </Paragraph>
         <Paragraph>
-          <strong>Automatic renewal.</strong> Paid plans are subscriptions. The monthly plan renews every month and the yearly plan renews every year, at the price in force at the time of renewal, until you cancel. The API plan is billed monthly.
+          <strong>Automatic renewal.</strong> Paid plans are subscriptions. The monthly plan renews every month and the yearly plan renews every year, at the price in force at the time of renewal, until you cancel. The mailbox API, Mail Grade, and Sender Check plans are billed monthly.
         </Paragraph>
         <Paragraph>
           <strong>How to cancel.</strong> Write to us at the address below with your order reference or license key and we will stop future charges. Cancelling stops renewals; your plan stays active until the end of the period you already paid for.

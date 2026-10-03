@@ -1,0 +1,252 @@
+.sender-page {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 8px 12px 32px;
+  color: var(--text-color);
+}
+
+.sender-page h1 {
+  margin: 0 0 8px;
+}
+
+.sender-lead {
+  margin-top: 0;
+  color: var(--text-secondary);
+}
+
+.sender-work {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.sender-policy-card {
+  flex: 1 1 240px;
+  min-width: 0;
+  max-width: 100%;
+  border: 3px solid var(--duck-orange);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--card-bg, #fff);
+}
+
+.sender-verdict {
+  margin: 0;
+  padding: 12px 10px;
+  background: var(--duck-orange);
+  color: #5c2d00;
+  text-align: center;
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  line-height: 1.1;
+}
+
+.sender-verdict-empty .sender-verdict {
+  color: #5c2d00;
+}
+
+.sender-slots {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.sender-slot {
+  display: grid;
+  grid-template-columns: 4.5rem minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+  padding: 10px 12px;
+  border-top: 1px solid var(--border-color);
+  border-left: 4px solid var(--border-color);
+}
+
+.sender-slot-name {
+  font-weight: 800;
+}
+
+.sender-slot-detail {
+  overflow-wrap: anywhere;
+  color: var(--text-secondary);
+}
+
+.sender-slot-pass {
+  border-left-color: var(--success-color, #28a745);
+}
+
+.sender-slot-warn {
+  border-left-color: var(--warning-color, #b8860b);
+}
+
+.sender-slot-fail {
+  border-left-color: var(--danger-color, #dc3545);
+}
+
+.sender-form {
+  flex: 2 1 280px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sender-form input {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font: 1rem/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: var(--text-color);
+  background: var(--card-bg, #fff);
+}
+
+.sender-submit {
+  align-self: flex-start;
+}
+
+.sender-empty {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.sender-error {
+  margin: 0;
+  color: var(--danger-color);
+  font-weight: 700;
+}
+
+.sender-result {
+  margin-top: 24px;
+}
+
+.sender-result h2 {
+  margin-bottom: 8px;
+}
+
+.sender-published {
+  margin: 16px 0 0;
+}
+
+.sender-published div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  padding: 8px 0;
+  border-top: 1px solid var(--border-color);
+}
+
+.sender-published dt {
+  flex: 0 0 4.5rem;
+  font-weight: 800;
+}
+
+.sender-published dd {
+  flex: 1 1 180px;
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.9rem;
+}
+
+.sender-offer {
+  margin-top: 36px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.sender-offer-price {
+  font-size: 1.4rem;
+  font-weight: 800;
+  margin: 0;
+}
+
+.sender-restore {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+}
+
+.sender-restore input {
+  flex: 1 1 180px;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font: inherit;
+  color: var(--text-color);
+  background: var(--card-bg, #fff);
+}
+
+.sender-page input:focus-visible,
+.sender-page button:focus-visible,
+.sender-page a:focus-visible {
+  outline: 3px solid var(--duck-orange);
+  outline-offset: 2px;
+}
+
+body[data-theme='dark'] .sender-page {
+  color: var(--dark-text-color);
+}
+
+body[data-theme='dark'] .sender-lead,
+body[data-theme='dark'] .sender-empty,
+body[data-theme='dark'] .sender-slot-detail {
+  color: var(--dark-text-secondary);
+}
+
+body[data-theme='dark'] .sender-policy-card {
+  background: var(--background-color);
+  border-color: var(--duck-orange);
+}
+
+body[data-theme='dark'] .sender-page input {
+  background-color: #1a1a1a;
+  color: #e0e0e0;
+  -webkit-text-fill-color: #e0e0e0;
+  caret-color: #e0e0e0;
+  border-color: #444444;
+  color-scheme: dark;
+}
+
+@media (max-width: 640px) {
+  .sender-page {
+    padding: 0 4px 24px;
+  }
+
+  .sender-page h1 {
+    font-size: 1.6rem;
+    margin-bottom: 4px;
+  }
+
+  .sender-lead {
+    margin-bottom: 10px;
+    font-size: 0.95rem;
+  }
+
+  .sender-work {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .sender-policy-card,
+  .sender-form {
+    flex-basis: 100%;
+  }
+
+  .sender-submit,
+  .sender-offer button {
+    width: 100%;
+    min-height: 44px;
+  }
+}
