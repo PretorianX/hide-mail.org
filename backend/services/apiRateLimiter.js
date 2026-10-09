@@ -33,6 +33,10 @@ const RATE_LIMITS = {
   gradeReport: { requests: 20, windowSeconds: 600 },
   // Paid Mail Grade API. A sender's pipeline buys this limit, not the free page.
   mailGrade: { requests: 120, windowSeconds: 60 },
+  // Free in-browser Sender Check lookups. Each one asks DNS.
+  senderReport: { requests: 15, windowSeconds: 600 },
+  // Paid Sender Check API.
+  senderCheck: { requests: 60, windowSeconds: 60 },
 };
 
 /**
@@ -104,6 +108,8 @@ module.exports = {
   orderLookup: createRateLimiter('orderLookup'),
   gradeReport: createRateLimiter('gradeReport'),
   mailGrade: createRateLimiter('mailGrade'),
+  senderReport: createRateLimiter('senderReport'),
+  senderCheck: createRateLimiter('senderCheck'),
   default: createRateLimiter('default'),
   RATE_LIMITS,
 };

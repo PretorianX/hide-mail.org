@@ -62,6 +62,24 @@ describe('entitlementService', () => {
     expect(entitlements.premiumDomains).toBe(false);
     expect(entitlements.mailboxTtlOptions).toEqual([]);
     expect(entitlements.forwardingLimit).toBe(2);
+    expect(entitlements.senderApi).toBe(false);
+  });
+
+  it('sells Sender Check without unlocking the inbox or Mail Grade', () => {
+    const entitlements = entitlementService.getEntitlements({
+      type: 'sender',
+      status: 'active',
+      expiresAt: Date.now() + 60_000,
+    });
+
+    expect(entitlements.planType).toBe('sender');
+    expect(entitlements.senderApi).toBe(true);
+    expect(entitlements.gradeApi).toBe(false);
+    expect(entitlements.ads).toBe(true);
+    expect(entitlements.apiAccess).toBe(false);
+    expect(entitlements.customAlias).toBe(false);
+    expect(entitlements.premiumDomains).toBe(false);
+    expect(entitlements.mailboxTtlOptions).toEqual([]);
   });
 
   it('treats an expired license as free', () => {
