@@ -114,6 +114,10 @@ const createOriginVerifier = (options = {}) => {
       // report stays on /grade/report and still has to come from the site.
       || req.path === '/mail-grade'
       || req.path.startsWith('/mail-grade/')
+      // DMARC Reports API is a paid machine client. The free read stays on
+      // /reports/read and still has to come from the site.
+      || req.path === '/dmarc-reports'
+      || req.path.startsWith('/dmarc-reports/')
       || req.path === '/billing/webhook'
       || req.path === '/billing/return'
     ) {
