@@ -11,6 +11,7 @@
 const express = require('express');
 
 const WEBHOOK_PATH = '/api/billing/webhook';
+const REPORT_JSON_PATHS = new Set(['/api/reports/read', '/api/dmarc-reports']);
 
 const readWebhookText = express.text({ type: '*/*', limit: '64kb' });
 
@@ -32,8 +33,18 @@ const decodeWebhookJson = (req, res, next) => {
   next();
 };
 
+const readReportJson = express.json({ limit: '600kb' });
+
+const parseReportBody = (req, res, next) => {
+  if (!REPORT_JSON_PATHS.has(req.path)) {
+    return next();
+  }
+  return readReportJson(req, res, next);
+};
+
 const applyBodyParsers = (app) => {
   app.use(WEBHOOK_PATH, readWebhookText, decodeWebhookJson);
+  app.use(parseReportBody);
   app.use(express.json());
   app.use(express.urlencoded({ extended: false }));
 };

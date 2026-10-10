@@ -41,6 +41,10 @@ const buildApp = () => {
   applyBodyParsers(app);
   app.post(WEBHOOK_PATH, (req, res) => res.json({ body: req.body }));
   app.post('/api/other', (req, res) => res.json({ body: req.body }));
+  app.post('/api/reports/read', (req, res) => res.json({ bytes: req.body?.xml?.length || 0 }));
+  app.use((err, req, res, _next) => {
+    res.status(err.status || err.statusCode || 500).json({ error: err.message });
+  });
   return app;
 };
 
@@ -99,6 +103,23 @@ describe('body parsers', () => {
         .expect(200);
 
       expect(res.body.body).toEqual({ type: 'pro', plan: 'monthly' });
+    });
+
+    it('accepts a DMARC report larger than the default JSON limit', async () => {
+      const xml = 'x'.repeat(120 * 1024);
+      const res = await request(buildApp())
+        .post('/api/reports/read')
+        .send({ xml })
+        .expect(200);
+
+      expect(res.body.bytes).toBe(xml.length);
+    });
+
+    it('keeps the default JSON limit on other routes', async () => {
+      await request(buildApp())
+        .post('/api/other')
+        .send({ xml: 'x'.repeat(120 * 1024) })
+        .expect(413);
     });
 
     it('parses ordinary form requests', async () => {

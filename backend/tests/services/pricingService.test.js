@@ -8,6 +8,7 @@ process.env.PRO_PRICE_MONTHLY_USD = '3.49';
 process.env.PRO_PRICE_YEARLY_USD = '24.99';
 process.env.API_PRICE_MONTHLY_USD = '7.99';
 process.env.GRADE_PRICE_MONTHLY_USD = '9';
+process.env.REPORTS_PRICE_MONTHLY_USD = '15';
 
 const pricingService = require('../../services/pricingService');
 
@@ -63,6 +64,15 @@ describe('pricingService', () => {
         currency: 'UAH',
       });
       expect(() => pricingService.quotePlan('grade', 'yearly', rates)).toThrow(/unsupported grade plan/i);
+    });
+
+    it('prices DMARC Reports from its own monthly USD list price', () => {
+      expect(pricingService.quotePlan('reports', 'monthly', rates)).toEqual({
+        usd: 15,
+        amountUah: 620,
+        currency: 'UAH',
+      });
+      expect(() => pricingService.quotePlan('reports', 'yearly', rates)).toThrow(/unsupported reports plan/i);
     });
   });
 

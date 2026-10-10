@@ -62,6 +62,24 @@ describe('entitlementService', () => {
     expect(entitlements.premiumDomains).toBe(false);
     expect(entitlements.mailboxTtlOptions).toEqual([]);
     expect(entitlements.forwardingLimit).toBe(2);
+    expect(entitlements.reportsApi).toBe(false);
+  });
+
+  it('sells DMARC Reports without unlocking the inbox or Mail Grade', () => {
+    const entitlements = entitlementService.getEntitlements({
+      type: 'reports',
+      status: 'active',
+      expiresAt: Date.now() + 60_000,
+    });
+
+    expect(entitlements.planType).toBe('reports');
+    expect(entitlements.reportsApi).toBe(true);
+    expect(entitlements.gradeApi).toBe(false);
+    expect(entitlements.ads).toBe(true);
+    expect(entitlements.apiAccess).toBe(false);
+    expect(entitlements.customAlias).toBe(false);
+    expect(entitlements.premiumDomains).toBe(false);
+    expect(entitlements.mailboxTtlOptions).toEqual([]);
   });
 
   it('treats an expired license as free', () => {
