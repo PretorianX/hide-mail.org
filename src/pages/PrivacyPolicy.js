@@ -167,6 +167,9 @@ const PrivacyPolicy = () => {
           Temporary email addresses and their contents are automatically deleted when the mailbox expires. On the free plan a mailbox lasts 30 minutes and can be extended; on Hide Mail Pro you can choose 24 hours, 7 days or 30 days. We do not permanently store email messages or their contents.
         </Paragraph>
         <Paragraph>
+          DMARC Reports reads an aggregate report you paste and answers in that same request. The XML is not stored.
+        </Paragraph>
+        <Paragraph>
           We retain other information for as long as necessary to provide our Service and fulfill the purposes described in this Privacy Policy, unless a longer retention period is required or permitted by law.
         </Paragraph>
       </Section>

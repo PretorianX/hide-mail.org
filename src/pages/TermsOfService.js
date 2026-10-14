@@ -88,7 +88,7 @@ const TermsOfService = () => {
       <Section>
         <SectionTitle>Paid Plans, Renewals and Refunds</SectionTitle>
         <Paragraph>
-          Hide Mail is free to use with advertising. Hide Mail Pro and the Hide Mail API are optional paid plans. Prices are shown on the Pro page and are charged in Ukrainian hryvnia (UAH); amounts shown in other currencies are approximate and the UAH amount is what you are charged.
+          Hide Mail is free to use with advertising. Hide Mail Pro, the Hide Mail API, and the DMARC Reports API are optional paid plans. Prices for Pro and the mailbox API are shown on the Pro page. The DMARC Reports API price is shown on the Reports page. Charges are in Ukrainian hryvnia (UAH); amounts shown in other currencies are approximate and the UAH amount is what you are charged.
         </Paragraph>
         <Paragraph>
           <strong>Payment provider.</strong> Payments are processed by WayForPay. We do not receive or store your card details.

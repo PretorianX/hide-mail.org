@@ -38,18 +38,30 @@ const requireApiKey = async (req, res, next) => {
   }
 };
 
+const PLAN_REQUIRED = {
+  grade: {
+    error: 'This key is not a Mail Grade API key',
+    code: 'GRADE_PLAN_REQUIRED',
+  },
+  api: {
+    error: 'This key is not a QA API key',
+    code: 'QA_PLAN_REQUIRED',
+  },
+  reports: {
+    error: 'This key is not a DMARC Reports API key',
+    code: 'REPORTS_PLAN_REQUIRED',
+  },
+};
+
 const requireLicenseType = (type) => (req, res, next) => {
-  if (req.apiLicense?.type !== type) {
-    const grade = type === 'grade';
-    return res.status(403).json({
-      success: false,
-      error: grade
-        ? 'This key is not a Mail Grade API key'
-        : 'This key is not a QA API key',
-      code: grade ? 'GRADE_PLAN_REQUIRED' : 'QA_PLAN_REQUIRED',
-    });
+  if (req.apiLicense?.type === type) {
+    return next();
   }
-  return next();
+  const refusal = PLAN_REQUIRED[type];
+  if (!refusal) {
+    return next(new Error(`Unknown license type: ${type}`));
+  }
+  return res.status(403).json({ success: false, ...refusal });
 };
 
 module.exports = {

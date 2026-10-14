@@ -126,6 +126,7 @@ const config = {
     yearlyUsd: parsePositiveNumber(process.env.PRO_PRICE_YEARLY_USD, '24.99', 'PRO_PRICE_YEARLY_USD'),
     apiUsd: parsePositiveNumber(process.env.API_PRICE_MONTHLY_USD, '7.99', 'API_PRICE_MONTHLY_USD'),
     gradeUsd: parsePositiveNumber(process.env.GRADE_PRICE_MONTHLY_USD, '9', 'GRADE_PRICE_MONTHLY_USD'),
+    reportsUsd: parsePositiveNumber(process.env.REPORTS_PRICE_MONTHLY_USD, '15', 'REPORTS_PRICE_MONTHLY_USD'),
     fxCacheSeconds: parsePositiveNumber(process.env.FX_CACHE_SECONDS, 7200, 'FX_CACHE_SECONDS'),
     fxStaleSeconds: parsePositiveNumber(process.env.FX_STALE_SECONDS, 86400, 'FX_STALE_SECONDS'),
     monthlyTtlSeconds: parseInt(process.env.PRO_LICENSE_MONTHLY_SECONDS || 30 * 24 * 60 * 60, 10),

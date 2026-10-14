@@ -92,6 +92,30 @@ describe('WayForPay customer return', () => {
       expect(target.searchParams.get('handoffToken')).toMatch(/^[0-9a-f-]{36}$/i);
     });
 
+    it('sends a DMARC Reports payer to /reports rather than the Pro page', async () => {
+      const orderService = require('../../services/orderService');
+      await orderService.createOrder({
+        id: 'reports-monthly-abc',
+        plan: 'monthly',
+        type: 'reports',
+        amount: 620,
+        currency: 'UAH',
+      });
+
+      const billingController = require('../../controllers/billingController');
+      const res = mockRes();
+
+      await billingController.customerReturn(
+        { query: { orderReference: 'reports-monthly-abc' }, body: {} },
+        res
+      );
+
+      const [, targetUrl] = res.redirect.mock.calls[0];
+      const target = new URL(targetUrl);
+      expect(target.origin + target.pathname).toBe('https://hide-mail.org/reports');
+      expect(target.searchParams.get('handoffToken')).toMatch(/^[0-9a-f-]{36}$/i);
+    });
+
     it('redirects to the Pro page even without an order reference', async () => {
       const billingController = require('../../controllers/billingController');
       const res = mockRes();
