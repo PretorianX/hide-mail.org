@@ -62,7 +62,8 @@ const PrivacyPolicy = () => {
           <ListItem>Temporary email addresses generated through our service</ListItem>
           <ListItem>Email content received by the temporary email addresses</ListItem>
           <ListItem>Information you provide when you contact us for support</ListItem>
-          <ListItem>Payment and subscription records if you buy Hide Mail Pro or the API plan, as described under "Payments and Hide Mail Pro" below</ListItem>
+          <ListItem>Payment and subscription records if you buy Hide Mail Pro, the API plan, Mail Grade, or Sender Check, as described under "Payments and Hide Mail Pro" below</ListItem>
+          <ListItem>A domain name you submit to Sender Check. It is used for one DNS lookup and is not stored</ListItem>
         </List>
         <Paragraph>
           <strong>Information we collect automatically:</strong> When you use our Service, we automatically collect certain information about your device and usage of the Service, including:

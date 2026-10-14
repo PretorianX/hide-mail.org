@@ -45,6 +45,7 @@ describe('Header Component', () => {
     expect(nav.getByRole('link', { name: 'About' })).toHaveAttribute('href', '/about-us');
     expect(nav.getByRole('link', { name: 'Contact' })).toHaveAttribute('href', '/contact-us');
     expect(nav.getByRole('link', { name: 'Grade' })).toHaveAttribute('href', '/grade');
+    expect(nav.getByRole('link', { name: 'Sender' })).toHaveAttribute('href', '/sender');
     expect(nav.getByRole('link', { name: 'Go Pro' })).toHaveAttribute('href', '/pro');
 
     // Check that theme toggle button is present
@@ -57,7 +58,7 @@ describe('Header Component', () => {
 
     expect(nav.getByRole('link', { name: 'Go Pro' })).toHaveClass('nav-pro-cta');
 
-    ['Home', 'Blog', 'About', 'Contact', 'Grade'].forEach(label => {
+    ['Home', 'Blog', 'About', 'Contact', 'Grade', 'Sender'].forEach(label => {
       expect(nav.getByRole('link', { name: label })).not.toHaveClass('nav-pro-cta');
     });
   });
@@ -75,7 +76,7 @@ describe('Header ink on the orange bar', () => {
     renderHeader();
     const nav = within(screen.getByRole('navigation'));
 
-    ['Home', 'Blog', 'About', 'Contact', 'Grade'].forEach(label => {
+    ['Home', 'Blog', 'About', 'Contact', 'Grade', 'Sender'].forEach(label => {
       expect(inkOf(nav.getByRole('link', { name: label }))).toBe(toRgb(HEADER_INK));
     });
   });

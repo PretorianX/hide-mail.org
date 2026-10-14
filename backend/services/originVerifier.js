@@ -114,6 +114,9 @@ const createOriginVerifier = (options = {}) => {
       // report stays on /grade/report and still has to come from the site.
       || req.path === '/mail-grade'
       || req.path.startsWith('/mail-grade/')
+      // Sender Check API is a paid machine client. The free report stays on /sender/report.
+      || req.path === '/sender-check'
+      || req.path.startsWith('/sender-check/')
       || req.path === '/billing/webhook'
       || req.path === '/billing/return'
     ) {
