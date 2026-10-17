@@ -1,0 +1,282 @@
+.bounce-page {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 8px 12px 32px;
+  color: var(--text-color);
+}
+
+.bounce-page h1 {
+  margin: 0 0 8px;
+}
+
+.bounce-lead {
+  margin-top: 0;
+  color: var(--text-secondary);
+}
+
+.bounce-work {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.bounce-stamp {
+  width: 112px;
+  height: 112px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  border: 6px solid var(--duck-orange);
+  box-shadow: inset 0 0 0 4px rgba(247, 148, 29, 0.28);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1.1;
+  text-align: center;
+  background: var(--card-bg, #fff);
+  padding: 8px;
+}
+
+.bounce-stamp-empty {
+  color: var(--text-secondary);
+  font-size: 3rem;
+  letter-spacing: 0;
+}
+
+.bounce-stamp-hard {
+  color: var(--danger-color, #dc3545);
+}
+
+.bounce-stamp-soft,
+.bounce-stamp-delayed {
+  color: #8a5a00;
+}
+
+.bounce-stamp-delivered,
+.bounce-stamp-relayed,
+.bounce-stamp-expanded {
+  color: var(--success-color, #28a745);
+}
+
+.bounce-stamp-mixed {
+  color: var(--duck-orange);
+}
+
+.bounce-form {
+  flex: 1 1 280px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bounce-form textarea {
+  width: 100%;
+  min-height: 220px;
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font: 0.9rem/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: var(--text-color);
+  background: var(--card-bg, #fff);
+  resize: vertical;
+}
+
+.bounce-submit {
+  align-self: flex-start;
+}
+
+.bounce-empty,
+.bounce-mta {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.bounce-error {
+  margin: 0;
+  color: var(--danger-color);
+  font-weight: 700;
+}
+
+.bounce-result {
+  margin-top: 24px;
+}
+
+.bounce-result h2 {
+  overflow-wrap: anywhere;
+}
+
+.bounce-recipients {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bounce-recipient {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  border-left-width: 4px;
+  border-radius: 8px;
+  background: var(--card-bg, #fff);
+  overflow-wrap: anywhere;
+}
+
+.bounce-recipient-hard {
+  border-left-color: var(--danger-color, #dc3545);
+}
+
+.bounce-recipient-soft,
+.bounce-recipient-delayed {
+  border-left-color: var(--warning-color, #ffc107);
+}
+
+.bounce-recipient-delivered,
+.bounce-recipient-relayed,
+.bounce-recipient-expanded {
+  border-left-color: var(--success-color, #28a745);
+}
+
+.bounce-recipient-title {
+  font-weight: 700;
+}
+
+.bounce-diagnostic {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.9rem;
+}
+
+.bounce-offer {
+  margin-top: 36px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.bounce-offer-price {
+  font-size: 1.4rem;
+  font-weight: 800;
+  margin: 0;
+}
+
+.bounce-restore {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+}
+
+.bounce-restore input {
+  flex: 1 1 180px;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font: inherit;
+  color: var(--text-color);
+  background: var(--card-bg, #fff);
+}
+
+.bounce-page textarea:focus-visible,
+.bounce-page button:focus-visible,
+.bounce-page input:focus-visible,
+.bounce-page a:focus-visible {
+  outline: 3px solid var(--duck-orange);
+  outline-offset: 2px;
+}
+
+body[data-theme='dark'] .bounce-page {
+  color: var(--dark-text-color);
+}
+
+body[data-theme='dark'] .bounce-lead,
+body[data-theme='dark'] .bounce-empty,
+body[data-theme='dark'] .bounce-mta {
+  color: var(--dark-text-secondary);
+}
+
+body[data-theme='dark'] .bounce-stamp {
+  background: var(--background-color);
+  border-color: var(--dark-border-color);
+}
+
+body[data-theme='dark'] .bounce-page textarea,
+body[data-theme='dark'] .bounce-page input {
+  background-color: #1a1a1a;
+  color: #e0e0e0;
+  -webkit-text-fill-color: #e0e0e0;
+  caret-color: #e0e0e0;
+  border-color: #444444;
+  color-scheme: dark;
+}
+
+body[data-theme='dark'] .bounce-stamp-empty {
+  color: var(--dark-text-secondary);
+}
+
+body[data-theme='dark'] .bounce-stamp-soft,
+body[data-theme='dark'] .bounce-stamp-delayed {
+  color: #ffc107;
+}
+
+body[data-theme='dark'] .bounce-recipient {
+  background: var(--background-color);
+}
+
+@media (max-width: 640px) {
+  .bounce-page {
+    padding: 0 4px 24px;
+  }
+
+  .bounce-page h1 {
+    font-size: 1.6rem;
+    margin-bottom: 4px;
+  }
+
+  .bounce-lead {
+    margin-bottom: 10px;
+    font-size: 0.95rem;
+  }
+
+  .bounce-work {
+    flex-wrap: nowrap;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .bounce-stamp {
+    width: 72px;
+    height: 72px;
+    margin: 28px 0 0;
+    border-width: 4px;
+    box-shadow: inset 0 0 0 3px rgba(247, 148, 29, 0.28);
+    font-size: 0.68rem;
+    padding: 4px;
+  }
+
+  .bounce-stamp-empty {
+    font-size: 2rem;
+  }
+
+  .bounce-form textarea {
+    min-height: 120px;
+  }
+
+  .bounce-submit,
+  .bounce-offer button {
+    width: 100%;
+    min-height: 44px;
+  }
+}

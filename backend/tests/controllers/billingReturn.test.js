@@ -92,6 +92,30 @@ describe('WayForPay customer return', () => {
       expect(target.searchParams.get('handoffToken')).toMatch(/^[0-9a-f-]{36}$/i);
     });
 
+    it('sends a Bounce Read payer to /bounces rather than the Pro page', async () => {
+      const orderService = require('../../services/orderService');
+      await orderService.createOrder({
+        id: 'bounce-monthly-abc',
+        plan: 'monthly',
+        type: 'bounce',
+        amount: 740,
+        currency: 'UAH',
+      });
+
+      const billingController = require('../../controllers/billingController');
+      const res = mockRes();
+
+      await billingController.customerReturn(
+        { query: { orderReference: 'bounce-monthly-abc' }, body: {} },
+        res
+      );
+
+      const [, targetUrl] = res.redirect.mock.calls[0];
+      const target = new URL(targetUrl);
+      expect(target.origin + target.pathname).toBe('https://hide-mail.org/bounces');
+      expect(target.searchParams.get('handoffToken')).toMatch(/^[0-9a-f-]{36}$/i);
+    });
+
     it('redirects to the Pro page even without an order reference', async () => {
       const billingController = require('../../controllers/billingController');
       const res = mockRes();

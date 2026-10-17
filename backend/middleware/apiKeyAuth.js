@@ -38,18 +38,34 @@ const requireApiKey = async (req, res, next) => {
   }
 };
 
+const LICENSE_TYPE_DENIAL = {
+  api: {
+    error: 'This key is not a QA API key',
+    code: 'QA_PLAN_REQUIRED',
+  },
+  grade: {
+    error: 'This key is not a Mail Grade API key',
+    code: 'GRADE_PLAN_REQUIRED',
+  },
+  bounce: {
+    error: 'This key is not a Bounce Read API key',
+    code: 'BOUNCE_PLAN_REQUIRED',
+  },
+};
+
 const requireLicenseType = (type) => (req, res, next) => {
-  if (req.apiLicense?.type !== type) {
-    const grade = type === 'grade';
-    return res.status(403).json({
-      success: false,
-      error: grade
-        ? 'This key is not a Mail Grade API key'
-        : 'This key is not a QA API key',
-      code: grade ? 'GRADE_PLAN_REQUIRED' : 'QA_PLAN_REQUIRED',
-    });
+  if (req.apiLicense?.type === type) {
+    return next();
   }
-  return next();
+  const denial = LICENSE_TYPE_DENIAL[type];
+  if (!denial) {
+    throw new Error(`Unsupported license type: ${type}`);
+  }
+  return res.status(403).json({
+    success: false,
+    error: denial.error,
+    code: denial.code,
+  });
 };
 
 module.exports = {
