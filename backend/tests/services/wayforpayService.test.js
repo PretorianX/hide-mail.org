@@ -190,6 +190,21 @@ describe('wayforpayService', () => {
       expect(payload.productPrice).toEqual([370]);
       expect(() => wayforpayService.resolveProduct('grade', 'yearly')).toThrow(/unsupported grade plan/i);
     });
+
+    it('names the Bounce Read product on its own monthly tariff', () => {
+      const payload = wayforpayService.buildCheckoutPayload({
+        type: 'bounce',
+        plan: 'monthly',
+        orderReference: 'bounce-monthly-test',
+        orderDate: 1700000000,
+        dateNext: '18.09.2026',
+        amount: 740,
+      });
+
+      expect(payload.productName).toEqual(['Bounce Read API Monthly']);
+      expect(payload.productPrice).toEqual([740]);
+      expect(() => wayforpayService.resolveProduct('bounce', 'yearly')).toThrow(/unsupported bounce plan/i);
+    });
   });
 
   describe('classifyTransactionStatus', () => {

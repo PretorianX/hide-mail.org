@@ -45,6 +45,12 @@ const PRODUCTS = {
       regularMode: 'monthly',
     },
   },
+  bounce: {
+    monthly: {
+      productName: 'Bounce Read API Monthly',
+      regularMode: 'monthly',
+    },
+  },
 };
 
 const resolveProduct = (type, plan) => {
