@@ -26,6 +26,7 @@ jest.mock('../../config/config', () => {
       yearlyUsd: 24.99,
       apiUsd: 7.99,
       gradeUsd: 9,
+      bounceUsd: 18,
       checkoutPaused: false,
     },
   };
@@ -71,6 +72,7 @@ const MONTHLY_UAH = 140;
 const YEARLY_UAH = 1030;
 const API_UAH = 330;
 const GRADE_UAH = 370;
+const BOUNCE_UAH = 740;
 
 const mockRes = () => {
   const res = {};
@@ -206,6 +208,32 @@ describe('billingController', () => {
       expect(orderService.createOrder).toHaveBeenCalledWith(
         expect.objectContaining({ type: 'grade', amount: GRADE_UAH })
       );
+    });
+
+    it('charges the Bounce Read price for a Bounce Read order', async () => {
+      const req = { body: { plan: 'monthly', type: 'bounce' } };
+      const res = mockRes();
+
+      await billingController.checkout(req, res);
+
+      const payload = res.json.mock.calls[0][0];
+      expect(payload.data.orderReference).toMatch(/^bounce-monthly-/);
+      expect(payload.data.productName).toEqual(['Bounce Read API Monthly']);
+      expect(payload.data.amount).toBe(BOUNCE_UAH);
+      expect(orderService.createOrder).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'bounce', amount: BOUNCE_UAH })
+      );
+    });
+
+    it('rejects a yearly Bounce Read order because that tariff is monthly only', async () => {
+      const req = { body: { plan: 'yearly', type: 'bounce' } };
+      const res = mockRes();
+
+      await billingController.checkout(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json.mock.calls[0][0].error).toMatch(/Bounce Read is a monthly plan/);
+      expect(orderService.createOrder).not.toHaveBeenCalled();
     });
 
     it('rejects a yearly Mail Grade order because that tariff is monthly only', async () => {
@@ -731,6 +759,22 @@ describe('billingController', () => {
 
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json.mock.calls[0][0].apiKey).toBe('hm_api_grade');
+    });
+
+    it('hands a Bounce Read subscriber a fresh key without treating it as the QA API', async () => {
+      licenseService.getLicense.mockResolvedValue({ ...activeApiLicense, type: 'bounce' });
+      licenseService.isActive.mockReturnValue(true);
+      licenseService.createApiKey.mockResolvedValue('hm_api_bounce');
+      licenseService.validateApiKey.mockResolvedValue({
+        expiresAt: Date.now() + 20 * 24 * 60 * 60 * 1000,
+        remainingDays: 20,
+      });
+
+      const res = mockRes();
+      await billingController.issueApiKey({ body: { key: activeApiLicense.key } }, res);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json.mock.calls[0][0].apiKey).toBe('hm_api_bounce');
     });
 
     it('refuses a Pro license, which carries no API access', async () => {

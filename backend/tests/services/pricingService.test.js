@@ -8,6 +8,7 @@ process.env.PRO_PRICE_MONTHLY_USD = '3.49';
 process.env.PRO_PRICE_YEARLY_USD = '24.99';
 process.env.API_PRICE_MONTHLY_USD = '7.99';
 process.env.GRADE_PRICE_MONTHLY_USD = '9';
+process.env.BOUNCE_PRICE_MONTHLY_USD = '18';
 
 const pricingService = require('../../services/pricingService');
 
@@ -63,6 +64,15 @@ describe('pricingService', () => {
         currency: 'UAH',
       });
       expect(() => pricingService.quotePlan('grade', 'yearly', rates)).toThrow(/unsupported grade plan/i);
+    });
+
+    it('prices Bounce Read from its own monthly USD list price', () => {
+      expect(pricingService.quotePlan('bounce', 'monthly', rates)).toEqual({
+        usd: 18,
+        amountUah: 740,
+        currency: 'UAH',
+      });
+      expect(() => pricingService.quotePlan('bounce', 'yearly', rates)).toThrow(/unsupported bounce plan/i);
     });
   });
 

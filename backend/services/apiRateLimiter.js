@@ -33,6 +33,10 @@ const RATE_LIMITS = {
   gradeReport: { requests: 20, windowSeconds: 600 },
   // Paid Mail Grade API. A sender's pipeline buys this limit, not the free page.
   mailGrade: { requests: 120, windowSeconds: 60 },
+  // Free in-browser Bounce Read reports.
+  bounceReport: { requests: 20, windowSeconds: 600 },
+  // Paid Bounce Read API.
+  bounceRead: { requests: 120, windowSeconds: 60 },
 };
 
 /**
@@ -104,6 +108,8 @@ module.exports = {
   orderLookup: createRateLimiter('orderLookup'),
   gradeReport: createRateLimiter('gradeReport'),
   mailGrade: createRateLimiter('mailGrade'),
+  bounceReport: createRateLimiter('bounceReport'),
+  bounceRead: createRateLimiter('bounceRead'),
   default: createRateLimiter('default'),
   RATE_LIMITS,
 };

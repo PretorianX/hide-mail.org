@@ -16,6 +16,7 @@ A temporary email service that provides disposable email addresses for privacy a
 - Optional Hide Mail Pro plan: no ads, longer mailbox lifetimes, custom aliases, premium domains, higher forwarding limits
 - Optional API plan for QA automation: create mailboxes, read messages, download attachments, register inbound webhooks
 - Mail Grade: paste a raw email and get a quality report, plus a separate Mail Grade API plan for scoring mail from a script
+- Bounce Read: paste a delivery failure and see whether to retry that address, plus a separate Bounce Read API plan for classifying bounces from a script
 
 ## Quick Start
 
@@ -91,6 +92,7 @@ Key configuration options in `.env`:
 | `PRO_PRICE_MONTHLY_USD` / `PRO_PRICE_YEARLY_USD` | Pro list prices in USD; UAH charged is derived from WayForPay rates |
 | `API_PRICE_MONTHLY_USD` | API plan list price in USD |
 | `GRADE_PRICE_MONTHLY_USD` | Mail Grade API list price in USD. This plan only scores raw email |
+| `BOUNCE_PRICE_MONTHLY_USD` | Bounce Read API list price in USD. This plan only classifies delivery status notifications |
 | `FX_CACHE_SECONDS` / `FX_STALE_SECONDS` | Fresh FX cache TTL (default 2h) and maximum stale-cache age (default 24h) |
 | `PREMIUM_DOMAINS` | Pro-only domains; empty means Pro uses `VALID_DOMAINS` |
 
@@ -219,6 +221,30 @@ A QA mailbox key is rejected on that route, and a Mail Grade key cannot create m
 Buying Mail Grade does not remove ads or change inbox limits. Card checkout follows the same
 WayForPay pause as the other plans; while it is paused the page still grades mail for free.
 After a grade payment the browser returns to `/grade`.
+
+## Bounce Read
+
+Bounce Read tells a sender whether a delivery failure is permanent. It is not a mailbox
+and it does not score the message you meant to send. Open `/bounces`, paste a raw bounce
+(a delivery status notification), and Hide Mail names each recipient, the enhanced status
+code, and whether that address is worth another try. The source is read in memory and is
+not stored. A message that is not a delivery status notification is rejected.
+
+The report on the page is free. The paid offer is the Bounce Read API, a monthly plan of its
+own (`BOUNCE_PRICE_MONTHLY_USD`, default $18):
+
+```bash
+curl -sS -H "Authorization: Bearer $BOUNCE_READ_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"source":"Final-Recipient: rfc822; ada@example.com\nAction: failed\nStatus: 5.1.1\n"}' \
+  https://hide-mail.org/api/bounce-read
+```
+
+A QA mailbox key and a Mail Grade key are rejected on that route, and a Bounce Read key
+cannot create mailboxes or grade mail. Buying Bounce Read does not remove ads or change
+inbox limits. Card checkout follows the same WayForPay pause as the other plans; while it
+is paused the page still reads bounces for free. After a Bounce Read payment the browser
+returns to `/bounces`.
 
 ## Attachments
 
