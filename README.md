@@ -16,6 +16,7 @@ A temporary email service that provides disposable email addresses for privacy a
 - Optional Hide Mail Pro plan: no ads, longer mailbox lifetimes, custom aliases, premium domains, higher forwarding limits
 - Optional API plan for QA automation: create mailboxes, read messages, download attachments, register inbound webhooks
 - Mail Grade: paste a raw email and get a quality report, plus a separate Mail Grade API plan for scoring mail from a script
+- DMARC Reports: paste a DMARC aggregate report and get a source-by-source alignment summary, plus a separate DMARC Reports API plan for reading reports from a script
 
 ## Quick Start
 
@@ -91,6 +92,7 @@ Key configuration options in `.env`:
 | `PRO_PRICE_MONTHLY_USD` / `PRO_PRICE_YEARLY_USD` | Pro list prices in USD; UAH charged is derived from WayForPay rates |
 | `API_PRICE_MONTHLY_USD` | API plan list price in USD |
 | `GRADE_PRICE_MONTHLY_USD` | Mail Grade API list price in USD. This plan only scores raw email |
+| `REPORTS_PRICE_MONTHLY_USD` | DMARC Reports API list price in USD. This plan only reads aggregate reports |
 | `FX_CACHE_SECONDS` / `FX_STALE_SECONDS` | Fresh FX cache TTL (default 2h) and maximum stale-cache age (default 24h) |
 | `PREMIUM_DOMAINS` | Pro-only domains; empty means Pro uses `VALID_DOMAINS` |
 
@@ -219,6 +221,29 @@ A QA mailbox key is rejected on that route, and a Mail Grade key cannot create m
 Buying Mail Grade does not remove ads or change inbox limits. Card checkout follows the same
 WayForPay pause as the other plans; while it is paused the page still grades mail for free.
 After a grade payment the browser returns to `/grade`.
+
+## DMARC Reports
+
+DMARC Reports reads an aggregate report a mailbox provider already sent you. It is not a
+mailbox, and it does not look up a domain's DNS. Open `/reports`, paste the XML (unzip a
+`.xml.gz` file first), and Hide Mail returns how many messages aligned, which sources failed,
+and what the published policy was. The report is read in memory and is not stored.
+
+The summary on the page is free. The paid offer is the DMARC Reports API, a monthly plan of
+its own (`REPORTS_PRICE_MONTHLY_USD`, default $15):
+
+```bash
+curl -sS -H "Authorization: Bearer $DMARC_REPORTS_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"xml":"<feedback>...</feedback>"}' \
+  https://hide-mail.org/api/dmarc-reports
+```
+
+A QA mailbox key and a Mail Grade key are rejected on that route, and a DMARC Reports key
+cannot create mailboxes or grade a message. Buying DMARC Reports does not remove ads or
+change inbox limits. Card checkout follows the same WayForPay pause as the other plans;
+while it is paused the page still reads reports for free. After a reports payment the
+browser returns to `/reports`.
 
 ## Attachments
 

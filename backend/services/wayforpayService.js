@@ -45,6 +45,12 @@ const PRODUCTS = {
       regularMode: 'monthly',
     },
   },
+  reports: {
+    monthly: {
+      productName: 'DMARC Reports API Monthly',
+      regularMode: 'monthly',
+    },
+  },
 };
 
 const resolveProduct = (type, plan) => {
