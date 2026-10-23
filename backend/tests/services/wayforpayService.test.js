@@ -190,6 +190,21 @@ describe('wayforpayService', () => {
       expect(payload.productPrice).toEqual([370]);
       expect(() => wayforpayService.resolveProduct('grade', 'yearly')).toThrow(/unsupported grade plan/i);
     });
+
+    it('names the Sender Check product on its own monthly tariff', () => {
+      const payload = wayforpayService.buildCheckoutPayload({
+        type: 'sender',
+        plan: 'monthly',
+        orderReference: 'sender-monthly-test',
+        orderDate: 1700000000,
+        dateNext: '18.09.2026',
+        amount: 490,
+      });
+
+      expect(payload.productName).toEqual(['Sender Check API Monthly']);
+      expect(payload.productPrice).toEqual([490]);
+      expect(() => wayforpayService.resolveProduct('sender', 'yearly')).toThrow(/unsupported sender plan/i);
+    });
   });
 
   describe('classifyTransactionStatus', () => {
