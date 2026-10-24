@@ -16,6 +16,7 @@ A temporary email service that provides disposable email addresses for privacy a
 - Optional Hide Mail Pro plan: no ads, longer mailbox lifetimes, custom aliases, premium domains, higher forwarding limits
 - Optional API plan for QA automation: create mailboxes, read messages, download attachments, register inbound webhooks
 - Mail Grade: paste a raw email and get a quality report, plus a separate Mail Grade API plan for scoring mail from a script
+- Complaint Read: paste an abuse feedback report and get the address to act on, plus a separate Complaint Read API plan
 
 ## Quick Start
 
@@ -91,6 +92,7 @@ Key configuration options in `.env`:
 | `PRO_PRICE_MONTHLY_USD` / `PRO_PRICE_YEARLY_USD` | Pro list prices in USD; UAH charged is derived from WayForPay rates |
 | `API_PRICE_MONTHLY_USD` | API plan list price in USD |
 | `GRADE_PRICE_MONTHLY_USD` | Mail Grade API list price in USD. This plan only scores raw email |
+| `COMPLAINT_PRICE_MONTHLY_USD` | Complaint Read API list price in USD. This plan only reads abuse feedback reports |
 | `FX_CACHE_SECONDS` / `FX_STALE_SECONDS` | Fresh FX cache TTL (default 2h) and maximum stale-cache age (default 24h) |
 | `PREMIUM_DOMAINS` | Pro-only domains; empty means Pro uses `VALID_DOMAINS` |
 
@@ -219,6 +221,31 @@ A QA mailbox key is rejected on that route, and a Mail Grade key cannot create m
 Buying Mail Grade does not remove ads or change inbox limits. Card checkout follows the same
 WayForPay pause as the other plans; while it is paused the page still grades mail for free.
 After a grade payment the browser returns to `/grade`.
+
+## Complaint Read
+
+Complaint Read tells a list operator which address to remove after a receiver sends an abuse
+feedback report. It is not a mailbox, and it does not grade a message you are about to send.
+Open `/complaints`, paste the feedback report (a `multipart/report` of type `feedback-report`,
+or the feedback fields themselves), and Hide Mail returns the feedback type, the original
+recipient, and whether to remove that address, keep it, or review it. The source is read in
+memory and is not stored. A delivery status notification is rejected.
+
+The report on the page is free. The paid offer is the Complaint Read API, a monthly plan of
+its own (`COMPLAINT_PRICE_MONTHLY_USD`, default $21):
+
+```bash
+curl -sS -H "Authorization: Bearer $COMPLAINT_READ_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"source":"Feedback-Type: abuse\nOriginal-Rcpt-To: <subscriber@example.net>\n"}' \
+  https://hide-mail.org/api/complaint-read
+```
+
+A QA mailbox key and a Mail Grade key are rejected on that route, and a Complaint Read key
+cannot create mailboxes or grade mail. Buying Complaint Read does not remove ads or change
+inbox limits. Card checkout follows the same WayForPay pause as the other plans; while it is
+paused the page still reads complaints for free. After a complaint payment the browser
+returns to `/complaints`.
 
 ## Attachments
 

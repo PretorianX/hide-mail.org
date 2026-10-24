@@ -15,6 +15,13 @@ const metrics = require('../services/metricsService');
 const exchangeRateService = require('../services/exchangeRateService');
 const pricingService = require('../services/pricingService');
 
+const API_KEY_LICENSE_TYPES = new Set(['api', 'grade', 'complaint']);
+
+const RETURN_PAGES = {
+  grade: '/grade',
+  complaint: '/complaints',
+};
+
 const licenseTtlForPlan = (plan) => {
   if (plan === 'yearly') {
     return config.billing.yearlyTtlSeconds;
@@ -53,7 +60,7 @@ const checkout = async (req, res, next) => {
 
     const plan = req.body?.plan;
     const requested = req.body?.type;
-    const type = requested === 'api' || requested === 'grade' ? requested : 'pro';
+    const type = API_KEY_LICENSE_TYPES.has(requested) ? requested : 'pro';
 
     try {
       wayforpayService.resolveProduct(type, plan);
@@ -61,6 +68,7 @@ const checkout = async (req, res, next) => {
       const invalidPlan = {
         api: 'API plan must be monthly',
         grade: 'Mail Grade is a monthly plan',
+        complaint: 'Complaint Read is a monthly plan',
         pro: 'plan must be monthly or yearly',
       };
       return res.status(400).json({
@@ -181,7 +189,7 @@ const activateLicense = async ({ orderReference, recToken, amount, currency }) =
   });
 
   const extra = {};
-  if (license.type === 'api' || license.type === 'grade') {
+  if (API_KEY_LICENSE_TYPES.has(license.type)) {
     extra.apiKey = await licenseService.createApiKey(license.key);
     const issued = await licenseService.validateApiKey(extra.apiKey);
     extra.apiKeyRemainingDays = issued.remainingDays;
@@ -292,8 +300,9 @@ const customerReturn = async (req, res, next) => {
     const { orderReference } = req.query || {};
     if (typeof orderReference === 'string' && orderReference) {
       const order = await orderService.getOrder(orderReference);
-      if (order?.type === 'grade') {
-        target.pathname = '/grade';
+      const returnPage = RETURN_PAGES[order?.type];
+      if (returnPage) {
+        target.pathname = returnPage;
         target.search = '';
         target.hash = '';
       }
@@ -347,10 +356,10 @@ const issueApiKey = async (req, res, next) => {
     if (!licenseService.isActive(license)) {
       return res.status(404).json({ success: false, error: 'License not found' });
     }
-    if (license.type !== 'api' && license.type !== 'grade') {
+    if (!API_KEY_LICENSE_TYPES.has(license.type)) {
       return res.status(403).json({
         success: false,
-        error: 'API keys are only issued for the QA API or Mail Grade plan',
+        error: 'API keys are only issued for the QA API, Mail Grade, or Complaint Read plan',
         code: 'API_PLAN_REQUIRED',
       });
     }

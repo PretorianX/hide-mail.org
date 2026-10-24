@@ -62,6 +62,25 @@ describe('entitlementService', () => {
     expect(entitlements.premiumDomains).toBe(false);
     expect(entitlements.mailboxTtlOptions).toEqual([]);
     expect(entitlements.forwardingLimit).toBe(2);
+    expect(entitlements.complaintApi).toBe(false);
+  });
+
+  it('sells Complaint Read without unlocking the inbox or Mail Grade', () => {
+    const entitlements = entitlementService.getEntitlements({
+      type: 'complaint',
+      status: 'active',
+      expiresAt: Date.now() + 60_000,
+    });
+
+    expect(entitlements.planType).toBe('complaint');
+    expect(entitlements.complaintApi).toBe(true);
+    expect(entitlements.gradeApi).toBe(false);
+    expect(entitlements.ads).toBe(true);
+    expect(entitlements.apiAccess).toBe(false);
+    expect(entitlements.customAlias).toBe(false);
+    expect(entitlements.premiumDomains).toBe(false);
+    expect(entitlements.mailboxTtlOptions).toEqual([]);
+    expect(entitlementService.describeTiers().complaint.complaintApi).toBe(true);
   });
 
   it('treats an expired license as free', () => {

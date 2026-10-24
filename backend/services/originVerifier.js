@@ -114,6 +114,10 @@ const createOriginVerifier = (options = {}) => {
       // report stays on /grade/report and still has to come from the site.
       || req.path === '/mail-grade'
       || req.path.startsWith('/mail-grade/')
+      // Complaint Read API is a paid machine client. The free report stays on
+      // /complaints/report and still has to come from the site.
+      || req.path === '/complaint-read'
+      || req.path.startsWith('/complaint-read/')
       || req.path === '/billing/webhook'
       || req.path === '/billing/return'
     ) {

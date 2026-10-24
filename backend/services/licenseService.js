@@ -73,8 +73,8 @@ const isActive = (license) => {
   return license.expiresAt > Date.now();
 };
 
-const LICENSE_TYPES = new Set(['pro', 'api', 'grade']);
-const API_KEY_TYPES = new Set(['api', 'grade']);
+const LICENSE_TYPES = new Set(['pro', 'api', 'grade', 'complaint']);
+const API_KEY_TYPES = new Set(['api', 'grade', 'complaint']);
 
 const createLicense = async ({ type, plan, orderReference, recToken, ttlSeconds }) => {
   if (!LICENSE_TYPES.has(type)) {

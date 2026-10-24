@@ -92,6 +92,7 @@ describe('billingMetricsCollector', () => {
     expect(metrics.licensesActive.reset).toHaveBeenCalled();
     expect(gaugeValue(metrics.licensesActive, { type: 'pro', plan: 'yearly' })).toBe(0);
     expect(gaugeValue(metrics.licensesActive, { type: 'api', plan: 'monthly' })).toBe(0);
+    expect(gaugeValue(metrics.licensesActive, { type: 'complaint', plan: 'monthly' })).toBe(0);
   });
 
   it('excludes expired and revoked licenses from the active count', async () => {

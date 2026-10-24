@@ -1,0 +1,274 @@
+.complaint-page {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 8px 12px 32px;
+  color: var(--text-color);
+}
+
+.complaint-page h1 {
+  margin: 0 0 8px;
+}
+
+.complaint-lead {
+  margin-top: 0;
+  color: var(--text-secondary);
+}
+
+.complaint-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.complaint-slip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 8px;
+  padding: 16px;
+  border: 2px dashed var(--duck-orange);
+  border-radius: 12px;
+  background: var(--card-bg, #fff);
+}
+
+.complaint-stamp {
+  flex: 0 0 auto;
+  min-width: 112px;
+  min-height: 72px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 4px solid var(--duck-orange);
+  box-shadow: inset 0 0 0 3px rgba(247, 148, 29, 0.28);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1.1;
+  text-align: center;
+  background: var(--card-bg, #fff);
+}
+
+.complaint-stamp-empty {
+  color: var(--text-secondary);
+  font-size: 2rem;
+}
+
+.complaint-stamp[data-action='suppress'] {
+  color: var(--danger-color, #dc3545);
+}
+
+.complaint-stamp[data-action='keep'] {
+  color: var(--success-color, #28a745);
+}
+
+.complaint-stamp[data-action='review'] {
+  color: #5c2d00;
+}
+
+.complaint-slip-copy {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
+.complaint-slip-waiting,
+.complaint-action {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.complaint-address {
+  margin: 0 0 4px;
+  font-size: 1.35rem;
+  font-weight: 800;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.complaint-form textarea {
+  width: 100%;
+  min-height: 220px;
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font: 0.9rem/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: var(--text-color);
+  background: var(--card-bg, #fff);
+  resize: vertical;
+}
+
+.complaint-submit {
+  align-self: flex-start;
+}
+
+.complaint-empty {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.complaint-error {
+  margin: 0;
+  color: var(--danger-color);
+  font-weight: 700;
+}
+
+.complaint-result {
+  margin-top: 24px;
+}
+
+.complaint-result h2 {
+  margin: 0 0 8px;
+}
+
+.complaint-result dl {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+}
+
+.complaint-result div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  padding: 10px 12px;
+  border-left: 4px solid var(--duck-orange);
+  background: var(--duck-gray);
+  border-radius: 0 8px 8px 0;
+}
+
+.complaint-result dt {
+  flex: 1 1 140px;
+  font-weight: 700;
+}
+
+.complaint-result dd {
+  flex: 2 1 200px;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.complaint-offer {
+  margin-top: 36px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.complaint-offer-price {
+  font-size: 1.4rem;
+  font-weight: 800;
+  margin: 0;
+}
+
+.complaint-restore {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+}
+
+.complaint-restore input {
+  flex: 1 1 180px;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font: inherit;
+  color: var(--text-color);
+  background: var(--card-bg, #fff);
+}
+
+.complaint-page textarea:focus-visible,
+.complaint-page button:focus-visible,
+.complaint-page input:focus-visible,
+.complaint-page a:focus-visible {
+  outline: 3px solid var(--duck-orange);
+  outline-offset: 2px;
+}
+
+body[data-theme='dark'] .complaint-page {
+  color: var(--dark-text-color);
+}
+
+body[data-theme='dark'] .complaint-lead,
+body[data-theme='dark'] .complaint-empty,
+body[data-theme='dark'] .complaint-slip-waiting,
+body[data-theme='dark'] .complaint-action {
+  color: var(--dark-text-secondary);
+}
+
+body[data-theme='dark'] .complaint-slip,
+body[data-theme='dark'] .complaint-stamp {
+  background: var(--background-color);
+  border-color: var(--duck-orange);
+}
+
+body[data-theme='dark'] .complaint-stamp-empty {
+  color: var(--dark-text-secondary);
+}
+
+body[data-theme='dark'] .complaint-stamp[data-action='review'] {
+  color: var(--duck-orange-light);
+}
+
+body[data-theme='dark'] .complaint-page textarea,
+body[data-theme='dark'] .complaint-page input {
+  background-color: #1a1a1a;
+  color: #e0e0e0;
+  -webkit-text-fill-color: #e0e0e0;
+  caret-color: #e0e0e0;
+  border-color: #444444;
+  color-scheme: dark;
+}
+
+body[data-theme='dark'] .complaint-result div {
+  background: var(--background-color);
+}
+
+@media (max-width: 640px) {
+  .complaint-page {
+    padding: 0 4px 24px;
+  }
+
+  .complaint-page h1 {
+    font-size: 1.6rem;
+    margin-bottom: 4px;
+  }
+
+  .complaint-lead {
+    margin-bottom: 10px;
+    font-size: 0.95rem;
+  }
+
+  .complaint-slip {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .complaint-stamp {
+    min-width: 96px;
+    min-height: 56px;
+    font-size: 0.95rem;
+  }
+
+  .complaint-address {
+    font-size: 1.1rem;
+  }
+
+  .complaint-form textarea {
+    min-height: 120px;
+  }
+
+  .complaint-submit,
+  .complaint-offer button {
+    width: 100%;
+    min-height: 44px;
+  }
+}
