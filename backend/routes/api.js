@@ -5,6 +5,7 @@ const forwardingController = require('../controllers/forwardingController');
 const billingRoutes = require('./billing');
 const qaApiRoutes = require('./qaApi');
 const mailGradeRoutes = require('./mailGrade');
+const complaintReadRoutes = require('./complaintRead');
 const redisService = require('../services/redisService');
 const logger = require('../utils/logger');
 const { sanitizeEmail } = require('../utils/sanitize');
@@ -316,5 +317,7 @@ router.use('/billing', billingRoutes);
 router.use('/qa', qaApiRoutes);
 router.use('/grade', mailGradeRoutes.browser);
 router.use('/mail-grade', mailGradeRoutes.api);
+router.use('/complaints', complaintReadRoutes.browser);
+router.use('/complaint-read', complaintReadRoutes.api);
 
 module.exports = router; 

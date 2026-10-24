@@ -5,15 +5,20 @@ const mailboxTtlOptions = () => Object.values(config.pro.mailboxTtlOptions);
 
 const planTypeOf = (license) => license.planType || license.type;
 
-const freeEntitlements = () => ({
+const inboxFree = () => ({
   ads: true,
   customAlias: false,
   premiumDomains: false,
   apiAccess: false,
   gradeApi: false,
+  complaintApi: false,
   forwardingLimit: config.forwarding.freeLimit,
   mailboxTtlSeconds: config.emailExpirationSeconds,
   mailboxTtlOptions: [],
+});
+
+const freeEntitlements = () => ({
+  ...inboxFree(),
   planType: 'free',
 });
 
@@ -23,6 +28,7 @@ const paidEntitlements = (planType) => ({
   premiumDomains: true,
   apiAccess: planType === 'api',
   gradeApi: false,
+  complaintApi: false,
   forwardingLimit: config.forwarding.proLimit,
   mailboxTtlSeconds: config.pro.defaultMailboxTtlSeconds,
   mailboxTtlOptions: mailboxTtlOptions(),
@@ -30,15 +36,15 @@ const paidEntitlements = (planType) => ({
 });
 
 const gradeEntitlements = () => ({
-  ads: true,
-  customAlias: false,
-  premiumDomains: false,
-  apiAccess: false,
+  ...inboxFree(),
   gradeApi: true,
-  forwardingLimit: config.forwarding.freeLimit,
-  mailboxTtlSeconds: config.emailExpirationSeconds,
-  mailboxTtlOptions: [],
   planType: 'grade',
+});
+
+const complaintEntitlements = () => ({
+  ...inboxFree(),
+  complaintApi: true,
+  planType: 'complaint',
 });
 
 const getEntitlements = (license) => {
@@ -47,6 +53,9 @@ const getEntitlements = (license) => {
   }
   if (planTypeOf(license) === 'grade') {
     return gradeEntitlements();
+  }
+  if (planTypeOf(license) === 'complaint') {
+    return complaintEntitlements();
   }
   return paidEntitlements(planTypeOf(license));
 };
@@ -61,6 +70,7 @@ const describeTiers = () => ({
   pro: paidEntitlements('pro'),
   api: paidEntitlements('api'),
   grade: gradeEntitlements(),
+  complaint: complaintEntitlements(),
   freeExtensionSeconds: config.emailExtensionSeconds,
   premiumDomainCount: config.premiumDomains.length,
   apiKeyTtlSeconds: config.billing.apiKeyTtlSeconds,

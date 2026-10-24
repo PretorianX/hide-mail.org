@@ -8,6 +8,7 @@ process.env.PRO_PRICE_MONTHLY_USD = '3.49';
 process.env.PRO_PRICE_YEARLY_USD = '24.99';
 process.env.API_PRICE_MONTHLY_USD = '7.99';
 process.env.GRADE_PRICE_MONTHLY_USD = '9';
+process.env.COMPLAINT_PRICE_MONTHLY_USD = '21';
 
 const pricingService = require('../../services/pricingService');
 
@@ -63,6 +64,15 @@ describe('pricingService', () => {
         currency: 'UAH',
       });
       expect(() => pricingService.quotePlan('grade', 'yearly', rates)).toThrow(/unsupported grade plan/i);
+    });
+
+    it('prices Complaint Read from its own monthly USD list price', () => {
+      expect(pricingService.quotePlan('complaint', 'monthly', rates)).toEqual({
+        usd: 21,
+        amountUah: 870,
+        currency: 'UAH',
+      });
+      expect(() => pricingService.quotePlan('complaint', 'yearly', rates)).toThrow(/unsupported complaint plan/i);
     });
   });
 

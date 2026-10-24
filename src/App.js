@@ -27,6 +27,7 @@ import ProCta from './components/ProCta.js';
 import HomeProBadge from './components/HomeProBadge.js';
 import Pro from './pages/Pro.js';
 import Grade from './pages/Grade.js';
+import Complaints from './pages/Complaints.js';
 import GradeGuide from './pages/GradeGuide.js';
 import { LicenseProvider, useLicense } from './context/LicenseContext.js';
 import { trackPageView, analytics } from './services/analytics.js';
@@ -45,6 +46,7 @@ function PageViewTracker() {
       '/blog': 'Blog',
       '/pro': 'Pro',
       '/grade': 'Mail Grade',
+      '/complaints': 'Complaint Read',
       '/grade/guide': 'Mail Grade findings guide',
     };
     
@@ -844,6 +846,7 @@ function AppContent() {
               <Route path="/blog/:postId" element={<BlogPost />} />
               <Route path="/pro" element={<Pro />} />
               <Route path="/grade" element={<Grade />} />
+              <Route path="/complaints" element={<Complaints />} />
               <Route path="/grade/guide" element={<GradeGuide />} />
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>

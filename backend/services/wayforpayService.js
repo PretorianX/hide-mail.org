@@ -45,6 +45,12 @@ const PRODUCTS = {
       regularMode: 'monthly',
     },
   },
+  complaint: {
+    monthly: {
+      productName: 'Complaint Read API Monthly',
+      regularMode: 'monthly',
+    },
+  },
 };
 
 const resolveProduct = (type, plan) => {
