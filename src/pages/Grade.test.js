@@ -250,7 +250,7 @@ describe('Mail Grade page', () => {
       expect(screen.getByLabelText('Raw email').value).toContain('Subject: Dropped EML');
     });
 
-    const oversizedFile = new File(['x'.repeat(260 * 1024)], 'huge.eml', { type: 'message/rfc822' });
+    const oversizedFile = new File(['x'.repeat(65 * 1024)], 'huge.eml', { type: 'message/rfc822' });
     fireEvent.change(fileInput, { target: { files: [oversizedFile] } });
 
     expect(await screen.findByRole('alert')).toHaveTextContent(/64 KB/i);

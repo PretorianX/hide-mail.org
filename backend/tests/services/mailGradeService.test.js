@@ -99,7 +99,7 @@ describe('mailGradeService', () => {
     expect(report.grade).toBe('F');
     expect(report.score).toBeLessThan(55);
     expect(ids).toEqual(expect.arrayContaining([
-      'subject_shouting',
+      'subject_all_caps',
       'subject_punctuation',
       'reply_to_mismatch',
       'dkim_missing',
@@ -110,6 +110,8 @@ describe('mailGradeService', () => {
       'links_shortener',
       'spf_no_ip',
     ]));
+    expect(ids).not.toContain('link_shortener');
+    expect(ids).not.toContain('subject_shouting');
   });
 
   it('fails SPF when live auth reports fail', async () => {
@@ -191,7 +193,7 @@ describe('mailGradeService', () => {
     const report = await gradeEmail(source, gradeOpts);
     const byId = Object.fromEntries(report.findings.map((f) => [f.id, f]));
 
-    expect(byId.subject_shouting).toMatchObject({ severity: 'warn', penalty: 7 });
+    expect(byId.subject_all_caps).toMatchObject({ severity: 'warn', penalty: 5 });
     expect(byId.subject_spam_tokens).toMatchObject({ severity: 'warn', penalty: 5 });
     expect(byId.from_display_spoof).toMatchObject({ severity: 'fail', penalty: 15 });
     expect(byId.links_shortener).toMatchObject({ severity: 'warn', penalty: 8 });
