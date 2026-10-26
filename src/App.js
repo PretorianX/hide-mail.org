@@ -29,6 +29,7 @@ import Pro from './pages/Pro.js';
 import Grade from './pages/Grade.js';
 import GradeGuide from './pages/GradeGuide.js';
 import Sender from './pages/Sender.js';
+import Reports from './pages/Reports.js';
 import { LicenseProvider, useLicense } from './context/LicenseContext.js';
 import { trackPageView, analytics } from './services/analytics.js';
 
@@ -48,6 +49,7 @@ function PageViewTracker() {
       '/grade': 'Mail Grade',
       '/grade/guide': 'Mail Grade findings guide',
       '/sender': 'Sender Check',
+      '/reports': 'DMARC Reports',
     };
     
     const title = pageTitles[location.pathname] || 
@@ -848,6 +850,7 @@ function AppContent() {
               <Route path="/grade" element={<Grade />} />
               <Route path="/grade/guide" element={<GradeGuide />} />
               <Route path="/sender" element={<Sender />} />
+              <Route path="/reports" element={<Reports />} />
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>
             

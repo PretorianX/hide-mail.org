@@ -38,7 +38,7 @@ const requireApiKey = async (req, res, next) => {
   }
 };
 
-const TYPE_DENIED = {
+const PLAN_REQUIRED = {
   grade: {
     error: 'This key is not a Mail Grade API key',
     code: 'GRADE_PLAN_REQUIRED',
@@ -51,18 +51,21 @@ const TYPE_DENIED = {
     error: 'This key is not a Sender Check API key',
     code: 'SENDER_PLAN_REQUIRED',
   },
+  reports: {
+    error: 'This key is not a DMARC Reports API key',
+    code: 'REPORTS_PLAN_REQUIRED',
+  },
 };
 
 const requireLicenseType = (type) => (req, res, next) => {
-  if (req.apiLicense?.type !== type) {
-    const denied = TYPE_DENIED[type] || TYPE_DENIED.api;
-    return res.status(403).json({
-      success: false,
-      error: denied.error,
-      code: denied.code,
-    });
+  if (req.apiLicense?.type === type) {
+    return next();
   }
-  return next();
+  const refusal = PLAN_REQUIRED[type];
+  if (!refusal) {
+    return next(new Error(`Unknown license type: ${type}`));
+  }
+  return res.status(403).json({ success: false, ...refusal });
 };
 
 module.exports = {

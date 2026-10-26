@@ -37,6 +37,10 @@ const RATE_LIMITS = {
   senderReport: { requests: 15, windowSeconds: 600 },
   // Paid Sender Check API.
   senderCheck: { requests: 60, windowSeconds: 60 },
+  // Free in-browser DMARC report reads.
+  reportsRead: { requests: 20, windowSeconds: 600 },
+  // Paid DMARC Reports API. A monitoring job buys this limit, not the free page.
+  dmarcReports: { requests: 60, windowSeconds: 60 },
 };
 
 /**
@@ -110,6 +114,8 @@ module.exports = {
   mailGrade: createRateLimiter('mailGrade'),
   senderReport: createRateLimiter('senderReport'),
   senderCheck: createRateLimiter('senderCheck'),
+  reportsRead: createRateLimiter('reportsRead'),
+  dmarcReports: createRateLimiter('dmarcReports'),
   default: createRateLimiter('default'),
   RATE_LIMITS,
 };

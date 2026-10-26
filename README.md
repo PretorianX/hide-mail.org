@@ -17,6 +17,7 @@ A temporary email service that provides disposable email addresses for privacy a
 - Optional API plan for QA automation: create mailboxes, read messages, download attachments, register inbound webhooks
 - Mail Grade: paste a raw email and get a quality report, plus a separate Mail Grade API plan for scoring mail from a script
 - Sender Check: look up a domain's MX, SPF, and DMARC, plus a separate Sender Check API plan for checking domains from a script
+- DMARC Reports: paste a DMARC aggregate report and get a source-by-source alignment summary, plus a separate DMARC Reports API plan for reading reports from a script
 
 ## Quick Start
 
@@ -93,6 +94,7 @@ Key configuration options in `.env`:
 | `API_PRICE_MONTHLY_USD` | API plan list price in USD |
 | `GRADE_PRICE_MONTHLY_USD` | Mail Grade API list price in USD. This plan only scores raw email |
 | `SENDER_PRICE_MONTHLY_USD` | Sender Check API list price in USD. This plan only looks up MX, SPF, and DMARC |
+| `REPORTS_PRICE_MONTHLY_USD` | DMARC Reports API list price in USD. This plan only reads aggregate reports |
 | `FX_CACHE_SECONDS` / `FX_STALE_SECONDS` | Fresh FX cache TTL (default 2h) and maximum stale-cache age (default 24h) |
 | `PREMIUM_DOMAINS` | Pro-only domains; empty means Pro uses `VALID_DOMAINS` |
 
@@ -244,6 +246,28 @@ key cannot create mailboxes or grade mail. Buying Sender Check does not remove a
 or change inbox limits. Card checkout follows the same WayForPay pause as the other
 plans; while it is paused the page still checks domains for free. After a Sender Check
 payment the browser returns to `/sender`.
+## DMARC Reports
+
+DMARC Reports reads an aggregate report a mailbox provider already sent you. It is not a
+mailbox, and it does not look up a domain's DNS. Open `/reports`, paste the XML (unzip a
+`.xml.gz` file first), and Hide Mail returns how many messages aligned, which sources failed,
+and what the published policy was. The report is read in memory and is not stored.
+
+The summary on the page is free. The paid offer is the DMARC Reports API, a monthly plan of
+its own (`REPORTS_PRICE_MONTHLY_USD`, default $15):
+
+```bash
+curl -sS -H "Authorization: Bearer $DMARC_REPORTS_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"xml":"<feedback>...</feedback>"}' \
+  https://hide-mail.org/api/dmarc-reports
+```
+
+A QA mailbox key and a Mail Grade key are rejected on that route, and a DMARC Reports key
+cannot create mailboxes or grade a message. Buying DMARC Reports does not remove ads or
+change inbox limits. Card checkout follows the same WayForPay pause as the other plans;
+while it is paused the page still reads reports for free. After a reports payment the
+browser returns to `/reports`.
 
 ## Attachments
 

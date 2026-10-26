@@ -205,6 +205,21 @@ describe('wayforpayService', () => {
       expect(payload.productPrice).toEqual([490]);
       expect(() => wayforpayService.resolveProduct('sender', 'yearly')).toThrow(/unsupported sender plan/i);
     });
+
+    it('names the DMARC Reports product on its own monthly tariff', () => {
+      const payload = wayforpayService.buildCheckoutPayload({
+        type: 'reports',
+        plan: 'monthly',
+        orderReference: 'reports-monthly-test',
+        orderDate: 1700000000,
+        dateNext: '18.09.2026',
+        amount: 620,
+      });
+
+      expect(payload.productName).toEqual(['DMARC Reports API Monthly']);
+      expect(payload.productPrice).toEqual([620]);
+      expect(() => wayforpayService.resolveProduct('reports', 'yearly')).toThrow(/unsupported reports plan/i);
+    });
   });
 
   describe('classifyTransactionStatus', () => {

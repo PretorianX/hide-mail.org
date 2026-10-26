@@ -120,6 +120,7 @@ const Header = () => {
             <NavLink to="/contact-us">Contact</NavLink>
             <NavLink to="/grade">Grade</NavLink>
             <NavLink to="/sender">Sender</NavLink>
+            <NavLink to="/reports">Reports</NavLink>
             <NavProCta isPro={isPro} daysLeft={daysLeft} />
           </Nav>
         </NavContainer>

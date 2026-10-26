@@ -5,16 +5,25 @@ const mailboxTtlOptions = () => Object.values(config.pro.mailboxTtlOptions);
 
 const planTypeOf = (license) => license.planType || license.type;
 
-const freeEntitlements = () => ({
+const toolFlags = (active) => ({
+  senderApi: active === 'sender',
+  reportsApi: active === 'reports',
+});
+
+const inboxFree = (active) => ({
   ads: true,
   customAlias: false,
   premiumDomains: false,
   apiAccess: false,
   gradeApi: false,
-  senderApi: false,
+  ...toolFlags(active),
   forwardingLimit: config.forwarding.freeLimit,
   mailboxTtlSeconds: config.emailExpirationSeconds,
   mailboxTtlOptions: [],
+});
+
+const freeEntitlements = () => ({
+  ...inboxFree(null),
   planType: 'free',
 });
 
@@ -24,7 +33,7 @@ const paidEntitlements = (planType) => ({
   premiumDomains: true,
   apiAccess: planType === 'api',
   gradeApi: false,
-  senderApi: false,
+  ...toolFlags(null),
   forwardingLimit: config.forwarding.proLimit,
   mailboxTtlSeconds: config.pro.defaultMailboxTtlSeconds,
   mailboxTtlOptions: mailboxTtlOptions(),
@@ -32,29 +41,19 @@ const paidEntitlements = (planType) => ({
 });
 
 const gradeEntitlements = () => ({
-  ads: true,
-  customAlias: false,
-  premiumDomains: false,
-  apiAccess: false,
+  ...inboxFree(null),
   gradeApi: true,
-  senderApi: false,
-  forwardingLimit: config.forwarding.freeLimit,
-  mailboxTtlSeconds: config.emailExpirationSeconds,
-  mailboxTtlOptions: [],
   planType: 'grade',
 });
 
 const senderEntitlements = () => ({
-  ads: true,
-  customAlias: false,
-  premiumDomains: false,
-  apiAccess: false,
-  gradeApi: false,
-  senderApi: true,
-  forwardingLimit: config.forwarding.freeLimit,
-  mailboxTtlSeconds: config.emailExpirationSeconds,
-  mailboxTtlOptions: [],
+  ...inboxFree('sender'),
   planType: 'sender',
+});
+
+const reportsEntitlements = () => ({
+  ...inboxFree('reports'),
+  planType: 'reports',
 });
 
 const getEntitlements = (license) => {
@@ -66,6 +65,9 @@ const getEntitlements = (license) => {
   }
   if (planTypeOf(license) === 'sender') {
     return senderEntitlements();
+  }
+  if (planTypeOf(license) === 'reports') {
+    return reportsEntitlements();
   }
   return paidEntitlements(planTypeOf(license));
 };
@@ -81,6 +83,7 @@ const describeTiers = () => ({
   api: paidEntitlements('api'),
   grade: gradeEntitlements(),
   sender: senderEntitlements(),
+  reports: reportsEntitlements(),
   freeExtensionSeconds: config.emailExtensionSeconds,
   premiumDomainCount: config.premiumDomains.length,
   apiKeyTtlSeconds: config.billing.apiKeyTtlSeconds,
