@@ -6,6 +6,7 @@
 const { DmarcReportError } = require('./errors');
 
 const MAX_ENTITY = 12;
+const MAX_DEPTH = 32;
 
 const unreadable = () => new DmarcReportError('REPORT_UNREADABLE', 'This report could not be read.');
 
@@ -123,6 +124,7 @@ const parseXml = (source) => {
     if (!name || name.startsWith('!') || name.startsWith('?')) {
       throw unreadable();
     }
+    if (stack.length >= MAX_DEPTH) throw unreadable();
     const node = { name, text: '', children: [] };
     stack[stack.length - 1].children.push(node);
     if (!selfClosing) stack.push(node);

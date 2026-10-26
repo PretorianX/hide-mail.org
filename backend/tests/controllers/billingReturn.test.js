@@ -140,6 +140,54 @@ describe('WayForPay customer return', () => {
       expect(target.searchParams.get('handoffToken')).toMatch(/^[0-9a-f-]{36}$/i);
     });
 
+    it('sends a Bounce Read payer to /bounces rather than the Pro page', async () => {
+      const orderService = require('../../services/orderService');
+      await orderService.createOrder({
+        id: 'bounce-monthly-abc',
+        plan: 'monthly',
+        type: 'bounce',
+        amount: 740,
+        currency: 'UAH',
+      });
+
+      const billingController = require('../../controllers/billingController');
+      const res = mockRes();
+
+      await billingController.customerReturn(
+        { query: { orderReference: 'bounce-monthly-abc' }, body: {} },
+        res
+      );
+
+      const [, bounceUrl] = res.redirect.mock.calls[0];
+      const bounceTarget = new URL(bounceUrl);
+      expect(bounceTarget.origin + bounceTarget.pathname).toBe('https://hide-mail.org/bounces');
+      expect(bounceTarget.searchParams.get('handoffToken')).toMatch(/^[0-9a-f-]{36}$/i);
+    });
+
+    it('sends a Complaint Read payer to /complaints rather than the Pro page', async () => {
+      const orderService = require('../../services/orderService');
+      await orderService.createOrder({
+        id: 'complaint-monthly-abc',
+        plan: 'monthly',
+        type: 'complaint',
+        amount: 870,
+        currency: 'UAH',
+      });
+
+      const billingController = require('../../controllers/billingController');
+      const res = mockRes();
+
+      await billingController.customerReturn(
+        { query: { orderReference: 'complaint-monthly-abc' }, body: {} },
+        res
+      );
+
+      const [, complaintUrl] = res.redirect.mock.calls[0];
+      const complaintTarget = new URL(complaintUrl);
+      expect(complaintTarget.origin + complaintTarget.pathname).toBe('https://hide-mail.org/complaints');
+      expect(complaintTarget.searchParams.get('handoffToken')).toMatch(/^[0-9a-f-]{36}$/i);
+    });
+
     it('redirects to the Pro page even without an order reference', async () => {
       const billingController = require('../../controllers/billingController');
       const res = mockRes();

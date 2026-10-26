@@ -7,6 +7,8 @@ const qaApiRoutes = require('./qaApi');
 const mailGradeRoutes = require('./mailGrade');
 const senderCheckRoutes = require('./senderCheck');
 const dmarcReportRoutes = require('./dmarcReport');
+const bounceReadRoutes = require('./bounceRead');
+const complaintReadRoutes = require('./complaintRead');
 const redisService = require('../services/redisService');
 const logger = require('../utils/logger');
 const { sanitizeEmail } = require('../utils/sanitize');
@@ -322,5 +324,9 @@ router.use('/sender', senderCheckRoutes.browser);
 router.use('/sender-check', senderCheckRoutes.api);
 router.use('/reports', dmarcReportRoutes.browser);
 router.use('/dmarc-reports', dmarcReportRoutes.api);
+router.use('/bounces', bounceReadRoutes.browser);
+router.use('/bounce-read', bounceReadRoutes.api);
+router.use('/complaints', complaintReadRoutes.browser);
+router.use('/complaint-read', complaintReadRoutes.api);
 
 module.exports = router; 

@@ -121,6 +121,12 @@ const createOriginVerifier = (options = {}) => {
       // /reports/read and still has to come from the site.
       || req.path === '/dmarc-reports'
       || req.path.startsWith('/dmarc-reports/')
+      // Bounce Read API is a paid machine client. The free report stays on /bounces/report.
+      || req.path === '/bounce-read'
+      || req.path.startsWith('/bounce-read/')
+      // Complaint Read API is a paid machine client. The free report stays on /complaints/report.
+      || req.path === '/complaint-read'
+      || req.path.startsWith('/complaint-read/')
       || req.path === '/billing/webhook'
       || req.path === '/billing/return'
     ) {

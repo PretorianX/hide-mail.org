@@ -55,6 +55,14 @@ const PLAN_REQUIRED = {
     error: 'This key is not a DMARC Reports API key',
     code: 'REPORTS_PLAN_REQUIRED',
   },
+  bounce: {
+    error: 'This key is not a Bounce Read API key',
+    code: 'BOUNCE_PLAN_REQUIRED',
+  },
+  complaint: {
+    error: 'This key is not a Complaint Read API key',
+    code: 'COMPLAINT_PLAN_REQUIRED',
+  },
 };
 
 const requireLicenseType = (type) => (req, res, next) => {

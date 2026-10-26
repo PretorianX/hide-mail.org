@@ -11,6 +11,8 @@ const USD_KEYS = {
   grade: { monthly: 'gradeUsd' },
   sender: { monthly: 'senderUsd' },
   reports: { monthly: 'reportsUsd' },
+  bounce: { monthly: 'bounceUsd' },
+  complaint: { monthly: 'complaintUsd' },
 };
 
 const usdPrice = (type, plan) => {

@@ -180,4 +180,10 @@ describe('dmarcReportService', () => {
     expect(report.verdict).toBe('Quiet');
     expect(JSON.stringify(report)).not.toContain('dmarc@yahoo.com');
   });
+
+  it('rejects a document nested deeper than a DMARC report', async () => {
+    const nested = `${'<wrap>'.repeat(40)}<feedback/>${'</wrap>'.repeat(40)}`;
+    await expect(readReport(nested)).rejects.toBeInstanceOf(DmarcReportError);
+    await expect(readReport(nested)).rejects.toMatchObject({ code: 'REPORT_UNREADABLE' });
+  });
 });

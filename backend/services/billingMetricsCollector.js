@@ -28,6 +28,8 @@ const TRACKED_PLANS = [
   { type: 'grade', plan: 'monthly' },
   { type: 'sender', plan: 'monthly' },
   { type: 'reports', plan: 'monthly' },
+  { type: 'bounce', plan: 'monthly' },
+  { type: 'complaint', plan: 'monthly' },
 ];
 
 const TRACKED_ORDER_STATUSES = ['pending', 'paid'];

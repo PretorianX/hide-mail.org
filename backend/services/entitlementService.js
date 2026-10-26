@@ -8,6 +8,8 @@ const planTypeOf = (license) => license.planType || license.type;
 const toolFlags = (active) => ({
   senderApi: active === 'sender',
   reportsApi: active === 'reports',
+  bounceApi: active === 'bounce',
+  complaintApi: active === 'complaint',
 });
 
 const inboxFree = (active) => ({
@@ -56,6 +58,16 @@ const reportsEntitlements = () => ({
   planType: 'reports',
 });
 
+const bounceEntitlements = () => ({
+  ...inboxFree('bounce'),
+  planType: 'bounce',
+});
+
+const complaintEntitlements = () => ({
+  ...inboxFree('complaint'),
+  planType: 'complaint',
+});
+
 const getEntitlements = (license) => {
   if (!licenseService.isActive(license)) {
     return freeEntitlements();
@@ -68,6 +80,12 @@ const getEntitlements = (license) => {
   }
   if (planTypeOf(license) === 'reports') {
     return reportsEntitlements();
+  }
+  if (planTypeOf(license) === 'bounce') {
+    return bounceEntitlements();
+  }
+  if (planTypeOf(license) === 'complaint') {
+    return complaintEntitlements();
   }
   return paidEntitlements(planTypeOf(license));
 };
@@ -84,6 +102,8 @@ const describeTiers = () => ({
   grade: gradeEntitlements(),
   sender: senderEntitlements(),
   reports: reportsEntitlements(),
+  bounce: bounceEntitlements(),
+  complaint: complaintEntitlements(),
   freeExtensionSeconds: config.emailExtensionSeconds,
   premiumDomainCount: config.premiumDomains.length,
   apiKeyTtlSeconds: config.billing.apiKeyTtlSeconds,

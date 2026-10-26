@@ -73,8 +73,8 @@ const isActive = (license) => {
   return license.expiresAt > Date.now();
 };
 
-const LICENSE_TYPES = new Set(['pro', 'api', 'grade', 'sender', 'reports']);
-const API_KEY_TYPES = new Set(['api', 'grade', 'sender', 'reports']);
+const LICENSE_TYPES = new Set(['pro', 'api', 'grade', 'sender', 'reports', 'bounce', 'complaint']);
+const API_KEY_TYPES = new Set(['api', 'grade', 'sender', 'reports', 'bounce', 'complaint']);
 
 const canIssueApiKey = (type) => API_KEY_TYPES.has(type);
 
@@ -193,7 +193,7 @@ const revokeByPayment = async ({ orderReference, recToken }) => {
 const createApiKey = async (licenseKey) => {
   const license = await getLicense(licenseKey);
   if (!isActive(license) || !API_KEY_TYPES.has(license.type)) {
-    throw new Error('API keys can only be issued for an active QA, Mail Grade, Sender Check, or DMARC Reports license');
+    throw new Error('API keys can only be issued for an active QA, Mail Grade, Sender Check, DMARC Reports, Bounce Read, or Complaint Read license');
   }
   const apiKey = generateApiKey();
   const licenseRemainingSeconds = Math.max(1, Math.ceil((license.expiresAt - Date.now()) / 1000));

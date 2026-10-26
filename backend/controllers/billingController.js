@@ -53,7 +53,7 @@ const checkout = async (req, res, next) => {
 
     const plan = req.body?.plan;
     const requested = req.body?.type;
-    const type = requested === 'api' || requested === 'grade' || requested === 'sender' || requested === 'reports'
+    const type = ['api', 'grade', 'sender', 'reports', 'bounce', 'complaint'].includes(requested)
       ? requested
       : 'pro';
 
@@ -65,6 +65,8 @@ const checkout = async (req, res, next) => {
         grade: 'Mail Grade is a monthly plan',
         sender: 'Sender Check is a monthly plan',
         reports: 'DMARC Reports is a monthly plan',
+        bounce: 'Bounce Read is a monthly plan',
+        complaint: 'Complaint Read is a monthly plan',
         pro: 'plan must be monthly or yearly',
       };
       return res.status(400).json({
@@ -296,7 +298,13 @@ const customerReturn = async (req, res, next) => {
     const { orderReference } = req.query || {};
     if (typeof orderReference === 'string' && orderReference) {
       const order = await orderService.getOrder(orderReference);
-      const returnPath = { grade: '/grade', sender: '/sender', reports: '/reports' }[order?.type];
+      const returnPath = {
+        grade: '/grade',
+        sender: '/sender',
+        reports: '/reports',
+        bounce: '/bounces',
+        complaint: '/complaints',
+      }[order?.type];
       if (returnPath) {
         target.pathname = returnPath;
         target.search = '';
@@ -355,7 +363,7 @@ const issueApiKey = async (req, res, next) => {
     if (!licenseService.canIssueApiKey(license.type)) {
       return res.status(403).json({
         success: false,
-        error: 'API keys are only issued for the QA API, Mail Grade, Sender Check, or DMARC Reports plan',
+        error: 'API keys are only issued for the QA API, Mail Grade, Sender Check, DMARC Reports, Bounce Read, or Complaint Read plan',
         code: 'API_PLAN_REQUIRED',
       });
     }

@@ -220,6 +220,36 @@ describe('wayforpayService', () => {
       expect(payload.productPrice).toEqual([620]);
       expect(() => wayforpayService.resolveProduct('reports', 'yearly')).toThrow(/unsupported reports plan/i);
     });
+
+    it('names the Bounce Read product on its own monthly tariff', () => {
+      const payload = wayforpayService.buildCheckoutPayload({
+        type: 'bounce',
+        plan: 'monthly',
+        orderReference: 'bounce-monthly-test',
+        orderDate: 1700000000,
+        dateNext: '18.09.2026',
+        amount: 740,
+      });
+
+      expect(payload.productName).toEqual(['Bounce Read API Monthly']);
+      expect(payload.productPrice).toEqual([740]);
+      expect(() => wayforpayService.resolveProduct('bounce', 'yearly')).toThrow(/unsupported bounce plan/i);
+    });
+
+    it('names the Complaint Read product on its own monthly tariff', () => {
+      const payload = wayforpayService.buildCheckoutPayload({
+        type: 'complaint',
+        plan: 'monthly',
+        orderReference: 'complaint-monthly-test',
+        orderDate: 1700000000,
+        dateNext: '18.09.2026',
+        amount: 870,
+      });
+
+      expect(payload.productName).toEqual(['Complaint Read API Monthly']);
+      expect(payload.productPrice).toEqual([870]);
+      expect(() => wayforpayService.resolveProduct('complaint', 'yearly')).toThrow(/unsupported complaint plan/i);
+    });
   });
 
   describe('classifyTransactionStatus', () => {
