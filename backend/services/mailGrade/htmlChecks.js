@@ -148,13 +148,6 @@ const buildHtmlFindings = ({ html, text }) => {
     push(
       findings,
       'warn',
-      'link_shortener',
-      'URL shortener used',
-      'Shortened links hide the real destination and often hurt inbox placement.'
-    );
-    push(
-      findings,
-      'warn',
       'links_shortener',
       'Public URL shortener detected',
       `Links use public shorteners (${shortenerLinks.slice(0, 3).join(', ')}), which are heavily penalized by Spamhaus DBL and Gmail filters.`,

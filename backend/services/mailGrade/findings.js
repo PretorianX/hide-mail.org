@@ -180,16 +180,6 @@ const buildFindings = ({ parsed, source }) => {
         'Most of the subject is uppercase.'
       );
     }
-    if (isSubjectAllCaps(subject)) {
-      push(
-        findings,
-        'warn',
-        'subject_all_caps',
-        'Subject is in all-caps',
-        'At least 80% of the subject letters are uppercase, which triggers spam filters.',
-        5
-      );
-    }
     if (/[!?]{2,}/.test(subject) || (subject.match(/!/g) || []).length > 2) {
       push(
         findings,

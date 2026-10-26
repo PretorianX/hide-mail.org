@@ -42,7 +42,7 @@ const SAMPLE_EMAIL = [
   '--hm-boundary-42--',
 ].join('\n');
 
-const MAX_UPLOAD_BYTES = 256 * 1024;
+const MAX_UPLOAD_BYTES = 64 * 1024;
 
 const readFileAsText = (file) => new Promise((resolve, reject) => {
   if (typeof file.text === 'function') {
@@ -112,7 +112,7 @@ const Grade = () => {
     if (!file) return;
     setError(null);
     if (file.size > MAX_UPLOAD_BYTES) {
-      setError('That file exceeds the 256 KB limit.');
+      setError('That file exceeds the 64 KB limit.');
       return;
     }
     try {
@@ -163,7 +163,7 @@ const Grade = () => {
   };
 
   const onCopyCurl = () => {
-    const payload = JSON.stringify({ raw: source || 'From: Ada <ada@example.com>\nSubject: Hello\n\nHi' });
+    const payload = JSON.stringify({ source: source || 'From: Ada <ada@example.com>\nSubject: Hello\n\nHi' });
     const snippet = `curl -X POST https://hide-mail.org/api/mail-grade \\\n  -H "X-API-Key: hm_live_..." \\\n  -H "Content-Type: application/json" \\\n  -d '${payload.replace(/'/g, "'\\''")}'`;
     copyText(snippet, 'curl');
   };

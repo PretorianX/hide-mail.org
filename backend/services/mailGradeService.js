@@ -189,7 +189,9 @@ const gradeEmail = async (source, options = {}) => {
   const dkimAligned = Boolean(
     dkimMeta.domain
     && fromDomain
-    && (dkimMeta.domain === fromDomain || dkimMeta.domain.endsWith(`.${fromDomain}`))
+    && (dkimMeta.domain === fromDomain
+      || dkimMeta.domain.endsWith(`.${fromDomain}`)
+      || fromDomain.endsWith(`.${dkimMeta.domain}`))
   );
 
   const allLinks = [...new Set(
@@ -203,6 +205,8 @@ const gradeEmail = async (source, options = {}) => {
   const hasTextPart = /content-type:\s*text\/plain/i.test(source) || Boolean(textStr.trim() && !htmlStr.trim());
   const hasHtmlPart = Boolean(htmlStr.trim()) || /content-type:\s*text\/html/i.test(source);
   const imageCount = (htmlStr.match(/<img\b/gi) || []).length;
+  const imagesWithAlt = (htmlStr.match(/<img\b[^>]*\balt\s*=\s*["'][^"']*["'][^>]*>/gi) || []).length;
+  const imagesMissingAlt = Math.max(0, imageCount - imagesWithAlt);
   const listUnsubscribePresent = /^list-unsubscribe\s*:/im.test(source)
     || Boolean(parsed.headers && parsed.headers.get('list') && parsed.headers.get('list').unsubscribe);
   const listUnsubscribeOneClick = /^list-unsubscribe-post\s*:[^\r\n]*list-unsubscribe=one-click/im.test(source);
@@ -237,23 +241,29 @@ const gradeEmail = async (source, options = {}) => {
       contentType,
       sizeBytes: Buffer.byteLength(source, 'utf8'),
       receivedHops,
+      sendingIp: clientIp,
       clientIp,
       receivedIps: clientIps,
     },
     authentication: {
       spf: {
         status: authStatusOf('spf'),
+        domain: fromDomain || null,
+        ip: clientIp,
         clientIp,
       },
       dkim: {
         status: authStatusOf('dkim'),
         present: dkimMeta.present,
+        signingDomain: dkimMeta.domain,
         domain: dkimMeta.domain,
         selector: dkimMeta.selector,
         aligned: dkimAligned,
       },
       dmarc: {
         status: authStatusOf('dmarc'),
+        policy: null,
+        domain: fromDomain || null,
         fromDomain: fromDomain || null,
       },
       arc,
@@ -267,15 +277,18 @@ const gradeEmail = async (source, options = {}) => {
     deliverability: {
       hasTextPart,
       hasHtmlPart,
+      plainTextBytes: Buffer.byteLength(textStr, 'utf8'),
       textBytes: Buffer.byteLength(textStr, 'utf8'),
       htmlBytes: Buffer.byteLength(htmlStr, 'utf8'),
       totalLinks: allLinks.length,
       httpsLinks,
       httpLinks,
+      uniqueLinkDomains: linkHosts,
       uniqueHosts: linkHosts,
       shortenerLinks,
       punycodeDomains,
       imageCount,
+      imagesMissingAlt,
       attachmentCount: Array.isArray(parsed.attachments) ? parsed.attachments.length : 0,
     },
     findings: findings.map(({ id, severity, title, detail, penalty }) => ({
