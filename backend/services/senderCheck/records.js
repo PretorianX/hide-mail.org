@@ -31,21 +31,25 @@ const isNullExchange = (exchange) => {
   return host === '' || host === '.';
 };
 
+const matchesHostSuffix = (hosts, suffixes) => hosts.some((rawHost) => {
+  const host = String(rawHost || '').toLowerCase().replace(/\.$/, '');
+  return suffixes.some((suffix) => host === suffix || host.endsWith(`.${suffix}`));
+});
+
 const detectMailProvider = (hosts) => {
-  const joined = hosts.join(' ').toLowerCase();
-  if (!joined) return null;
-  if (/google\.com|googlemail\.com/.test(joined)) return 'Google Workspace';
-  if (/outlook\.com/.test(joined)) return 'Microsoft 365';
-  if (/protonmail\.ch|pm\.me/.test(joined)) return 'Proton Mail';
-  if (/cloudflare\.net/.test(joined)) return 'Cloudflare Email Routing';
-  if (/messagingengine\.com/.test(joined)) return 'Fastmail';
-  if (/amazonses\.com|awsapps\.com/.test(joined)) return 'Amazon SES';
-  if (/pphosted\.com/.test(joined)) return 'Proofpoint';
-  if (/mimecast\.com/.test(joined)) return 'Mimecast';
-  if (/zoho\.(com|eu|in)/.test(joined)) return 'Zoho Mail';
-  if (/registrar-servers\.com|privateemail\.com/.test(joined)) return 'Namecheap Private Email';
-  if (/yahoodns\.net/.test(joined)) return 'Yahoo Mail';
-  if (/icloud\.com/.test(joined)) return 'Apple iCloud Mail';
+  if (!Array.isArray(hosts) || hosts.length === 0) return null;
+  if (matchesHostSuffix(hosts, ['google.com', 'googlemail.com'])) return 'Google Workspace';
+  if (matchesHostSuffix(hosts, ['outlook.com'])) return 'Microsoft 365';
+  if (matchesHostSuffix(hosts, ['protonmail.ch', 'pm.me'])) return 'Proton Mail';
+  if (matchesHostSuffix(hosts, ['cloudflare.net'])) return 'Cloudflare Email Routing';
+  if (matchesHostSuffix(hosts, ['messagingengine.com'])) return 'Fastmail';
+  if (matchesHostSuffix(hosts, ['amazonses.com', 'awsapps.com'])) return 'Amazon SES';
+  if (matchesHostSuffix(hosts, ['pphosted.com'])) return 'Proofpoint';
+  if (matchesHostSuffix(hosts, ['mimecast.com'])) return 'Mimecast';
+  if (matchesHostSuffix(hosts, ['zoho.com', 'zoho.eu', 'zoho.in'])) return 'Zoho Mail';
+  if (matchesHostSuffix(hosts, ['registrar-servers.com', 'privateemail.com'])) return 'Namecheap Private Email';
+  if (matchesHostSuffix(hosts, ['yahoodns.net'])) return 'Yahoo Mail';
+  if (matchesHostSuffix(hosts, ['icloud.com'])) return 'Apple iCloud Mail';
   return 'Custom / Self-hosted';
 };
 
