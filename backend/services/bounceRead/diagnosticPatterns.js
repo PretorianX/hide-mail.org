@@ -82,31 +82,31 @@ const REASON_PATTERNS = [
 const ISP_HINTS = [
   {
     ispHint: 'Gmail',
-    patterns: [/google\.com/i, /gmail-smtp-in/i, /googlemail\.com/i, /gsmtp/i],
+    tokens: ['google.com', 'gmail-smtp-in', 'googlemail.com', 'gsmtp'],
   },
   {
     ispHint: 'Microsoft 365 / Outlook',
-    patterns: [/outlook\.com/i, /protection\.outlook\.com/i, /hotmail\.com/i, /office365\.com/i],
+    tokens: ['outlook.com', 'protection.outlook.com', 'hotmail.com', 'office365.com'],
   },
   {
     ispHint: 'Yahoo / AOL',
-    patterns: [/yahoodns\.net/i, /yahoo\.com/i, /aol\.com/i, /\[tss04\]/i],
+    tokens: ['yahoodns.net', 'yahoo.com', 'aol.com', '[tss04]'],
   },
   {
     ispHint: 'Proofpoint',
-    patterns: [/pphosted\.com/i, /proofpoint/i],
+    tokens: ['pphosted.com', 'proofpoint'],
   },
   {
     ispHint: 'Mimecast',
-    patterns: [/mimecast\.com/i, /mimecast/i],
+    tokens: ['mimecast.com', 'mimecast'],
   },
   {
     ispHint: 'Barracuda',
-    patterns: [/barracudanetworks\.com/i, /barracuda/i],
+    tokens: ['barracudanetworks.com', 'barracuda'],
   },
   {
     ispHint: 'Amazon SES',
-    patterns: [/amazonaws\.com/i, /amazonses\.com/i],
+    tokens: ['amazonaws.com', 'amazonses.com'],
   },
 ];
 
@@ -173,8 +173,9 @@ const matchDiagnostic = ({ cleanDiagnostic = '', remoteMta = '', reportingMta = 
   }
 
   let ispHint = null;
+  const lowerCombined = combined.toLowerCase();
   for (const entry of ISP_HINTS) {
-    if (entry.patterns.some((regex) => regex.test(combined))) {
+    if (entry.tokens.some((token) => lowerCombined.includes(token))) {
       ispHint = entry.ispHint;
       break;
     }
