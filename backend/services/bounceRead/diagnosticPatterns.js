@@ -43,7 +43,6 @@ const REASON_PATTERNS = [
     patterns: [
       /rate\s+limit/i,
       /too\s+many\s+connections/i,
-      /try\s+again\s+later/i,
       /421\s+4\.7\.0/i,
       /throttled/i,
       /receiving\s+at\s+a\s+rate/i,
