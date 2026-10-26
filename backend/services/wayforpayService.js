@@ -45,6 +45,12 @@ const PRODUCTS = {
       regularMode: 'monthly',
     },
   },
+  sender: {
+    monthly: {
+      productName: 'Sender Check API Monthly',
+      regularMode: 'monthly',
+    },
+  },
 };
 
 const resolveProduct = (type, plan) => {

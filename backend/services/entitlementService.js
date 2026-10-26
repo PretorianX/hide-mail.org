@@ -11,6 +11,7 @@ const freeEntitlements = () => ({
   premiumDomains: false,
   apiAccess: false,
   gradeApi: false,
+  senderApi: false,
   forwardingLimit: config.forwarding.freeLimit,
   mailboxTtlSeconds: config.emailExpirationSeconds,
   mailboxTtlOptions: [],
@@ -23,6 +24,7 @@ const paidEntitlements = (planType) => ({
   premiumDomains: true,
   apiAccess: planType === 'api',
   gradeApi: false,
+  senderApi: false,
   forwardingLimit: config.forwarding.proLimit,
   mailboxTtlSeconds: config.pro.defaultMailboxTtlSeconds,
   mailboxTtlOptions: mailboxTtlOptions(),
@@ -35,10 +37,24 @@ const gradeEntitlements = () => ({
   premiumDomains: false,
   apiAccess: false,
   gradeApi: true,
+  senderApi: false,
   forwardingLimit: config.forwarding.freeLimit,
   mailboxTtlSeconds: config.emailExpirationSeconds,
   mailboxTtlOptions: [],
   planType: 'grade',
+});
+
+const senderEntitlements = () => ({
+  ads: true,
+  customAlias: false,
+  premiumDomains: false,
+  apiAccess: false,
+  gradeApi: false,
+  senderApi: true,
+  forwardingLimit: config.forwarding.freeLimit,
+  mailboxTtlSeconds: config.emailExpirationSeconds,
+  mailboxTtlOptions: [],
+  planType: 'sender',
 });
 
 const getEntitlements = (license) => {
@@ -47,6 +63,9 @@ const getEntitlements = (license) => {
   }
   if (planTypeOf(license) === 'grade') {
     return gradeEntitlements();
+  }
+  if (planTypeOf(license) === 'sender') {
+    return senderEntitlements();
   }
   return paidEntitlements(planTypeOf(license));
 };
@@ -61,6 +80,7 @@ const describeTiers = () => ({
   pro: paidEntitlements('pro'),
   api: paidEntitlements('api'),
   grade: gradeEntitlements(),
+  sender: senderEntitlements(),
   freeExtensionSeconds: config.emailExtensionSeconds,
   premiumDomainCount: config.premiumDomains.length,
   apiKeyTtlSeconds: config.billing.apiKeyTtlSeconds,

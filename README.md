@@ -16,6 +16,7 @@ A temporary email service that provides disposable email addresses for privacy a
 - Optional Hide Mail Pro plan: no ads, longer mailbox lifetimes, custom aliases, premium domains, higher forwarding limits
 - Optional API plan for QA automation: create mailboxes, read messages, download attachments, register inbound webhooks
 - Mail Grade: paste a raw email and get a quality report, plus a separate Mail Grade API plan for scoring mail from a script
+- Sender Check: look up a domain's MX, SPF, and DMARC, plus a separate Sender Check API plan for checking domains from a script
 
 ## Quick Start
 
@@ -91,6 +92,7 @@ Key configuration options in `.env`:
 | `PRO_PRICE_MONTHLY_USD` / `PRO_PRICE_YEARLY_USD` | Pro list prices in USD; UAH charged is derived from WayForPay rates |
 | `API_PRICE_MONTHLY_USD` | API plan list price in USD |
 | `GRADE_PRICE_MONTHLY_USD` | Mail Grade API list price in USD. This plan only scores raw email |
+| `SENDER_PRICE_MONTHLY_USD` | Sender Check API list price in USD. This plan only looks up MX, SPF, and DMARC |
 | `FX_CACHE_SECONDS` / `FX_STALE_SECONDS` | Fresh FX cache TTL (default 2h) and maximum stale-cache age (default 24h) |
 | `PREMIUM_DOMAINS` | Pro-only domains; empty means Pro uses `VALID_DOMAINS` |
 
@@ -219,6 +221,29 @@ A QA mailbox key is rejected on that route, and a Mail Grade key cannot create m
 Buying Mail Grade does not remove ads or change inbox limits. Card checkout follows the same
 WayForPay pause as the other plans; while it is paused the page still grades mail for free.
 After a grade payment the browser returns to `/grade`.
+
+## Sender Check
+
+Sender Check tells you whether a domain publishes the DNS records receivers use to
+accept mail that claims to come from it. It is not a mailbox, and it does not grade
+a message. Open `/sender`, enter a domain, and Hide Mail returns three records:
+MX, SPF, and DMARC, plus a verdict of Ready, Gaps, or Blocked. The lookup is not stored.
+
+The report on the page is free. The paid offer is the Sender Check API, a monthly plan
+of its own (`SENDER_PRICE_MONTHLY_USD`, default $12):
+
+```bash
+curl -sS -H "Authorization: Bearer $SENDER_CHECK_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"domain":"example.com"}' \
+  https://hide-mail.org/api/sender-check
+```
+
+A QA mailbox key and a Mail Grade key are rejected on that route, and a Sender Check
+key cannot create mailboxes or grade mail. Buying Sender Check does not remove ads
+or change inbox limits. Card checkout follows the same WayForPay pause as the other
+plans; while it is paused the page still checks domains for free. After a Sender Check
+payment the browser returns to `/sender`.
 
 ## Attachments
 
