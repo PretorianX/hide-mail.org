@@ -35,6 +35,24 @@ describe('senderCheckService', () => {
     });
   });
 
+  it('accepts a domain under an internationalized top-level domain', async () => {
+    const report = await checkDomain('пример.рф', {
+      resolver: resolver({
+        mx: [{ exchange: 'mx.example', priority: 10 }],
+        txt: txt('v=spf1 -all'),
+        dmarc: txt('v=DMARC1; p=reject'),
+      }),
+    });
+
+    expect(report.domain).toBe('xn--e1afmkfd.xn--p1ai');
+  });
+
+  it('rejects a numeric top-level domain', async () => {
+    await expect(checkDomain('example.123', { resolver: {} })).rejects.toMatchObject({
+      code: 'DOMAIN_INVALID',
+    });
+  });
+
   it('rejects a URL instead of rewriting it into a domain', async () => {
     await expect(checkDomain('https://example.com/path', { resolver: {} })).rejects.toMatchObject({
       code: 'DOMAIN_INVALID',

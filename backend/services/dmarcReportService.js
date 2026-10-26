@@ -126,6 +126,11 @@ const readReport = async (xml) => {
   const aligned = sources.reduce((sum, source) => sum + (source.aligned ? source.count : 0), 0);
   const totals = { messages, aligned, failed: messages - aligned };
   const policy = required(textOf(published, 'p').toLowerCase(), 'policy');
+  const rawPercent = textOf(published, 'pct');
+  const percent = rawPercent === '' ? 100 : integerOf(rawPercent);
+  if (percent > 100) {
+    throw new DmarcReportError('REPORT_UNREADABLE', 'This report could not be read.');
+  }
   const report = {
     stored: false,
     orgName: required(textOf(metadata, 'org_name'), 'reporter'),
@@ -133,7 +138,7 @@ const readReport = async (xml) => {
     domain: required(textOf(published, 'domain').toLowerCase(), 'domain'),
     policy,
     subdomainPolicy: textOf(published, 'sp').toLowerCase() || null,
-    percent: textOf(published, 'pct') ? integerOf(textOf(published, 'pct')) : 100,
+    percent,
     begin,
     end,
     verdict: verdictFor(messages, aligned),

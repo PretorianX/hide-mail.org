@@ -6,7 +6,9 @@
 const { domainToASCII } = require('node:url');
 const { SenderCheckError } = require('./errors');
 
-const HOSTNAME = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9-]{2,63}$/;
+const LABEL = '(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)';
+const TLD = '(?:[a-z]{2,63}|xn--[a-z0-9](?:[a-z0-9-]{0,57}[a-z0-9])?)';
+const HOSTNAME = new RegExp(`^(?:${LABEL}\\.)+${TLD}$`);
 
 const normalizeDomain = (input) => {
   const raw = String(input ?? '').trim().toLowerCase();

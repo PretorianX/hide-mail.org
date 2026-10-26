@@ -181,6 +181,18 @@ describe('dmarcReportService', () => {
     expect(JSON.stringify(report)).not.toContain('dmarc@yahoo.com');
   });
 
+  it('defaults a missing pct to 100', async () => {
+    const xml = feedback('').replace('<pct>100</pct>', '');
+    const report = await readReport(xml);
+    expect(report.percent).toBe(100);
+    expect(report.verdict).toBe('Quiet');
+  });
+
+  it('rejects a pct above 100', async () => {
+    const xml = feedback('').replace('<pct>100</pct>', '<pct>150</pct>');
+    await expect(readReport(xml)).rejects.toMatchObject({ code: 'REPORT_UNREADABLE' });
+  });
+
   it('rejects a document nested deeper than a DMARC report', async () => {
     const nested = `${'<wrap>'.repeat(40)}<feedback/>${'</wrap>'.repeat(40)}`;
     await expect(readReport(nested)).rejects.toBeInstanceOf(DmarcReportError);
