@@ -693,7 +693,7 @@ const buildRecommendations = (domain, records, extras = {}) => {
         detail: 'RFC 7208 §3.2 requires at most one v=spf1 TXT record per domain. Combine all include: and ip4:/ip6: mechanisms into a single record.',
         suggestedRecord: null,
       });
-    } else if (spf.parsed?.allQualifier === '+all' || spf.parsed?.allQualifier === '?all' || !spf.parsed?.allQualifier) {
+    } else if (spf.parsed?.allQualifier === '+all' || spf.parsed?.allQualifier === '?all') {
       recommendations.push({
         id: 'spf_weak_all',
         severity: 'high',
@@ -743,7 +743,7 @@ const buildRecommendations = (domain, records, extras = {}) => {
     }
   }
 
-  const weakDkim = dkimSelectors.find((s) => s.status === 'warn' || (s.status === 'fail' && s.record));
+  const weakDkim = dkimSelectors.find((s) => s.status === 'warn' || (s.status === 'fail' && s.record && !s.revoked));
   if (weakDkim) {
     recommendations.push({
       id: 'dkim_weak_key',
