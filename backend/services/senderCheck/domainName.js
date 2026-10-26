@@ -6,7 +6,7 @@
 const { domainToASCII } = require('node:url');
 const { SenderCheckError } = require('./errors');
 
-const HOSTNAME = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
+const HOSTNAME = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9-]{2,63}$/;
 
 const normalizeDomain = (input) => {
   const raw = String(input ?? '').trim().toLowerCase();

@@ -133,7 +133,7 @@ const readReport = async (xml) => {
     domain: required(textOf(published, 'domain').toLowerCase(), 'domain'),
     policy,
     subdomainPolicy: textOf(published, 'sp').toLowerCase() || null,
-    percent: integerOf(required(textOf(published, 'pct'), 'percent')),
+    percent: textOf(published, 'pct') ? integerOf(textOf(published, 'pct')) : 100,
     begin,
     end,
     verdict: verdictFor(messages, aligned),
