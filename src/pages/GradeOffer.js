@@ -1,6 +1,23 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router';
 import GradeService from '../services/GradeService';
 import LicenseService from '../services/LicenseService';
+
+const CURL_SNIPPET = `curl -X POST https://hide-mail.org/api/mail-grade \\
+  -H "Authorization: Bearer hm_api_YOUR_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{"source":"From: Ada <ada@example.com>\\r\\nSubject: Hello\\r\\n\\r\\nBody"}'`;
+
+const MCP_SNIPPET = `{
+  "mcpServers": {
+    "hide-mail": {
+      "url": "https://hide-mail.org/api/mcp",
+      "headers": {
+        "X-API-Key": "hm_live_..."
+      }
+    }
+  }
+}`;
 
 const HANDOFF_POLL_MS = 1000;
 const HANDOFF_POLL_ATTEMPTS = 18;
@@ -89,10 +106,10 @@ const GradeOffer = () => {
         return;
       }
       sessionStorage.removeItem(HANDOFF_STORAGE_KEY);
-      if (!paid?.licenseKey || paid.data?.type !== 'grade') {
+      if (!paid?.licenseKey || (paid.data?.type !== 'grade' && paid.data?.type !== 'suite')) {
         setConfirming(false);
         setError(paid?.licenseKey
-          ? 'That payment is not a Mail Grade plan.'
+          ? 'That payment is not a Mail Grade or Deliverability Suite plan.'
           : 'Payment is still confirming. Refresh this page in a moment.');
         return;
       }
@@ -161,15 +178,27 @@ const GradeOffer = () => {
 
   return (
     <section className="grade-offer" aria-labelledby="grade-offer-title">
-      <h2 id="grade-offer-title">Mail Grade API</h2>
+      <h2 id="grade-offer-title">Mail Grade API &amp; Deliverability Suite</h2>
       <p>
-        Score mail from a script. <code>POST /api/mail-grade</code> with a Mail Grade key.
-        A QA mailbox key does not work here, and this plan does not change the inbox.
+        Score raw MIME messages from your CI/CD pipeline or staging environment via{' '}
+        <code>POST /api/mail-grade</code> (120 req/min, max 64 KB). Authenticate with a{' '}
+        <strong>Deliverability Suite</strong> key ($19.99/mo — unlocks all 5 deliverability APIs,
+        QA mailboxes, and Pro inbox with one key) or a standalone Mail Grade key.{' '}
+        <Link to="/pro">Compare all 4 plans</Link>.
       </p>
+      <pre className="tool-curl-preview" data-testid="grade-curl-preview">
+        <code>{CURL_SNIPPET}</code>
+      </pre>
+      <div className="tool-mcp-onboarding">
+        <p className="tool-mcp-label">Connect via MCP (Claude / Cursor / Antigravity)</p>
+        <pre className="tool-mcp-preview" data-testid="mcp-config-snippet">
+          <code>{MCP_SNIPPET}</code>
+        </pre>
+      </div>
       {confirming ? <p role="status">Confirming payment…</p> : null}
       {offer ? (
         <p className="grade-offer-price" data-testid="grade-price">
-          ${offer.usd} per month
+          ${offer.usd} per month <span className="tool-suite-note">· or $19.99/mo for the full Deliverability Suite</span>
         </p>
       ) : null}
       {offerError ? <p role="alert">{offerError}</p> : null}
@@ -185,7 +214,7 @@ const GradeOffer = () => {
       </button>
       {license ? (
         <div data-testid="grade-license">
-          <p>Mail Grade is active for this browser.</p>
+          <p>Mail Grade is active for this browser ({license.type === 'suite' ? 'Deliverability Suite' : 'Mail Grade'}).</p>
           <button type="button" onClick={handleIssue} disabled={busy}>
             {apiKey ? 'Replace API key' : 'Issue API key'}
           </button>
@@ -193,7 +222,7 @@ const GradeOffer = () => {
         </div>
       ) : (
         <form className="grade-restore" onSubmit={handleRestore}>
-          <label htmlFor="grade-license-key">Already bought? Paste your license key</label>
+          <label htmlFor="grade-license-key">Already bought? Paste your license key (Suite or Mail Grade)</label>
           <input
             id="grade-license-key"
             value={restoreKey}

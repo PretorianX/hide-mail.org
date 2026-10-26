@@ -125,6 +125,7 @@ const config = {
     monthlyUsd: parsePositiveNumber(process.env.PRO_PRICE_MONTHLY_USD, '3.49', 'PRO_PRICE_MONTHLY_USD'),
     yearlyUsd: parsePositiveNumber(process.env.PRO_PRICE_YEARLY_USD, '24.99', 'PRO_PRICE_YEARLY_USD'),
     apiUsd: parsePositiveNumber(process.env.API_PRICE_MONTHLY_USD, '7.99', 'API_PRICE_MONTHLY_USD'),
+    suiteUsd: parsePositiveNumber(process.env.SUITE_PRICE_MONTHLY_USD, '19.99', 'SUITE_PRICE_MONTHLY_USD'),
     gradeUsd: parsePositiveNumber(process.env.GRADE_PRICE_MONTHLY_USD, '9', 'GRADE_PRICE_MONTHLY_USD'),
     senderUsd: parsePositiveNumber(process.env.SENDER_PRICE_MONTHLY_USD, '12', 'SENDER_PRICE_MONTHLY_USD'),
     reportsUsd: parsePositiveNumber(process.env.REPORTS_PRICE_MONTHLY_USD, '15', 'REPORTS_PRICE_MONTHLY_USD'),

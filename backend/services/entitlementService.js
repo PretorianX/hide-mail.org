@@ -33,14 +33,19 @@ const paidEntitlements = (planType) => ({
   ads: false,
   customAlias: true,
   premiumDomains: true,
-  apiAccess: planType === 'api',
-  gradeApi: false,
-  ...toolFlags(null),
+  apiAccess: planType === 'api' || planType === 'suite',
+  gradeApi: planType === 'suite',
+  senderApi: planType === 'suite',
+  reportsApi: planType === 'suite',
+  bounceApi: planType === 'suite',
+  complaintApi: planType === 'suite',
   forwardingLimit: config.forwarding.proLimit,
   mailboxTtlSeconds: config.pro.defaultMailboxTtlSeconds,
   mailboxTtlOptions: mailboxTtlOptions(),
   planType,
 });
+
+const suiteEntitlements = () => paidEntitlements('suite');
 
 const gradeEntitlements = () => ({
   ...inboxFree(null),
@@ -99,6 +104,7 @@ const describeTiers = () => ({
   free: freeEntitlements(),
   pro: paidEntitlements('pro'),
   api: paidEntitlements('api'),
+  suite: suiteEntitlements(),
   grade: gradeEntitlements(),
   sender: senderEntitlements(),
   reports: reportsEntitlements(),

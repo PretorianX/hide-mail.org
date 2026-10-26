@@ -25,6 +25,7 @@ const TRACKED_PLANS = [
   { type: 'pro', plan: 'monthly' },
   { type: 'pro', plan: 'yearly' },
   { type: 'api', plan: 'monthly' },
+  { type: 'suite', plan: 'monthly' },
   { type: 'grade', plan: 'monthly' },
   { type: 'sender', plan: 'monthly' },
   { type: 'reports', plan: 'monthly' },

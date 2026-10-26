@@ -8,6 +8,7 @@ const config = require('../config/config');
 const USD_KEYS = {
   pro: { monthly: 'monthlyUsd', yearly: 'yearlyUsd' },
   api: { monthly: 'apiUsd' },
+  suite: { monthly: 'suiteUsd' },
   grade: { monthly: 'gradeUsd' },
   sender: { monthly: 'senderUsd' },
   reports: { monthly: 'reportsUsd' },

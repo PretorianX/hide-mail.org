@@ -39,6 +39,12 @@ const PRODUCTS = {
       regularMode: 'monthly',
     },
   },
+  suite: {
+    monthly: {
+      productName: 'Hide Mail Deliverability Suite Monthly',
+      regularMode: 'monthly',
+    },
+  },
   grade: {
     monthly: {
       productName: 'Mail Grade API Monthly',
