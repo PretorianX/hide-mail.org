@@ -434,6 +434,56 @@ describe('dmarcReportService', () => {
       expect(unresolved).toHaveLength(ipCount - MAX_PTR_UNIQUE_IPS);
     });
 
+    it('spends the PTR budget on high-volume public IPs before skippable or low-volume ones', async () => {
+      const lowVolumePublic = Array.from({ length: MAX_PTR_UNIQUE_IPS }, (_, i) => record({
+        ip: `203.0.113.${(i % 200) + 1}`,
+        count: 1,
+        dkim: 'pass',
+        spf: 'pass',
+        disposition: 'none',
+      }));
+      // Document order puts skippable + many low-volume IPs first; the high-volume
+      // public sender appears last and must still win a PTR slot.
+      const xml = feedback([
+        record({
+          ip: '169.254.10.20',
+          count: 500,
+          dkim: 'pass',
+          spf: 'pass',
+          disposition: 'none',
+        }),
+        record({
+          ip: '2001:db8::9',
+          count: 500,
+          dkim: 'pass',
+          spf: 'pass',
+          disposition: 'none',
+        }),
+        ...lowVolumePublic,
+        record({
+          ip: '8.8.8.8',
+          count: 999,
+          dkim: 'pass',
+          spf: 'pass',
+          disposition: 'none',
+        }),
+      ].join(''));
+
+      const fakeDns = {
+        reverse: jest.fn(async (ip) => [`host-${ip.replace(/[.:]/g, '-')}.example.com`]),
+      };
+
+      const report = await readReport(xml, { dns: fakeDns });
+      const byIp = Object.fromEntries(report.sources.map((s) => [s.sourceIp, s]));
+
+      expect(fakeDns.reverse).toHaveBeenCalledWith('8.8.8.8');
+      expect(fakeDns.reverse).not.toHaveBeenCalledWith('169.254.10.20');
+      expect(fakeDns.reverse).not.toHaveBeenCalledWith('2001:db8::9');
+      expect(byIp['8.8.8.8'].ptrHost).toBe('host-8-8-8-8.example.com');
+      expect(byIp['169.254.10.20'].ptrHost).toBeNull();
+      expect(byIp['2001:db8::9'].ptrHost).toBeNull();
+    });
+
     it('skips PTR for link-local, CGNAT, and IPv6 source IPs', async () => {
       const xml = feedback([
         record({

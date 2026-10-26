@@ -462,8 +462,25 @@ const readReport = async (input, options = {}) => {
     throw new DmarcReportError('REPORT_TOO_LARGE', 'That report is too large.');
   }
 
-  const uniqueIps = [...new Set(sources.map((s) => s.sourceIp))];
-  const ipsToResolve = uniqueIps.slice(0, MAX_PTR_UNIQUE_IPS);
+  const volumeByIp = new Map();
+  sources.forEach((source) => {
+    volumeByIp.set(source.sourceIp, (volumeByIp.get(source.sourceIp) || 0) + source.count);
+  });
+  // Spend the PTR budget on resolvable, high-volume IPs first (skip CGNAT/link-local/IPv6
+  // before slicing so they cannot crowd out public IPv4 senders).
+  const ipsToResolve = [...volumeByIp.entries()]
+    .filter(([ip]) => {
+      if (isAlwaysSkippedPtrIp(ip)) {
+        return false;
+      }
+      if (!options.dns && isNonRoutableIpv4(ip)) {
+        return false;
+      }
+      return true;
+    })
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, MAX_PTR_UNIQUE_IPS)
+    .map(([ip]) => ip);
   const ptrEntries = await mapWithConcurrency(
     ipsToResolve,
     PTR_CONCURRENCY,
