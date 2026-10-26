@@ -43,11 +43,13 @@ const passAuth = async () => ({
 
 const cleanDnsbl = async () => null;
 const noMx = async () => [];
+const noTxt = async () => [];
 
 const gradeOpts = {
   authenticateFn: passAuth,
   resolveDnsbl: cleanDnsbl,
   resolveMxIps: noMx,
+  resolveTxt: noTxt,
 };
 
 describe('mailGradeService', () => {
@@ -169,5 +171,79 @@ describe('mailGradeService', () => {
       'hidden_link_mismatch',
       'rbl_ip',
     ]));
+  });
+
+  it('flags all-caps subject, spam tokens, display-name domain spoofing, shortener links, and punycode domains', async () => {
+    const source = [
+      'Received: from mail.example.com ([203.0.113.10]) by mx.hide-mail.org',
+      'From: "ceo@bank.com" <attacker@example.net>',
+      'To: victim@example.org',
+      'Subject: URGENT: CLAIM YOUR $$$ REWARD NOW!!!',
+      'Date: Tue, 1 Mar 2026 12:00:00 +0000',
+      'Message-ID: <spoof@example.net>',
+      'MIME-Version: 1.0',
+      'Content-Type: text/html; charset=utf-8',
+      '',
+      '<p>Verify at <a href="https://rb.gy/short">short</a> or <a href="https://xn--pple-43d.com/login">apple</a></p>',
+      '',
+    ].join('\r\n');
+
+    const report = await gradeEmail(source, gradeOpts);
+    const byId = Object.fromEntries(report.findings.map((f) => [f.id, f]));
+
+    expect(byId.subject_all_caps).toMatchObject({ severity: 'warn', penalty: 5 });
+    expect(byId.subject_spam_tokens).toMatchObject({ severity: 'warn', penalty: 5 });
+    expect(byId.from_display_spoof).toMatchObject({ severity: 'fail', penalty: 15 });
+    expect(byId.links_shortener).toMatchObject({ severity: 'warn', penalty: 8 });
+    expect(byId.links_punycode).toMatchObject({ severity: 'warn', penalty: 8 });
+    expect(report.deliverability.shortenerLinks).toEqual(['https://rb.gy/short']);
+    expect(report.deliverability.punycodeDomains).toEqual(['xn--pple-43d.com']);
+  });
+
+  it('inspects ARC chain headers and queries BIMI and MTA-STS TXT records', async () => {
+    const source = [
+      'Received: from mail.example.com ([203.0.113.10]) by mx.hide-mail.org',
+      'ARC-Seal: i=2; a=rsa-sha256; cv=pass; d=forwarder.example; s=arc; b=xyz',
+      'ARC-Message-Signature: i=2; a=rsa-sha256; d=forwarder.example; s=arc; b=xyz',
+      'ARC-Authentication-Results: i=2; forwarder.example; arc=pass',
+      'ARC-Seal: i=1; a=rsa-sha256; cv=none; d=mx.example; s=arc; b=abc',
+      'ARC-Message-Signature: i=1; a=rsa-sha256; d=mx.example; s=arc; b=abc',
+      'ARC-Authentication-Results: i=1; mx.example; spf=pass',
+      'From: Newsletter <news@example.com>',
+      'To: reader@example.com',
+      'Subject: Your March update',
+      'Date: Tue, 1 Mar 2026 12:00:00 +0000',
+      'Message-ID: <march@example.com>',
+      '',
+      'Hello there.',
+      '',
+    ].join('\r\n');
+
+    const report = await gradeEmail(source, {
+      ...gradeOpts,
+      resolveTxt: async (host) => {
+        if (host === 'default._bimi.example.com') {
+          return [['v=BIMI1; l=https://example.com/logo.svg;']];
+        }
+        if (host === '_mta-sts.example.com') {
+          return [['v=STSv1; id=20260301;']];
+        }
+        return [];
+      },
+    });
+
+    expect(report.authentication.arc).toEqual({
+      present: true,
+      status: 'pass',
+      chainCount: 2,
+    });
+    expect(report.authentication.bimi).toEqual({
+      present: true,
+      record: 'v=BIMI1; l=https://example.com/logo.svg;',
+    });
+    expect(report.authentication.mtaSts).toEqual({
+      present: true,
+      record: 'v=STSv1; id=20260301;',
+    });
   });
 });

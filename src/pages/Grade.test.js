@@ -162,4 +162,97 @@ describe('Mail Grade page', () => {
     expect(screen.getByTestId('grade-stamp')).toHaveTextContent('—');
     expect(screen.queryByTestId('grade-result')).not.toBeInTheDocument();
   });
+
+  test('loads a sample email and renders envelope, authentication matrix, and MIME inventory', async () => {
+    GradeService.grade.mockResolvedValue({
+      score: 94,
+      grade: 'A',
+      summary: 'This message looks ready to send.',
+      stored: false,
+      envelope: {
+        from: 'Hide Mail Billing <billing@example.com>',
+        fromDomain: 'example.com',
+        returnPath: 'bounces@example.com',
+        replyTo: 'support@example.com',
+        subject: 'Your October invoice',
+        subjectLength: 20,
+        messageId: '<20261026120000.invoice-9812@example.com>',
+        contentType: 'multipart/alternative',
+        sizeBytes: 912,
+        sendingIp: '93.184.216.34',
+        receivedHops: 1,
+      },
+      authentication: {
+        spf: { status: 'pass', domain: 'example.com', ip: '93.184.216.34' },
+        dkim: { status: 'pass', signingDomain: 'example.com', selector: 's2026', aligned: true },
+        dmarc: { status: 'pass', policy: 'reject', domain: 'example.com' },
+        listUnsubscribe: { present: true, oneClick: true },
+      },
+      deliverability: {
+        plainTextBytes: 120,
+        htmlBytes: 280,
+        totalLinks: 1,
+        httpsLinks: 1,
+        httpLinks: 0,
+        uniqueLinkDomains: ['example.com'],
+        imageCount: 1,
+        imagesMissingAlt: 0,
+        attachmentCount: 0,
+      },
+      findings: [
+        {
+          id: 'from_present',
+          severity: 'pass',
+          category: 'headers',
+          penalty: 0,
+          title: 'From is present',
+          detail: 'From billing@example.com.',
+        },
+      ],
+    });
+    renderGrade();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Load sample' }));
+    expect(screen.getByLabelText('Raw email').value).toContain('Hide Mail Billing');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Grade this email' }));
+
+    expect(await screen.findByTestId('grade-envelope')).toHaveTextContent('93.184.216.34 (1 hop)');
+    expect(screen.getByTestId('grade-auth-matrix')).toHaveTextContent('RFC 8058 One-Click enabled');
+    expect(screen.getByTestId('grade-deliverability')).toHaveTextContent('1 total (1 HTTPS, 0 HTTP)');
+    expect(screen.getByTestId('grade-copy-json')).toBeInTheDocument();
+    expect(screen.getByTestId('grade-copy-curl')).toBeInTheDocument();
+  });
+
+  test('populates textarea when a valid .eml file is uploaded or dropped, and rejects files over 256 KB', async () => {
+    renderGrade();
+
+    const fileInput = screen.getByTestId('grade-file-input');
+    expect(fileInput).toHaveAttribute('accept', '.eml,.txt,message/rfc822');
+
+    const emlContent = 'From: Ada <ada@example.com>\r\nSubject: Uploaded EML\r\n\r\nUploaded body.';
+    const validFile = new File([emlContent], 'sample.eml', { type: 'message/rfc822' });
+
+    fireEvent.change(fileInput, { target: { files: [validFile] } });
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Raw email').value).toContain('Subject: Uploaded EML');
+    });
+
+    const dropzone = screen.getByTestId('grade-dropzone');
+    const droppedContent = 'From: Bob <bob@example.com>\r\nSubject: Dropped EML\r\n\r\nDropped body.';
+    const droppedFile = new File([droppedContent], 'dropped.eml', { type: 'message/rfc822' });
+
+    fireEvent.dragOver(dropzone);
+    fireEvent.drop(dropzone, { dataTransfer: { files: [droppedFile] } });
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Raw email').value).toContain('Subject: Dropped EML');
+    });
+
+    const oversizedFile = new File(['x'.repeat(260 * 1024)], 'huge.eml', { type: 'message/rfc822' });
+    fireEvent.change(fileInput, { target: { files: [oversizedFile] } });
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/256 KB/i);
+  });
 });

@@ -10,20 +10,22 @@ const SHORTENERS = new Set([
   'goo.gl',
   'tinyurl.com',
   'ow.ly',
+  'rb.gy',
   'is.gd',
   'buff.ly',
   'rebrand.ly',
+  'cutt.ly',
 ]);
 
 const CLOAK_CSS = /display\s*:\s*none|visibility\s*:\s*hidden|opacity\s*:\s*0(?:\.0+)?|font-size\s*:\s*0|text-indent\s*:\s*-\d|position\s*:\s*absolute[^;]*(?:left|top)\s*:\s*-\d/i;
 
-const push = (findings, severity, id, title, detail) => {
+const push = (findings, severity, id, title, detail, customPenalty) => {
   findings.push({
     id,
     severity,
     title,
     detail,
-    penalty: severity === 'pass' ? 0 : (PENALTY[severity] || 0),
+    penalty: severity === 'pass' ? 0 : (typeof customPenalty === 'number' ? customPenalty : (PENALTY[severity] || 0)),
   });
 };
 
@@ -37,13 +39,37 @@ const hostOf = (url) => {
 
 const looksLikeUrl = (text) => /^https?:\/\//i.test(String(text || '').trim());
 
-const scanShorteners = (haystack) => {
-  const found = String(haystack || '').match(/https?:\/\/[^\s<>"')]+/gi) || [];
-  return found.some((link) => {
-    const host = hostOf(link.replace(/[.,;]+$/, ''));
-    return host && SHORTENERS.has(host);
+const extractShortenerLinks = (haystack) => {
+  const found = String(haystack || '').match(/https?:\/\/[^\s<>"'\])]+/gi) || [];
+  const results = [];
+  const seen = new Set();
+  found.forEach((rawLink) => {
+    const clean = rawLink.replace(/[.,;]+$/, '');
+    const host = hostOf(clean);
+    if (host && SHORTENERS.has(host) && !seen.has(clean)) {
+      seen.add(clean);
+      results.push(clean);
+    }
   });
+  return results;
 };
+
+const extractPunycodeDomains = (haystack) => {
+  const found = String(haystack || '').match(/https?:\/\/[^\s<>"'\])]+/gi) || [];
+  const domains = [];
+  const seen = new Set();
+  found.forEach((rawLink) => {
+    const clean = rawLink.replace(/[.,;]+$/, '');
+    const host = hostOf(clean);
+    if (host && (host.startsWith('xn--') || host.includes('.xn--')) && !seen.has(host)) {
+      seen.add(host);
+      domains.push(host);
+    }
+  });
+  return domains;
+};
+
+const scanShorteners = (haystack) => extractShortenerLinks(haystack).length > 0;
 
 /**
  * @param {{ html: string, text: string }} input
@@ -69,7 +95,10 @@ const buildHtmlFindings = ({ html, text }) => {
 
   let hiddenLink = false;
   let mismatch = false;
-  const shortener = scanShorteners(`${body}\n${plain}`);
+  const combinedHaystack = `${body}\n${plain}`;
+  const shortenerLinks = extractShortenerLinks(combinedHaystack);
+  const punycodeDomains = extractPunycodeDomains(combinedHaystack);
+  const shortener = shortenerLinks.length > 0;
 
   if (body) {
     const anchors = [...body.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi)];
@@ -123,6 +152,24 @@ const buildHtmlFindings = ({ html, text }) => {
       'URL shortener used',
       'Shortened links hide the real destination and often hurt inbox placement.'
     );
+    push(
+      findings,
+      'warn',
+      'links_shortener',
+      'Public URL shortener detected',
+      `Links use public shorteners (${shortenerLinks.slice(0, 3).join(', ')}), which are heavily penalized by Spamhaus DBL and Gmail filters.`,
+      8
+    );
+  }
+  if (punycodeDomains.length > 0) {
+    push(
+      findings,
+      'warn',
+      'links_punycode',
+      'IDN punycode link domain',
+      `Links use punycode hostnames (${punycodeDomains.slice(0, 3).join(', ')}) that can indicate homograph phishing.`,
+      8
+    );
   }
 
   if (body && /<img\b[^>]*(?:width\s*=\s*["']?1["']?[^>]*height\s*=\s*["']?1["']?|height\s*=\s*["']?1["']?[^>]*width\s*=\s*["']?1["']?)/i.test(body)) {
@@ -175,4 +222,6 @@ const buildHtmlFindings = ({ html, text }) => {
 module.exports = {
   buildHtmlFindings,
   SHORTENERS,
+  extractShortenerLinks,
+  extractPunycodeDomains,
 };

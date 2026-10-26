@@ -6,8 +6,16 @@
 const dns = require('node:dns').promises;
 const { simpleParser } = require('mailparser');
 const { buildFindings, scoreOf, letterFor, SUMMARY } = require('./mailGrade/findings');
-const { buildAuthFindings } = require('./mailGrade/authChecks');
-const { buildHtmlFindings } = require('./mailGrade/htmlChecks');
+const {
+  buildAuthFindings,
+  inspectArcHeaders,
+  inspectTransportAndBrandTxt,
+} = require('./mailGrade/authChecks');
+const {
+  buildHtmlFindings,
+  extractShortenerLinks,
+  extractPunycodeDomains,
+} = require('./mailGrade/htmlChecks');
 const { buildReputationFindings, defaultResolveDnsbl } = require('./mailGrade/reputationChecks');
 const { extractReceivedIps, isPublicIp } = require('./mailGrade/receivedIps');
 
@@ -29,14 +37,54 @@ const domainOf = (address) => {
   return String(address).slice(at + 1).toLowerCase();
 };
 
-const fromDomainOf = (parsed) => {
+const fromAddressOf = (parsed) => {
   const from = parsed.from;
   if (!from) {
-    return '';
+    return null;
   }
   const list = Array.isArray(from.value) ? from.value : [from];
   const first = list.find((item) => item && item.address);
-  return first ? domainOf(first.address) : '';
+  return first ? first.address : null;
+};
+
+const fromDomainOf = (parsed) => {
+  const addr = fromAddressOf(parsed);
+  return addr ? domainOf(addr) : '';
+};
+
+const extractDkimMeta = (source) => {
+  const match = String(source || '').match(/^dkim-signature\s*:\s*([^\r\n]+(?:\r?\n[ \t]+[^\r\n]+)*)/im);
+  if (!match) {
+    return { present: false, domain: null, selector: null };
+  }
+  const raw = match[1].replace(/\r?\n[ \t]+/g, ' ');
+  const dMatch = raw.match(/(?:^|;)\s*d\s*=\s*([^;\s]+)/i);
+  const sMatch = raw.match(/(?:^|;)\s*s\s*=\s*([^;\s]+)/i);
+  return {
+    present: true,
+    domain: dMatch ? dMatch[1].toLowerCase().replace(/\.$/, '') : null,
+    selector: sMatch ? sMatch[1] : null,
+  };
+};
+
+const categoryForFinding = (id) => {
+  if (id.startsWith('spf_') || id.startsWith('dkim_') || id.startsWith('dmarc_') || id === 'auth_inconclusive') {
+    return 'Authentication';
+  }
+  if (id.startsWith('rbl_')) {
+    return 'Reputation';
+  }
+  if (
+    id.startsWith('from_')
+    || id.startsWith('subject_')
+    || id.startsWith('date_')
+    || id.startsWith('message_id_')
+    || id.startsWith('reply_to_')
+    || id.startsWith('list_unsubscribe')
+  ) {
+    return 'Headers';
+  }
+  return 'Content & Formatting';
 };
 
 const collectLinkHosts = (source, parsed) => {
@@ -104,8 +152,9 @@ const gradeEmail = async (source, options = {}) => {
 
   const structural = buildFindings({ parsed, source });
   const html = buildHtmlFindings({ html: parsed.html || '', text: parsed.text || '' });
+  const arc = inspectArcHeaders(source);
 
-  const [auth, reputation] = await Promise.all([
+  const [auth, reputation, transportTxt] = await Promise.all([
     buildAuthFindings({
       source,
       fromDomain,
@@ -121,22 +170,121 @@ const gradeEmail = async (source, options = {}) => {
       resolveMxIps: options.resolveMxIps || resolveMxIps,
       ...(options.rblTimeoutMs ? { timeoutMs: options.rblTimeoutMs } : {}),
     }),
+    inspectTransportAndBrandTxt(fromDomain, options),
   ]);
 
   const findings = [...structural, ...auth, ...html, ...reputation];
   const score = Math.max(0, scoreOf(findings));
   const grade = letterFor(score);
 
+  const fromAddress = fromAddressOf(parsed);
+  const replyToList = parsed.replyTo?.value || [];
+  const replyTo = replyToList[0]?.address || null;
+  const returnPathMatch = source.match(/^return-path\s*:\s*<?([^>\r\n]+)>?/im);
+  const returnPath = returnPathMatch ? returnPathMatch[1].trim() : null;
+  const contentTypeMatch = source.match(/^content-type\s*:\s*([^\r\n;]+)/im);
+  const contentType = contentTypeMatch ? contentTypeMatch[1].trim().toLowerCase() : 'text/plain';
+  const receivedHops = (source.match(/^received\s*:/gim) || []).length;
+  const dkimMeta = extractDkimMeta(source);
+  const dkimAligned = Boolean(
+    dkimMeta.domain
+    && fromDomain
+    && (dkimMeta.domain === fromDomain || dkimMeta.domain.endsWith(`.${fromDomain}`))
+  );
+
+  const allLinks = [...new Set(
+    (`${source}\n${parsed.text || ''}\n${parsed.html || ''}`.match(/https?:\/\/[^\s<>"')]+/gi) || [])
+      .map((link) => link.replace(/[.,;]+$/, ''))
+  )];
+  const httpsLinks = allLinks.filter((link) => link.toLowerCase().startsWith('https://')).length;
+  const httpLinks = allLinks.filter((link) => link.toLowerCase().startsWith('http://')).length;
+  const htmlStr = String(parsed.html || '');
+  const textStr = String(parsed.text || '');
+  const hasTextPart = /content-type:\s*text\/plain/i.test(source) || Boolean(textStr.trim() && !htmlStr.trim());
+  const hasHtmlPart = Boolean(htmlStr.trim()) || /content-type:\s*text\/html/i.test(source);
+  const imageCount = (htmlStr.match(/<img\b/gi) || []).length;
+  const listUnsubscribePresent = /^list-unsubscribe\s*:/im.test(source)
+    || Boolean(parsed.headers && parsed.headers.get('list') && parsed.headers.get('list').unsubscribe);
+  const listUnsubscribeOneClick = /^list-unsubscribe-post\s*:[^\r\n]*list-unsubscribe=one-click/im.test(source);
+  const combinedHaystack = `${source}\n${textStr}\n${htmlStr}`;
+  const shortenerLinks = extractShortenerLinks(combinedHaystack);
+  const punycodeDomains = extractPunycodeDomains(combinedHaystack);
+
+  const authStatusOf = (prefix) => {
+    const match = auth.find((item) => item.id.startsWith(`${prefix}_`));
+    if (!match) return 'none';
+    if (match.id === `${prefix}_pass`) return 'pass';
+    if (match.id === `${prefix}_fail`) return 'fail';
+    return 'warn';
+  };
+
   return {
     score,
     grade,
     summary: SUMMARY[grade],
     stored: false,
-    findings: findings.map(({ id, severity, title, detail }) => ({
+    envelope: {
+      from: parsed.from?.text || fromAddress || null,
+      fromAddress,
+      fromDomain: fromDomain || null,
+      to: parsed.to?.text || null,
+      replyTo,
+      returnPath,
+      subject: (parsed.subject || '').trim() || null,
+      subjectLength: (parsed.subject || '').trim().length,
+      date: parsed.date ? parsed.date.toISOString() : null,
+      messageId: parsed.messageId || null,
+      contentType,
+      sizeBytes: Buffer.byteLength(source, 'utf8'),
+      receivedHops,
+      clientIp,
+      receivedIps: clientIps,
+    },
+    authentication: {
+      spf: {
+        status: authStatusOf('spf'),
+        clientIp,
+      },
+      dkim: {
+        status: authStatusOf('dkim'),
+        present: dkimMeta.present,
+        domain: dkimMeta.domain,
+        selector: dkimMeta.selector,
+        aligned: dkimAligned,
+      },
+      dmarc: {
+        status: authStatusOf('dmarc'),
+        fromDomain: fromDomain || null,
+      },
+      arc,
+      bimi: transportTxt.bimi,
+      mtaSts: transportTxt.mtaSts,
+      listUnsubscribe: {
+        present: listUnsubscribePresent,
+        oneClick: listUnsubscribeOneClick,
+      },
+    },
+    deliverability: {
+      hasTextPart,
+      hasHtmlPart,
+      textBytes: Buffer.byteLength(textStr, 'utf8'),
+      htmlBytes: Buffer.byteLength(htmlStr, 'utf8'),
+      totalLinks: allLinks.length,
+      httpsLinks,
+      httpLinks,
+      uniqueHosts: linkHosts,
+      shortenerLinks,
+      punycodeDomains,
+      imageCount,
+      attachmentCount: Array.isArray(parsed.attachments) ? parsed.attachments.length : 0,
+    },
+    findings: findings.map(({ id, severity, title, detail, penalty }) => ({
       id,
       severity,
       title,
       detail,
+      penalty: penalty || 0,
+      category: categoryForFinding(id),
     })),
   };
 };

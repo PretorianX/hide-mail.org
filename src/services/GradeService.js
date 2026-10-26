@@ -57,8 +57,8 @@ class GradeService {
     });
     const payload = await readPayload(response);
     const license = payload.license || payload.data;
-    if (license?.type !== 'grade') {
-      throw new Error('That key is not a Mail Grade plan.');
+    if (license?.type !== 'grade' && license?.type !== 'suite') {
+      throw new Error('That key is not a Mail Grade or Deliverability Suite plan.');
     }
     this.saveKey(license.key);
     return license;

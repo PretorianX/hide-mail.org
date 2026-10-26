@@ -19,6 +19,11 @@ const ENTRIES = {
     cause: 'The friendly name shows one email while the real From uses another. Filters treat that as spoofing.',
     fix: 'Put only a person or brand name in the display name. Keep the actual address in the angle brackets.',
   },
+  from_display_spoof: {
+    title: 'Display name spoofs another domain',
+    cause: 'The From display name contains an email address whose domain differs from the actual From header domain, a classic executive-impersonation and phishing pattern.',
+    fix: 'Remove email addresses from the display name or ensure the display name matches your authenticated sending domain.',
+  },
   subject_missing: {
     title: 'Missing subject',
     cause: 'Empty subjects look unfinished and are often filtered or ignored.',
@@ -39,10 +44,20 @@ const ENTRIES = {
     cause: 'Mostly uppercase subjects are a classic spam signal.',
     fix: 'Use normal sentence or title case instead of ALL CAPS.',
   },
+  subject_all_caps: {
+    title: 'Subject is in all-caps',
+    cause: 'Subjects with at least 10 letters where 80% or more are uppercase trigger spam heuristics across major mailbox providers.',
+    fix: 'Rewrite the subject in standard sentence case or title case.',
+  },
   subject_punctuation: {
     title: 'Subject overuses punctuation',
     cause: 'Repeated !!! or ??? looks like spam to both people and filters.',
     fix: 'Use at most one exclamation or question mark, or none.',
+  },
+  subject_spam_tokens: {
+    title: 'Subject contains spam trigger tokens',
+    cause: 'Excessive exclamation/question marks (!!!, ???), dollar signs ($$$), or urgency phrases (URGENT:, ACT NOW, FREE MONEY) heavily penalize inbox placement.',
+    fix: 'Remove aggressive punctuation, currency symbols, and urgency clichés from the subject line.',
   },
   date_missing: {
     title: 'Missing Date',
@@ -218,6 +233,16 @@ const ENTRIES = {
     title: 'URL shortener used',
     cause: 'Shortened links hide the real destination and are a spam signal.',
     fix: 'Link directly to your own https hostname.',
+  },
+  links_shortener: {
+    title: 'Public URL shortener detected',
+    cause: 'Public URL shorteners (bit.ly, tinyurl.com, t.co, ow.ly, rb.gy, etc.) obscure destination domains and are frequently blocklisted by Spamhaus DBL and Gmail.',
+    fix: 'Replace shortened URLs with direct HTTPS links on your own domain or a custom branded tracking domain.',
+  },
+  links_punycode: {
+    title: 'IDN punycode link domain',
+    cause: 'Links pointing to xn-- punycode domains are often used in lookalike homograph attacks and are treated with suspicion by anti-phishing filters.',
+    fix: 'Use standard ASCII domains for primary links or ensure the internationalized domain matches your verified sender brand.',
   },
   rbl_domain: {
     title: 'Domain on a public blocklist',

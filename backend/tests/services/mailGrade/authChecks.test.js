@@ -3,7 +3,11 @@ jest.mock('mailauth', () => ({
 }));
 
 const { authenticate } = require('mailauth');
-const { buildAuthFindings } = require('../../../services/mailGrade/authChecks');
+const {
+  buildAuthFindings,
+  inspectArcHeaders,
+  inspectTransportAndBrandTxt,
+} = require('../../../services/mailGrade/authChecks');
 
 describe('authChecks', () => {
   beforeEach(() => {
@@ -73,5 +77,43 @@ describe('authChecks', () => {
     });
 
     expect(findings.map((f) => f.id)).toEqual(expect.arrayContaining(['dkim_fail', 'dmarc_fail']));
+  });
+
+  it('inspects ARC fail and fallback status and handles TXT lookup errors gracefully', async () => {
+    expect(inspectArcHeaders('From: a@b.com\r\n\r\nHi')).toEqual({
+      present: false,
+      status: 'none',
+      chainCount: 0,
+    });
+
+    expect(inspectArcHeaders('ARC-Seal: i=1; cv=fail\r\nARC-Authentication-Results: i=1; arc=fail')).toEqual({
+      present: true,
+      status: 'fail',
+      chainCount: 1,
+    });
+
+    expect(inspectArcHeaders('ARC-Seal: i=1; cv=none\r\nARC-Authentication-Results: i=1; mx.example; arc=pass')).toEqual({
+      present: true,
+      status: 'pass',
+      chainCount: 1,
+    });
+
+    const emptyDomainRes = await inspectTransportAndBrandTxt('');
+    expect(emptyDomainRes).toEqual({
+      bimi: { present: false, record: null },
+      mtaSts: { present: false, record: null },
+    });
+
+    const failedLookupRes = await inspectTransportAndBrandTxt('example.com', {
+      dns: {
+        resolveTxt: async () => {
+          throw new Error('ENOTFOUND');
+        },
+      },
+    });
+    expect(failedLookupRes).toEqual({
+      bimi: { present: false, record: null },
+      mtaSts: { present: false, record: null },
+    });
   });
 });
