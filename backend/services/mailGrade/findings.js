@@ -171,7 +171,16 @@ const buildFindings = ({ parsed, source }) => {
         'Keep the subject between 3 and 78 characters so it is not clipped or empty.'
       );
     }
-    if (isShouting(subject)) {
+    if (isSubjectAllCaps(subject)) {
+      push(
+        findings,
+        'warn',
+        'subject_all_caps',
+        'Subject is mostly uppercase',
+        'At least 80% of a 10+ letter subject is uppercase, which spam filters treat as shouting.',
+        5
+      );
+    } else if (isShouting(subject)) {
       push(
         findings,
         'warn',

@@ -99,7 +99,7 @@ describe('mailGradeService', () => {
     expect(report.grade).toBe('F');
     expect(report.score).toBeLessThan(55);
     expect(ids).toEqual(expect.arrayContaining([
-      'subject_shouting',
+      'subject_all_caps',
       'subject_punctuation',
       'reply_to_mismatch',
       'dkim_missing',
@@ -107,9 +107,11 @@ describe('mailGradeService', () => {
       'spam_phrases',
       'date_missing',
       'message_id_missing',
-      'link_shortener',
+      'links_shortener',
       'spf_no_ip',
     ]));
+    expect(ids).not.toContain('link_shortener');
+    expect(ids).not.toContain('subject_shouting');
   });
 
   it('fails SPF when live auth reports fail', async () => {
