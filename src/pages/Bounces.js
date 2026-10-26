@@ -128,7 +128,7 @@ const Bounces = () => {
   };
 
   const onCopyCurl = () => {
-    const payload = JSON.stringify({ raw: source.trim() || SAMPLE_BOUNCE });
+    const payload = JSON.stringify({ source: source.trim() || SAMPLE_BOUNCE });
     const snippet = `curl -X POST https://hide-mail.org/api/bounce-read \\\n  -H "X-API-Key: hm_live_..." \\\n  -H "Content-Type: application/json" \\\n  -d '${payload.replace(/'/g, "'\\''")}'`;
     copyText(snippet, 'curl');
   };

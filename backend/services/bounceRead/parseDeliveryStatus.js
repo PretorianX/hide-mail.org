@@ -169,7 +169,7 @@ const parseDeliveryStatus = (text) => {
       remoteMta,
       reportingMta,
     });
-    const useOverride = isGenericStatus(status) && matched.override;
+    const useOverride = isGenericStatus(status) && status[0] === '5' && matched.override;
 
     recipients.push({
       recipient,
