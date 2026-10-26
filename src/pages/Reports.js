@@ -193,6 +193,7 @@ const Reports = () => {
     setError(null);
     if (file.size > MAX_UPLOAD_BYTES) {
       setReport(null);
+      setArchiveData(null);
       setError('That report is too large.');
       return;
     }
@@ -215,6 +216,7 @@ const Reports = () => {
         }
       } catch (err) {
         setReport(null);
+        setArchiveData(null);
         setError(err.message || 'DMARC Reports could not read that report.');
       } finally {
         setBusy(false);
@@ -226,6 +228,7 @@ const Reports = () => {
       const text = await readFileAsText(file);
       if (text.length > MAX_UPLOAD_BYTES) {
         setReport(null);
+        setArchiveData(null);
         setError('That report is too large.');
         return;
       }
@@ -233,6 +236,7 @@ const Reports = () => {
       setArchiveData(null);
     } catch (err) {
       setReport(null);
+      setArchiveData(null);
       setError(err.message || 'DMARC Reports could not read that report.');
     }
   };
