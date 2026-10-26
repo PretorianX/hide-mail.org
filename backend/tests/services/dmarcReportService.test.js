@@ -181,6 +181,12 @@ describe('dmarcReportService', () => {
     expect(JSON.stringify(report)).not.toContain('dmarc@yahoo.com');
   });
 
+  it('keeps an explicit pct of 0', async () => {
+    const xml = feedback('').replace('<pct>100</pct>', '<pct>0</pct>');
+    const report = await readReport(xml);
+    expect(report.percent).toBe(0);
+  });
+
   it('defaults a missing pct to 100', async () => {
     const xml = feedback('').replace('<pct>100</pct>', '');
     const report = await readReport(xml);
