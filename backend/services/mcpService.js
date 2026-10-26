@@ -491,6 +491,13 @@ const executeTool = async (name, args = {}, license) => {
           err.code = 'NO_XML_IN_ZIP';
           throw err;
         }
+        if (xmlEntry.header.size > MAX_GZIP_OUTPUT_BYTES) {
+          const err = new Error(
+            `ZIP entry exceeds maximum size (${MAX_GZIP_OUTPUT_BYTES} bytes)`
+          );
+          err.code = 'ZIP_ENTRY_TOO_LARGE';
+          throw err;
+        }
         xml = xmlEntry.getData().toString('utf8');
       } else if (!xml && args.archiveBase64) {
         const buffer = Buffer.from(args.archiveBase64, 'base64');
