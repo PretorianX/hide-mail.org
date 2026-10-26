@@ -135,4 +135,93 @@ describe('Complaint Read page', () => {
     expect(screen.queryByTestId('complaint-result')).not.toBeInTheDocument();
     expect(screen.getByTestId('complaint-stamp')).toHaveTextContent('—');
   });
+
+  test('loads a sample complaint and renders ARF fields and suppression workflow', async () => {
+    ComplaintService.read.mockResolvedValue({
+      ...abuseReport,
+      feedbackExplanation: 'The recipient clicked "Report Spam" or "Junk" in their mailbox client.',
+      version: '1',
+      incidents: 1,
+      originalEnvelopeId: 'env-arf-20261026-01',
+      reportedUri: ['https://sender.example/promo/october'],
+      dkimDomain: 'sender.example',
+      authenticationResults: 'mta.example.net; dkim=pass header.d=sender.example',
+      workflow: [
+        'Immediately add subscriber@example.net to your global suppression list.',
+      ],
+    });
+    renderComplaints();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Load sample' }));
+    expect(screen.getByLabelText('Feedback report').value).toContain('Yahoo!-Mail-Feedback');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Read this complaint' }));
+
+    expect(await screen.findByTestId('complaint-workflow')).toHaveTextContent(
+      'Immediately add subscriber@example.net to your global suppression list.'
+    );
+    expect(screen.getByTestId('complaint-result')).toHaveTextContent('env-arf-20261026-01');
+  });
+
+  test('uploads a .eml file into the feedback report textarea', async () => {
+    renderComplaints();
+
+    const fileInput = screen.getByTestId('complaints-file-input');
+    expect(fileInput).toHaveAttribute('accept', '.eml,.arf,.txt,message/rfc822');
+
+    const emlContent = 'Feedback-Type: abuse\nOriginal-Rcpt-To: <uploaded@example.net>';
+    const file = new File([emlContent], 'complaint.eml', { type: 'message/rfc822' });
+    Object.defineProperty(file, 'text', {
+      value: jest.fn().mockResolvedValue(emlContent),
+    });
+
+    fireEvent.change(fileInput, { target: { files: [file] } });
+
+    expect(await screen.findByDisplayValue(/uploaded@example\.net/)).toBeInTheDocument();
+  });
+
+  test('renders original campaign headers and exports suppression CSV', async () => {
+    ComplaintService.read.mockResolvedValue({
+      ...abuseReport,
+      arrivalDate: 'Wed, 26 Oct 2026 11:30:00 +0000',
+      originalMessage: {
+        messageId: '<campaign-42@sender.example>',
+        subject: 'October Promo',
+        listUnsubscribe: true,
+      },
+      suppressionRecord: {
+        email: 'subscriber@example.net',
+        action: 'suppress',
+        reason: 'arf_abuse',
+        domain: 'sender.example',
+        sourceIp: '192.0.2.1',
+        messageId: '<campaign-42@sender.example>',
+        arrivalDate: 'Wed, 26 Oct 2026 11:30:00 +0000',
+      },
+    });
+
+    const createObjectURL = jest.fn(() => 'blob:suppression-csv');
+    const revokeObjectURL = jest.fn();
+    global.URL.createObjectURL = createObjectURL;
+    global.URL.revokeObjectURL = revokeObjectURL;
+
+    renderComplaints();
+
+    fireEvent.change(screen.getByLabelText('Feedback report'), {
+      target: { value: 'Feedback-Type: abuse\nOriginal-Rcpt-To: <subscriber@example.net>' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Read this complaint' }));
+
+    const result = await screen.findByTestId('complaint-result');
+    expect(result).toHaveTextContent('<campaign-42@sender.example>');
+    expect(result).toHaveTextContent('October Promo');
+    expect(result).toHaveTextContent('Yes');
+
+    const exportBtn = screen.getByTestId('complaint-export-csv');
+    fireEvent.click(exportBtn);
+
+    expect(createObjectURL).toHaveBeenCalledTimes(1);
+    const blobArg = createObjectURL.mock.calls[0][0];
+    expect(blobArg).toBeInstanceOf(Blob);
+  });
 });
