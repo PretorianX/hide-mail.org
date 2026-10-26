@@ -2,12 +2,11 @@ const licenseService = require('../services/licenseService');
 const logger = require('../utils/logger');
 
 const extractApiKey = (req) => {
-  const headers = req?.headers || {};
-  const header = headers.authorization || headers.Authorization;
+  const header = req.headers.authorization;
   if (header && header.startsWith('Bearer ')) {
     return header.slice('Bearer '.length).trim();
   }
-  return headers['x-api-key'] || headers['X-API-Key'] || headers['X-Api-Key'] || null;
+  return req.headers['x-api-key'] || null;
 };
 
 const requireApiKey = async (req, res, next) => {
@@ -21,12 +20,7 @@ const requireApiKey = async (req, res, next) => {
       });
     }
 
-    const authenticate = (licenseService.authenticateApiKey && licenseService.authenticateApiKey._isMockFunction)
-      ? licenseService.authenticateApiKey
-      : (licenseService.validateApiKey && licenseService.validateApiKey._isMockFunction)
-        ? licenseService.validateApiKey
-        : (licenseService.authenticateApiKey || licenseService.validateApiKey);
-    const resolved = await authenticate(apiKey);
+    const resolved = await licenseService.validateApiKey(apiKey);
     if (!resolved) {
       return res.status(401).json({
         success: false,

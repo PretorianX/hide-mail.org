@@ -256,6 +256,5 @@ module.exports = {
   revokeByPayment,
   createApiKey,
   validateApiKey,
-  authenticateApiKey: validateApiKey,
   canIssueApiKey,
 };

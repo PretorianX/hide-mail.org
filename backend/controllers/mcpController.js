@@ -9,12 +9,22 @@ const { extractApiKey } = require('../middleware/apiKeyAuth');
 const logger = require('../utils/logger');
 const { sanitizeForLog } = require('../utils/sanitize');
 
+const readHeaderKey = (req) => {
+  const headers = req?.headers || {};
+  const header = headers.authorization || headers.Authorization;
+  if (header && header.startsWith('Bearer ')) {
+    return header.slice('Bearer '.length).trim();
+  }
+  return headers['x-api-key'] || headers['X-API-Key'] || headers['X-Api-Key'] || extractApiKey({ headers });
+};
+
 const resolveCallerLicense = async (req) => {
   if (req.apiLicense) {
     return { ok: true, license: req.apiLicense };
   }
 
-  const apiKey = extractApiKey(req);
+  const apiKey = readHeaderKey(req);
+  const resolved = apiKey ? await licenseService.validateApiKey(apiKey) : null;
   if (!apiKey) {
     return {
       ok: false,
@@ -23,14 +33,6 @@ const resolveCallerLicense = async (req) => {
       message: 'API key required (provide X-API-Key or Authorization: Bearer hm_live_...)',
     };
   }
-
-  const authenticate = (licenseService.authenticateApiKey && licenseService.authenticateApiKey._isMockFunction)
-    ? licenseService.authenticateApiKey
-    : (licenseService.validateApiKey && licenseService.validateApiKey._isMockFunction)
-      ? licenseService.validateApiKey
-      : (licenseService.authenticateApiKey || licenseService.validateApiKey);
-
-  const resolved = await authenticate(apiKey);
   if (!resolved || !resolved.license) {
     return {
       ok: false,
