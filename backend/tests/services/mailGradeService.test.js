@@ -107,7 +107,7 @@ describe('mailGradeService', () => {
       'spam_phrases',
       'date_missing',
       'message_id_missing',
-      'link_shortener',
+      'links_shortener',
       'spf_no_ip',
     ]));
   });
@@ -191,7 +191,7 @@ describe('mailGradeService', () => {
     const report = await gradeEmail(source, gradeOpts);
     const byId = Object.fromEntries(report.findings.map((f) => [f.id, f]));
 
-    expect(byId.subject_all_caps).toMatchObject({ severity: 'warn', penalty: 5 });
+    expect(byId.subject_shouting).toMatchObject({ severity: 'warn', penalty: 7 });
     expect(byId.subject_spam_tokens).toMatchObject({ severity: 'warn', penalty: 5 });
     expect(byId.from_display_spoof).toMatchObject({ severity: 'fail', penalty: 15 });
     expect(byId.links_shortener).toMatchObject({ severity: 'warn', penalty: 8 });

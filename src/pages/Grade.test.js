@@ -224,7 +224,7 @@ describe('Mail Grade page', () => {
     expect(screen.getByTestId('grade-copy-curl')).toBeInTheDocument();
   });
 
-  test('populates textarea when a valid .eml file is uploaded or dropped, and rejects files over 256 KB', async () => {
+  test('populates textarea when a valid .eml file is uploaded or dropped, and rejects files over 64 KB', async () => {
     renderGrade();
 
     const fileInput = screen.getByTestId('grade-file-input');
@@ -253,6 +253,6 @@ describe('Mail Grade page', () => {
     const oversizedFile = new File(['x'.repeat(260 * 1024)], 'huge.eml', { type: 'message/rfc822' });
     fireEvent.change(fileInput, { target: { files: [oversizedFile] } });
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(/256 KB/i);
+    expect(await screen.findByRole('alert')).toHaveTextContent(/64 KB/i);
   });
 });

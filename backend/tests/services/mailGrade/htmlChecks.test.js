@@ -37,7 +37,7 @@ describe('htmlChecks', () => {
       text: 'read more',
     });
     const ids = findings.map((f) => f.id);
-    expect(ids).toEqual(expect.arrayContaining(['link_shortener', 'links_shortener', 'links_punycode']));
+    expect(ids).toEqual(expect.arrayContaining(['links_shortener', 'links_punycode']));
     expect(findings.find((f) => f.id === 'links_shortener').penalty).toBe(8);
     expect(findings.find((f) => f.id === 'links_punycode').penalty).toBe(8);
   });
