@@ -6,6 +6,7 @@
 
 const crypto = require('node:crypto');
 const zlib = require('node:zlib');
+const AdmZip = require('adm-zip');
 const config = require('../config/config');
 const redisService = require('./redisService');
 const entitlementService = require('./entitlementService');
@@ -478,6 +479,19 @@ const executeTool = async (name, args = {}, license) => {
             maxOutputLength: MAX_GZIP_OUTPUT_BYTES,
           })
           .toString('utf8');
+      } else if (args.archiveBase64 && args.format === 'zip') {
+        const buffer = Buffer.from(args.archiveBase64, 'base64');
+        const zip = new AdmZip(buffer);
+        const entries = zip.getEntries();
+        const xmlEntry = entries.find(
+          (entry) => !entry.isDirectory && entry.entryName.toLowerCase().endsWith('.xml')
+        );
+        if (!xmlEntry) {
+          const err = new Error('No XML file found in zip archive');
+          err.code = 'NO_XML_IN_ZIP';
+          throw err;
+        }
+        xml = xmlEntry.getData().toString('utf8');
       } else if (!xml && args.archiveBase64) {
         const buffer = Buffer.from(args.archiveBase64, 'base64');
         if (buffer.length >= 2 && buffer[0] === 0x1f && buffer[1] === 0x8b) {

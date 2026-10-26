@@ -57,7 +57,7 @@ class ComplaintService {
     });
     const payload = await readPayload(response);
     const license = payload.license || payload.data;
-    if (license?.type !== 'complaint') {
+    if (license?.type !== 'complaint' && license?.type !== 'suite') {
       throw new Error('That key is not a Complaint Read plan.');
     }
     this.saveKey(license.key);

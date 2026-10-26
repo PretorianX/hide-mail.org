@@ -67,7 +67,7 @@ class ReportsService {
     });
     const payload = await readPayload(response);
     const license = payload.license || payload.data;
-    if (license?.type !== 'reports') {
+    if (license?.type !== 'reports' && license?.type !== 'suite') {
       throw new Error('That key is not a DMARC Reports plan.');
     }
     this.saveKey(license.key);

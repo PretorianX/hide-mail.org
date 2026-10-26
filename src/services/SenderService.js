@@ -57,7 +57,7 @@ class SenderService {
     });
     const payload = await readPayload(response);
     const license = payload.license || payload.data;
-    if (license?.type !== 'sender') {
+    if (license?.type !== 'sender' && license?.type !== 'suite') {
       throw new Error('That key is not a Sender Check plan.');
     }
     this.saveKey(license.key);
