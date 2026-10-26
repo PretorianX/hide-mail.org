@@ -6,7 +6,6 @@
 
 const crypto = require('node:crypto');
 const zlib = require('node:zlib');
-const AdmZip = require('adm-zip');
 const config = require('../config/config');
 const redisService = require('./redisService');
 const entitlementService = require('./entitlementService');
@@ -30,7 +29,86 @@ const CAPABILITIES = {
 };
 
 const ALIAS_PATTERN = /^[a-z0-9](?:[a-z0-9._-]{0,62}[a-z0-9])?$/;
-const MAX_GZIP_OUTPUT_BYTES = 262144;
+const MAX_ARCHIVE_OUTPUT_BYTES = 262144;
+const ZIP_LOCAL_FILE_HEADER = 0x04034b50;
+
+const archiveTooLargeError = () => {
+  const err = new Error('DMARC archive exceeds the 256 KB decompression limit');
+  err.code = 'ARCHIVE_TOO_LARGE';
+  return err;
+};
+
+const archiveUnreadableError = (message = 'DMARC zip archive could not be read') => {
+  const err = new Error(message);
+  err.code = 'ARCHIVE_UNREADABLE';
+  return err;
+};
+
+/**
+ * Extract the first .xml entry from a ZIP buffer using a manual local-file-header
+ * parse + zlib.inflateRawSync(maxOutputLength). Never calls unbounded getData().
+ */
+const extractXmlFromZipBuffer = (buf) => {
+  let offset = 0;
+  while (offset + 30 <= buf.length) {
+    const sig = buf.readUInt32LE(offset);
+    if (sig !== ZIP_LOCAL_FILE_HEADER) {
+      break;
+    }
+    const method = buf.readUInt16LE(offset + 8);
+    const compressedSize = buf.readUInt32LE(offset + 18);
+    const uncompressedSize = buf.readUInt32LE(offset + 22);
+    const nameLen = buf.readUInt16LE(offset + 26);
+    const extraLen = buf.readUInt16LE(offset + 28);
+    const dataStart = offset + 30 + nameLen + extraLen;
+    if (dataStart > buf.length) {
+      throw archiveUnreadableError();
+    }
+    const entryName = buf.subarray(offset + 30, offset + 30 + nameLen).toString('utf8');
+    const dataEnd = compressedSize > 0 ? dataStart + compressedSize : buf.length;
+    if (dataEnd > buf.length) {
+      throw archiveUnreadableError();
+    }
+
+    if (entryName.toLowerCase().endsWith('.xml')) {
+      if (uncompressedSize > MAX_ARCHIVE_OUTPUT_BYTES) {
+        throw archiveTooLargeError();
+      }
+      const compressedSlice = buf.subarray(dataStart, dataEnd);
+      if (method === 0) {
+        if (compressedSlice.length > MAX_ARCHIVE_OUTPUT_BYTES) {
+          throw archiveTooLargeError();
+        }
+        return compressedSlice.toString('utf8');
+      }
+      if (method === 8) {
+        try {
+          return zlib
+            .inflateRawSync(compressedSlice, { maxOutputLength: MAX_ARCHIVE_OUTPUT_BYTES })
+            .toString('utf8');
+        } catch (err) {
+          if (err && (err.code === 'ERR_BUFFER_TOO_LARGE' || /maxOutputLength/i.test(err.message))) {
+            throw archiveTooLargeError();
+          }
+          throw archiveUnreadableError();
+        }
+      }
+      throw archiveUnreadableError('Unsupported zip compression method');
+    }
+
+    if (compressedSize === 0) {
+      if (entryName.endsWith('/')) {
+        offset = dataStart;
+        continue;
+      }
+      break;
+    }
+    offset = dataEnd;
+  }
+  const err = new Error('No XML file found in zip archive');
+  err.code = 'NO_XML_IN_ZIP';
+  throw err;
+};
 
 class McpToolEntitlementError extends Error {
   constructor(toolName, requiredPlan, currentPlan) {
@@ -476,34 +554,16 @@ const executeTool = async (name, args = {}, license) => {
       if (args.archiveBase64 && args.format === 'gzip') {
         xml = zlib
           .gunzipSync(Buffer.from(args.archiveBase64, 'base64'), {
-            maxOutputLength: MAX_GZIP_OUTPUT_BYTES,
+            maxOutputLength: MAX_ARCHIVE_OUTPUT_BYTES,
           })
           .toString('utf8');
       } else if (args.archiveBase64 && args.format === 'zip') {
-        const buffer = Buffer.from(args.archiveBase64, 'base64');
-        const zip = new AdmZip(buffer);
-        const entries = zip.getEntries();
-        const xmlEntry = entries.find(
-          (entry) => !entry.isDirectory && entry.entryName.toLowerCase().endsWith('.xml')
-        );
-        if (!xmlEntry) {
-          const err = new Error('No XML file found in zip archive');
-          err.code = 'NO_XML_IN_ZIP';
-          throw err;
-        }
-        if (xmlEntry.header.size > MAX_GZIP_OUTPUT_BYTES) {
-          const err = new Error(
-            `ZIP entry exceeds maximum size (${MAX_GZIP_OUTPUT_BYTES} bytes)`
-          );
-          err.code = 'ZIP_ENTRY_TOO_LARGE';
-          throw err;
-        }
-        xml = xmlEntry.getData().toString('utf8');
+        xml = extractXmlFromZipBuffer(Buffer.from(args.archiveBase64, 'base64'));
       } else if (!xml && args.archiveBase64) {
         const buffer = Buffer.from(args.archiveBase64, 'base64');
         if (buffer.length >= 2 && buffer[0] === 0x1f && buffer[1] === 0x8b) {
           xml = zlib
-            .gunzipSync(buffer, { maxOutputLength: MAX_GZIP_OUTPUT_BYTES })
+            .gunzipSync(buffer, { maxOutputLength: MAX_ARCHIVE_OUTPUT_BYTES })
             .toString('utf8');
         } else {
           xml = buffer.toString('utf8');
@@ -1013,8 +1073,10 @@ module.exports = {
   CAPABILITIES,
   TOOL_DEFINITIONS,
   MAIL_GRADE_FINDINGS_GUIDE,
+  MAX_ARCHIVE_OUTPUT_BYTES,
   McpToolEntitlementError,
   McpInvalidParamsError,
+  extractXmlFromZipBuffer,
   listTools,
   executeTool,
   listResources,

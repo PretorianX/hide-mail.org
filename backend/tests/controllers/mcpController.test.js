@@ -11,7 +11,73 @@ const dmarcReportService = require('../../services/dmarcReportService');
 const bounceReadService = require('../../services/bounceReadService');
 const complaintReadService = require('../../services/complaintReadService');
 const mcpController = require('../../controllers/mcpController');
+const {
+  extractXmlFromZipBuffer,
+  MAX_ARCHIVE_OUTPUT_BYTES,
+} = require('../../services/mcpService');
 const { forwardJsonRpc, createStdioBridge } = require('../../../mcp/hide-mail-mcp');
+
+const buildZipBuffer = (entries, { lieUncompressedSize } = {}) => {
+  const localParts = [];
+  const centralParts = [];
+  let offset = 0;
+
+  entries.forEach(({ name, data, method = 8 }) => {
+    const nameBuf = Buffer.from(name, 'utf8');
+    const uncompressed = Buffer.isBuffer(data) ? data : Buffer.from(data, 'utf8');
+    const compressed = method === 8 ? zlib.deflateRawSync(uncompressed) : uncompressed;
+    const declaredUncompressed =
+      typeof lieUncompressedSize === 'number' ? lieUncompressedSize : uncompressed.length;
+
+    const localHeader = Buffer.alloc(30);
+    localHeader.writeUInt32LE(0x04034b50, 0);
+    localHeader.writeUInt16LE(20, 4);
+    localHeader.writeUInt16LE(0, 6);
+    localHeader.writeUInt16LE(method, 8);
+    localHeader.writeUInt32LE(0, 10);
+    localHeader.writeUInt32LE(0, 14);
+    localHeader.writeUInt32LE(compressed.length, 18);
+    localHeader.writeUInt32LE(declaredUncompressed >>> 0, 22);
+    localHeader.writeUInt16LE(nameBuf.length, 26);
+    localHeader.writeUInt16LE(0, 28);
+
+    localParts.push(localHeader, nameBuf, compressed);
+
+    const centralHeader = Buffer.alloc(46);
+    centralHeader.writeUInt32LE(0x02014b50, 0);
+    centralHeader.writeUInt16LE(20, 4);
+    centralHeader.writeUInt16LE(20, 6);
+    centralHeader.writeUInt16LE(0, 8);
+    centralHeader.writeUInt16LE(method, 10);
+    centralHeader.writeUInt32LE(0, 12);
+    centralHeader.writeUInt32LE(0, 16);
+    centralHeader.writeUInt32LE(compressed.length, 20);
+    centralHeader.writeUInt32LE(declaredUncompressed >>> 0, 24);
+    centralHeader.writeUInt16LE(nameBuf.length, 28);
+    centralHeader.writeUInt16LE(0, 30);
+    centralHeader.writeUInt16LE(0, 32);
+    centralHeader.writeUInt16LE(0, 34);
+    centralHeader.writeUInt16LE(0, 36);
+    centralHeader.writeUInt32LE(0, 38);
+    centralHeader.writeUInt32LE(offset, 42);
+
+    centralParts.push(centralHeader, nameBuf);
+    offset += localHeader.length + nameBuf.length + compressed.length;
+  });
+
+  const centralDir = Buffer.concat(centralParts);
+  const eocd = Buffer.alloc(22);
+  eocd.writeUInt32LE(0x06054b50, 0);
+  eocd.writeUInt16LE(0, 4);
+  eocd.writeUInt16LE(0, 6);
+  eocd.writeUInt16LE(entries.length, 8);
+  eocd.writeUInt16LE(entries.length, 10);
+  eocd.writeUInt32LE(centralDir.length, 12);
+  eocd.writeUInt32LE(offset, 16);
+  eocd.writeUInt16LE(0, 20);
+
+  return Buffer.concat([...localParts, centralDir, eocd]);
+};
 
 const createRes = () => {
   const headers = {};
@@ -345,6 +411,33 @@ describe('Official Hide Mail MCP Server (mcpController & mcpService)', () => {
       expect(dmarcRes.body.result.structuredContent.domain).toBe('example.com');
       expect(dmarcRes.body.result.structuredContent.verdict).toBe('Aligned');
 
+      // 3b. hide_mail_dmarc_report with zip archiveBase64
+      const zipBuf = buildZipBuffer([
+        { name: 'readme.txt', data: 'ignore me', method: 0 },
+        { name: 'google.com!example.com!1700000000!1700086400.xml', data: SAMPLE_DMARC_XML, method: 8 },
+      ]);
+      const zipDmarcSpy = jest.spyOn(dmarcReportService, 'readReport');
+      const zipDmarcRes = createRes();
+      await mcpController.handlePost(
+        {
+          headers: { 'x-api-key': keys.suite },
+          body: {
+            jsonrpc: '2.0',
+            id: 13.5,
+            method: 'tools/call',
+            params: {
+              name: 'hide_mail_dmarc_report',
+              arguments: { archiveBase64: zipBuf.toString('base64'), format: 'zip' },
+            },
+          },
+        },
+        zipDmarcRes,
+        (err) => { throw err; }
+      );
+      expect(zipDmarcSpy).toHaveBeenCalledWith(SAMPLE_DMARC_XML);
+      expect(zipDmarcRes.body.result.structuredContent.domain).toBe('example.com');
+      expect(zipDmarcRes.body.result.structuredContent.verdict).toBe('Aligned');
+
       // 4. hide_mail_bounce_read
       const bounceRes = createRes();
       await mcpController.handlePost(
@@ -384,6 +477,24 @@ describe('Official Hide Mail MCP Server (mcpController & mcpService)', () => {
         (err) => { throw err; }
       );
       expect(complaintRes.body.result.structuredContent.feedbackType).toBe('abuse');
+    });
+
+    it('rejects a zip that claims a huge uncompressed size without decompressing (zip bomb)', () => {
+      const tinyPayload = Buffer.alloc(64, 0x41);
+      const bomb = buildZipBuffer(
+        [{ name: 'bomb.xml', data: tinyPayload, method: 8 }],
+        { lieUncompressedSize: 0xffffffff }
+      );
+
+      expect(() => extractXmlFromZipBuffer(bomb)).toThrow(
+        expect.objectContaining({ code: 'ARCHIVE_TOO_LARGE' })
+      );
+
+      const oversizedXml = `<feedback>${'a'.repeat(MAX_ARCHIVE_OUTPUT_BYTES + 1024)}</feedback>`;
+      const oversizedZip = buildZipBuffer([{ name: 'huge.xml', data: oversizedXml, method: 8 }]);
+      expect(() => extractXmlFromZipBuffer(oversizedZip)).toThrow(
+        expect.objectContaining({ code: 'ARCHIVE_TOO_LARGE' })
+      );
     });
 
     it('allows a suite or api key to run the 4 QA mailbox tools end-to-end', async () => {
