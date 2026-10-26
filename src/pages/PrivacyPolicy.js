@@ -62,7 +62,8 @@ const PrivacyPolicy = () => {
           <ListItem>Temporary email addresses generated through our service</ListItem>
           <ListItem>Email content received by the temporary email addresses</ListItem>
           <ListItem>Information you provide when you contact us for support</ListItem>
-          <ListItem>Payment and subscription records if you buy Hide Mail Pro or the API plan, as described under "Payments and Hide Mail Pro" below</ListItem>
+          <ListItem>Payment and subscription records if you buy Hide Mail Pro, the API plan, Mail Grade, Sender Check, DMARC Reports, Bounce Read, or Complaint Read, as described under "Payments and Hide Mail Pro" below</ListItem>
+          <ListItem>A domain name you submit to Sender Check. It is used for one DNS lookup and is not stored</ListItem>
         </List>
         <Paragraph>
           <strong>Information we collect automatically:</strong> When you use our Service, we automatically collect certain information about your device and usage of the Service, including:
@@ -165,6 +166,9 @@ const PrivacyPolicy = () => {
         <SectionTitle>Data Retention</SectionTitle>
         <Paragraph>
           Temporary email addresses and their contents are automatically deleted when the mailbox expires. On the free plan a mailbox lasts 30 minutes and can be extended; on Hide Mail Pro you can choose 24 hours, 7 days or 30 days. We do not permanently store email messages or their contents.
+        </Paragraph>
+        <Paragraph>
+          DMARC Reports reads an aggregate report you paste and answers in that same request. The XML is not stored. Bounce Read and Complaint Read work the same way: the bounce or feedback report is read for that request and is not stored.
         </Paragraph>
         <Paragraph>
           We retain other information for as long as necessary to provide our Service and fulfill the purposes described in this Privacy Policy, unless a longer retention period is required or permitted by law.

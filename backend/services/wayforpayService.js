@@ -45,6 +45,30 @@ const PRODUCTS = {
       regularMode: 'monthly',
     },
   },
+  sender: {
+    monthly: {
+      productName: 'Sender Check API Monthly',
+      regularMode: 'monthly',
+    },
+  },
+  reports: {
+    monthly: {
+      productName: 'DMARC Reports API Monthly',
+      regularMode: 'monthly',
+    },
+  },
+  bounce: {
+    monthly: {
+      productName: 'Bounce Read API Monthly',
+      regularMode: 'monthly',
+    },
+  },
+  complaint: {
+    monthly: {
+      productName: 'Complaint Read API Monthly',
+      regularMode: 'monthly',
+    },
+  },
 };
 
 const resolveProduct = (type, plan) => {

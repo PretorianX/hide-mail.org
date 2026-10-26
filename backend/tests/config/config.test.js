@@ -167,6 +167,10 @@ describe('config', () => {
       const config = require('../../config/config');
       expect(config.billing.monthlyUsd).toBe(3.49);
       expect(config.billing.gradeUsd).toBe(9);
+      expect(config.billing.senderUsd).toBe(12);
+      expect(config.billing.reportsUsd).toBe(15);
+      expect(config.billing.bounceUsd).toBe(18);
+      expect(config.billing.complaintUsd).toBe(21);
       expect(config.billing.currency).toBe('UAH');
       expect(config.billing.fxCacheSeconds).toBe(7200);
       expect(config.billing.fxStaleSeconds).toBe(86400);

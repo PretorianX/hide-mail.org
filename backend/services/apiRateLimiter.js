@@ -33,6 +33,22 @@ const RATE_LIMITS = {
   gradeReport: { requests: 20, windowSeconds: 600 },
   // Paid Mail Grade API. A sender's pipeline buys this limit, not the free page.
   mailGrade: { requests: 120, windowSeconds: 60 },
+  // Free in-browser Sender Check lookups. Each one asks DNS.
+  senderReport: { requests: 15, windowSeconds: 600 },
+  // Paid Sender Check API.
+  senderCheck: { requests: 60, windowSeconds: 60 },
+  // Free in-browser DMARC report reads.
+  reportsRead: { requests: 20, windowSeconds: 600 },
+  // Paid DMARC Reports API. A monitoring job buys this limit, not the free page.
+  dmarcReports: { requests: 60, windowSeconds: 60 },
+  // Free in-browser Bounce Read reports.
+  bounceReport: { requests: 20, windowSeconds: 600 },
+  // Paid Bounce Read API.
+  bounceRead: { requests: 120, windowSeconds: 60 },
+  // Free in-browser Complaint Read reports.
+  complaintReport: { requests: 20, windowSeconds: 600 },
+  // Paid Complaint Read API.
+  complaintRead: { requests: 120, windowSeconds: 60 },
 };
 
 /**
@@ -104,6 +120,14 @@ module.exports = {
   orderLookup: createRateLimiter('orderLookup'),
   gradeReport: createRateLimiter('gradeReport'),
   mailGrade: createRateLimiter('mailGrade'),
+  senderReport: createRateLimiter('senderReport'),
+  senderCheck: createRateLimiter('senderCheck'),
+  reportsRead: createRateLimiter('reportsRead'),
+  dmarcReports: createRateLimiter('dmarcReports'),
+  bounceReport: createRateLimiter('bounceReport'),
+  bounceRead: createRateLimiter('bounceRead'),
+  complaintReport: createRateLimiter('complaintReport'),
+  complaintRead: createRateLimiter('complaintRead'),
   default: createRateLimiter('default'),
   RATE_LIMITS,
 };

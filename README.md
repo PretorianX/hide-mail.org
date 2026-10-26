@@ -16,6 +16,10 @@ A temporary email service that provides disposable email addresses for privacy a
 - Optional Hide Mail Pro plan: no ads, longer mailbox lifetimes, custom aliases, premium domains, higher forwarding limits
 - Optional API plan for QA automation: create mailboxes, read messages, download attachments, register inbound webhooks
 - Mail Grade: paste a raw email and get a quality report, plus a separate Mail Grade API plan for scoring mail from a script
+- Sender Check: look up a domain's MX, SPF, and DMARC, plus a separate Sender Check API plan for checking domains from a script
+- DMARC Reports: paste a DMARC aggregate report and get a source-by-source alignment summary, plus a separate DMARC Reports API plan for reading reports from a script
+- Bounce Read: paste a delivery status and see which addresses failed permanently, plus a separate Bounce Read API plan
+- Complaint Read: paste an abuse feedback report and get the address to suppress, plus a separate Complaint Read API plan
 
 ## Quick Start
 
@@ -91,6 +95,10 @@ Key configuration options in `.env`:
 | `PRO_PRICE_MONTHLY_USD` / `PRO_PRICE_YEARLY_USD` | Pro list prices in USD; UAH charged is derived from WayForPay rates |
 | `API_PRICE_MONTHLY_USD` | API plan list price in USD |
 | `GRADE_PRICE_MONTHLY_USD` | Mail Grade API list price in USD. This plan only scores raw email |
+| `SENDER_PRICE_MONTHLY_USD` | Sender Check API list price in USD. This plan only looks up MX, SPF, and DMARC |
+| `REPORTS_PRICE_MONTHLY_USD` | DMARC Reports API list price in USD. This plan only reads aggregate reports |
+| `BOUNCE_PRICE_MONTHLY_USD` | Bounce Read API list price in USD. This plan only classifies delivery statuses |
+| `COMPLAINT_PRICE_MONTHLY_USD` | Complaint Read API list price in USD. This plan only reads abuse feedback reports |
 | `FX_CACHE_SECONDS` / `FX_STALE_SECONDS` | Fresh FX cache TTL (default 2h) and maximum stale-cache age (default 24h) |
 | `PREMIUM_DOMAINS` | Pro-only domains; empty means Pro uses `VALID_DOMAINS` |
 
@@ -219,6 +227,63 @@ A QA mailbox key is rejected on that route, and a Mail Grade key cannot create m
 Buying Mail Grade does not remove ads or change inbox limits. Card checkout follows the same
 WayForPay pause as the other plans; while it is paused the page still grades mail for free.
 After a grade payment the browser returns to `/grade`.
+
+## Sender Check
+
+Sender Check tells you whether a domain publishes the DNS records receivers use to
+accept mail that claims to come from it. It is not a mailbox, and it does not grade
+a message. Open `/sender`, enter a domain, and Hide Mail returns three records:
+MX, SPF, and DMARC, plus a verdict of Ready, Gaps, or Blocked. The lookup is not stored.
+
+The report on the page is free. The paid offer is the Sender Check API, a monthly plan
+of its own (`SENDER_PRICE_MONTHLY_USD`, default $12):
+
+```bash
+curl -sS -H "Authorization: Bearer $SENDER_CHECK_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"domain":"example.com"}' \
+  https://hide-mail.org/api/sender-check
+```
+
+A QA mailbox key and a Mail Grade key are rejected on that route, and a Sender Check
+key cannot create mailboxes or grade mail. Buying Sender Check does not remove ads
+or change inbox limits. Card checkout follows the same WayForPay pause as the other
+plans; while it is paused the page still checks domains for free. After a Sender Check
+payment the browser returns to `/sender`.
+## DMARC Reports
+
+DMARC Reports reads an aggregate report a mailbox provider already sent you. It is not a
+mailbox, and it does not look up a domain's DNS. Open `/reports`, paste the XML (unzip a
+`.xml.gz` file first), and Hide Mail returns how many messages aligned, which sources failed,
+and what the published policy was. The report is read in memory and is not stored.
+
+The summary on the page is free. The paid offer is the DMARC Reports API, a monthly plan of
+its own (`REPORTS_PRICE_MONTHLY_USD`, default $15):
+
+```bash
+curl -sS -H "Authorization: Bearer $DMARC_REPORTS_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"xml":"<feedback>...</feedback>"}' \
+  https://hide-mail.org/api/dmarc-reports
+```
+
+A QA mailbox key and a Mail Grade key are rejected on that route, and a DMARC Reports key
+cannot create mailboxes or grade a message. Buying DMARC Reports does not remove ads or
+change inbox limits. Card checkout follows the same WayForPay pause as the other plans;
+while it is paused the page still reads reports for free. After a reports payment the
+browser returns to `/reports`.
+
+## Bounce Read
+
+Bounce Read classifies one delivery status notification. Open `/bounces`, paste the raw bounce, and Hide Mail says whether each recipient failed permanently. The bounce is not stored.
+
+The page is free. The paid offer is the Bounce Read API (`BOUNCE_PRICE_MONTHLY_USD`, default $18): `POST /api/bounce-read` with a Bounce Read key. That key cannot open a mailbox, grade a message, or call the other tool APIs.
+
+## Complaint Read
+
+Complaint Read turns one RFC 5965 feedback report into the address to suppress, keep, or review. Open `/complaints` and paste the report. The report is not stored.
+
+The page is free. The paid offer is the Complaint Read API (`COMPLAINT_PRICE_MONTHLY_USD`, default $21): `POST /api/complaint-read` with a Complaint Read key. That key cannot open a mailbox, grade a message, or call the other tool APIs.
 
 ## Attachments
 

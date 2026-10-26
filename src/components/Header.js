@@ -119,6 +119,10 @@ const Header = () => {
             <NavLink to="/about-us">About</NavLink>
             <NavLink to="/contact-us">Contact</NavLink>
             <NavLink to="/grade">Grade</NavLink>
+            <NavLink to="/sender">Sender</NavLink>
+            <NavLink to="/reports">Reports</NavLink>
+            <NavLink to="/bounces">Bounces</NavLink>
+            <NavLink to="/complaints">Complaints</NavLink>
             <NavProCta isPro={isPro} daysLeft={daysLeft} />
           </Nav>
         </NavContainer>

@@ -26,6 +26,10 @@ jest.mock('../../config/config', () => {
       yearlyUsd: 24.99,
       apiUsd: 7.99,
       gradeUsd: 9,
+      senderUsd: 12,
+      reportsUsd: 15,
+      bounceUsd: 18,
+      complaintUsd: 21,
       checkoutPaused: false,
     },
   };
@@ -44,6 +48,7 @@ jest.mock('../../services/licenseService', () => ({
   findByRecToken: jest.fn(),
   createApiKey: jest.fn(),
   validateApiKey: jest.fn(),
+  canIssueApiKey: (type) => ['api', 'grade', 'sender', 'reports', 'bounce', 'complaint'].includes(type),
   getLicense: jest.fn(),
   isActive: jest.fn(),
   maskKey: jest.fn(() => 'HM-****-DDDD'),
@@ -71,6 +76,10 @@ const MONTHLY_UAH = 140;
 const YEARLY_UAH = 1030;
 const API_UAH = 330;
 const GRADE_UAH = 370;
+const SENDER_UAH = 490;
+const REPORTS_UAH = 620;
+const BOUNCE_UAH = 740;
+const COMPLAINT_UAH = 870;
 
 const mockRes = () => {
   const res = {};
@@ -206,6 +215,110 @@ describe('billingController', () => {
       expect(orderService.createOrder).toHaveBeenCalledWith(
         expect.objectContaining({ type: 'grade', amount: GRADE_UAH })
       );
+    });
+
+    it('charges the Sender Check price for a Sender Check order', async () => {
+      const req = { body: { plan: 'monthly', type: 'sender' } };
+      const res = mockRes();
+
+      await billingController.checkout(req, res);
+
+      const payload = res.json.mock.calls[0][0];
+      expect(payload.data.orderReference).toMatch(/^sender-monthly-/);
+      expect(payload.data.productName).toEqual(['Sender Check API Monthly']);
+      expect(payload.data.amount).toBe(SENDER_UAH);
+      expect(orderService.createOrder).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'sender', amount: SENDER_UAH })
+      );
+    });
+
+    it('rejects a yearly Sender Check order because that tariff is monthly only', async () => {
+      const req = { body: { plan: 'yearly', type: 'sender' } };
+      const res = mockRes();
+
+      await billingController.checkout(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json.mock.calls[0][0].error).toMatch(/Sender Check is a monthly plan/);
+      expect(orderService.createOrder).not.toHaveBeenCalled();
+    });
+
+    it('charges the DMARC Reports price for a DMARC Reports order', async () => {
+      const req = { body: { plan: 'monthly', type: 'reports' } };
+      const res = mockRes();
+
+      await billingController.checkout(req, res);
+
+      const payload = res.json.mock.calls[0][0];
+      expect(payload.data.orderReference).toMatch(/^reports-monthly-/);
+      expect(payload.data.productName).toEqual(['DMARC Reports API Monthly']);
+      expect(payload.data.amount).toBe(REPORTS_UAH);
+      expect(orderService.createOrder).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'reports', amount: REPORTS_UAH })
+      );
+    });
+
+    it('rejects a yearly DMARC Reports order because that tariff is monthly only', async () => {
+      const req = { body: { plan: 'yearly', type: 'reports' } };
+      const res = mockRes();
+
+      await billingController.checkout(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json.mock.calls[0][0].error).toMatch(/DMARC Reports is a monthly plan/);
+      expect(orderService.createOrder).not.toHaveBeenCalled();
+    });
+
+    it('charges the Bounce Read price for a Bounce Read order', async () => {
+      const req = { body: { plan: 'monthly', type: 'bounce' } };
+      const res = mockRes();
+
+      await billingController.checkout(req, res);
+
+      const payload = res.json.mock.calls[0][0];
+      expect(payload.data.orderReference).toMatch(/^bounce-monthly-/);
+      expect(payload.data.productName).toEqual(['Bounce Read API Monthly']);
+      expect(payload.data.amount).toBe(BOUNCE_UAH);
+      expect(orderService.createOrder).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'bounce', amount: BOUNCE_UAH })
+      );
+    });
+
+    it('rejects a yearly Bounce Read order because that tariff is monthly only', async () => {
+      const req = { body: { plan: 'yearly', type: 'bounce' } };
+      const res = mockRes();
+
+      await billingController.checkout(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json.mock.calls[0][0].error).toMatch(/Bounce Read is a monthly plan/);
+      expect(orderService.createOrder).not.toHaveBeenCalled();
+    });
+
+    it('charges the Complaint Read price for a Complaint Read order', async () => {
+      const req = { body: { plan: 'monthly', type: 'complaint' } };
+      const res = mockRes();
+
+      await billingController.checkout(req, res);
+
+      const payload = res.json.mock.calls[0][0];
+      expect(payload.data.orderReference).toMatch(/^complaint-monthly-/);
+      expect(payload.data.productName).toEqual(['Complaint Read API Monthly']);
+      expect(payload.data.amount).toBe(COMPLAINT_UAH);
+      expect(orderService.createOrder).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'complaint', amount: COMPLAINT_UAH })
+      );
+    });
+
+    it('rejects a yearly Complaint Read order because that tariff is monthly only', async () => {
+      const req = { body: { plan: 'yearly', type: 'complaint' } };
+      const res = mockRes();
+
+      await billingController.checkout(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json.mock.calls[0][0].error).toMatch(/Complaint Read is a monthly plan/);
+      expect(orderService.createOrder).not.toHaveBeenCalled();
     });
 
     it('rejects a yearly Mail Grade order because that tariff is monthly only', async () => {
@@ -715,6 +828,70 @@ describe('billingController', () => {
         apiKey: 'hm_api_newkey',
         remainingDays: 20,
       }));
+    });
+
+    it('hands a Sender Check subscriber a fresh key without treating it as the QA API', async () => {
+      licenseService.getLicense.mockResolvedValue({ ...activeApiLicense, type: 'sender' });
+      licenseService.isActive.mockReturnValue(true);
+      licenseService.createApiKey.mockResolvedValue('hm_api_sender');
+      licenseService.validateApiKey.mockResolvedValue({
+        expiresAt: Date.now() + 20 * 24 * 60 * 60 * 1000,
+        remainingDays: 20,
+      });
+
+      const res = mockRes();
+      await billingController.issueApiKey({ body: { key: activeApiLicense.key } }, res);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json.mock.calls[0][0].apiKey).toBe('hm_api_sender');
+    });
+
+    it('hands a DMARC Reports subscriber a fresh key without treating it as the QA API', async () => {
+      licenseService.getLicense.mockResolvedValue({ ...activeApiLicense, type: 'reports' });
+      licenseService.isActive.mockReturnValue(true);
+      licenseService.createApiKey.mockResolvedValue('hm_api_reports');
+      licenseService.validateApiKey.mockResolvedValue({
+        expiresAt: Date.now() + 20 * 24 * 60 * 60 * 1000,
+        remainingDays: 20,
+      });
+
+      const res = mockRes();
+      await billingController.issueApiKey({ body: { key: activeApiLicense.key } }, res);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json.mock.calls[0][0].apiKey).toBe('hm_api_reports');
+    });
+
+    it('hands a Bounce Read subscriber a fresh key without treating it as the QA API', async () => {
+      licenseService.getLicense.mockResolvedValue({ ...activeApiLicense, type: 'bounce' });
+      licenseService.isActive.mockReturnValue(true);
+      licenseService.createApiKey.mockResolvedValue('hm_api_bounce');
+      licenseService.validateApiKey.mockResolvedValue({
+        expiresAt: Date.now() + 20 * 24 * 60 * 60 * 1000,
+        remainingDays: 20,
+      });
+
+      const res = mockRes();
+      await billingController.issueApiKey({ body: { key: activeApiLicense.key } }, res);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json.mock.calls[0][0].apiKey).toBe('hm_api_bounce');
+    });
+
+    it('hands a Complaint Read subscriber a fresh key without treating it as the QA API', async () => {
+      licenseService.getLicense.mockResolvedValue({ ...activeApiLicense, type: 'complaint' });
+      licenseService.isActive.mockReturnValue(true);
+      licenseService.createApiKey.mockResolvedValue('hm_api_complaint');
+      licenseService.validateApiKey.mockResolvedValue({
+        expiresAt: Date.now() + 20 * 24 * 60 * 60 * 1000,
+        remainingDays: 20,
+      });
+
+      const res = mockRes();
+      await billingController.issueApiKey({ body: { key: activeApiLicense.key } }, res);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json.mock.calls[0][0].apiKey).toBe('hm_api_complaint');
     });
 
     it('hands a Mail Grade subscriber a fresh key without treating it as the QA API', async () => {
