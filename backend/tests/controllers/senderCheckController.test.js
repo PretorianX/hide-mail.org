@@ -73,7 +73,19 @@ describe('Sender Check HTTP', () => {
       .expect(200);
 
     expect(res.body.report).toEqual(REPORT);
-    expect(senderCheckService.checkDomain).toHaveBeenCalledWith('example.com');
+    expect(senderCheckService.checkDomain).toHaveBeenCalledWith('example.com', { dkimSelector: undefined });
+  });
+
+  it('passes dkimSelector to senderCheckService when provided', async () => {
+    senderCheckService.checkDomain.mockResolvedValue(REPORT);
+
+    const res = await request(app)
+      .post('/sender/report')
+      .send({ domain: 'example.com', dkimSelector: 'google' })
+      .expect(200);
+
+    expect(res.body.report).toEqual(REPORT);
+    expect(senderCheckService.checkDomain).toHaveBeenCalledWith('example.com', { dkimSelector: 'google' });
   });
 
   it('returns 503 when DNS does not answer', async () => {

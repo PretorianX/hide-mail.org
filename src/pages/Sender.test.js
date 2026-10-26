@@ -117,4 +117,183 @@ describe('Sender Check page', () => {
     expect(screen.getByTestId('sender-verdict')).toHaveTextContent('—');
     expect(screen.queryByTestId('sender-result')).not.toBeInTheDocument();
   });
+
+  test('loads a sample domain and renders MX provider, SPF lookup count, DMARC tags, and recommendations', async () => {
+    SenderService.check.mockResolvedValue({
+      ...readyReport,
+      records: [
+        {
+          ...readyReport.records[0],
+          parsed: {
+            provider: 'Google Workspace',
+            exchangeCount: 1,
+            nullMx: false,
+            exchanges: [{ priority: 10, exchange: 'aspmx.l.google.com' }],
+          },
+        },
+        {
+          ...readyReport.records[1],
+          parsed: {
+            dnsLookupCount: 2,
+            dnsLookupLimit: 10,
+            exceedsLookupLimit: false,
+            allQualifier: '-all',
+            mechanisms: [
+              {
+                token: 'include:_spf.google.com',
+                causesDnsLookup: true,
+                description: 'Includes policy from _spf.google.com',
+              },
+            ],
+          },
+        },
+        {
+          ...readyReport.records[2],
+          parsed: {
+            tags: [
+              {
+                tag: 'p',
+                value: 'reject',
+                label: 'Domain policy',
+                explanation: 'Receivers reject messages that fail DMARC alignment.',
+              },
+            ],
+          },
+        },
+      ],
+      recommendations: [
+        {
+          id: 'dmarc_rua',
+          severity: 'low',
+          title: 'Add aggregate reporting (rua)',
+          detail: 'Add rua=mailto:dmarc@example.com to receive daily XML reports.',
+          suggestedRecord: 'v=DMARC1; p=reject; rua=mailto:dmarc@example.com',
+        },
+      ],
+    });
+    renderSender();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Load sample' }));
+    expect(screen.getByLabelText('Domain').value).toBe('example.com');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Check this domain' }));
+
+    expect(await screen.findByTestId('sender-mx-details')).toHaveTextContent('Google Workspace');
+    expect(screen.getByTestId('sender-spf-details')).toHaveTextContent('2 / 10 RFC 7208 limit');
+    expect(screen.getByTestId('sender-dmarc-details')).toHaveTextContent('Domain policy');
+    expect(screen.getByTestId('sender-recommendations')).toHaveTextContent('Add aggregate reporting (rua)');
+  });
+
+  test('passes optional DKIM selector and renders DKIM Key Inspector, Recursive SPF Tree, and Transport Security & Brand cards', async () => {
+    SenderService.check.mockResolvedValue({
+      ...readyReport,
+      records: [
+        readyReport.records[0],
+        {
+          ...readyReport.records[1],
+          parsed: {
+            dnsLookupCount: 2,
+            totalDnsLookups: 4,
+            dnsLookupLimit: 10,
+            overLookupLimit: false,
+            allQualifier: '-all',
+            mechanisms: [
+              {
+                token: 'include:_spf.google.com',
+                lookups: 1,
+                description: 'Includes policy from _spf.google.com',
+              },
+            ],
+            includeTree: [
+              {
+                domain: '_spf.google.com',
+                record: 'v=spf1 include:_netblocks.google.com ~all',
+                lookups: 1,
+                depth: 1,
+              },
+              {
+                domain: '_netblocks.google.com',
+                record: 'v=spf1 ip4:35.190.247.0/24 ~all',
+                lookups: 0,
+                depth: 2,
+              },
+            ],
+          },
+        },
+        readyReport.records[2],
+      ],
+      dkim: {
+        mode: 'explicit',
+        probedSelectors: ['google'],
+        selectors: [
+          {
+            selector: 'google',
+            fqdn: 'google._domainkey.example.com',
+            status: 'pass',
+            keyType: 'rsa',
+            keyBits: 2048,
+            revoked: false,
+            strictMode: false,
+            testing: false,
+            detail: 'RSA ~2048-bit public key published for selector google.',
+            record: 'v=DKIM1; k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8A...',
+          },
+        ],
+      },
+      transportAndBrand: {
+        bimi: {
+          id: 'bimi',
+          name: 'BIMI',
+          status: 'pass',
+          detail: 'BIMI brand logo published with VMC certificate.',
+          record: 'v=BIMI1; l=https://example.com/logo.svg; a=https://example.com/vmc.pem',
+          parsed: {
+            version: 'BIMI1',
+            logoUrl: 'https://example.com/logo.svg',
+            authorityUrl: 'https://example.com/vmc.pem',
+          },
+        },
+        mtaSts: {
+          id: 'mta_sts',
+          name: 'MTA-STS',
+          status: 'pass',
+          detail: 'MTA-STS TXT policy published (id=20260101).',
+          record: 'v=STSv1; id=20260101',
+          parsed: {
+            version: 'STSv1',
+            policyId: '20260101',
+          },
+        },
+        tlsRpt: {
+          id: 'tls_rpt',
+          name: 'TLS-RPT',
+          status: 'pass',
+          detail: 'SMTP TLS Reporting enabled (mailto:tlsrpt@example.com).',
+          record: 'v=TLSRPTv1; rua=mailto:tlsrpt@example.com',
+          parsed: {
+            version: 'TLSRPTv1',
+            rua: ['mailto:tlsrpt@example.com'],
+          },
+        },
+      },
+    });
+
+    renderSender();
+
+    fireEvent.change(screen.getByLabelText('Domain'), { target: { value: 'example.com' } });
+    fireEvent.change(screen.getByLabelText('DKIM selector'), { target: { value: 'google' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Check this domain' }));
+
+    await waitFor(() => {
+      expect(SenderService.check).toHaveBeenCalledWith('example.com', 'google');
+    });
+
+    expect(await screen.findByTestId('sender-dkim-details')).toHaveTextContent('google._domainkey.example.com');
+    expect(screen.getByTestId('sender-dkim-details')).toHaveTextContent('2048-bit');
+    expect(screen.getByTestId('sender-spf-tree')).toHaveTextContent('_spf.google.com');
+    expect(screen.getByTestId('sender-spf-tree')).toHaveTextContent('_netblocks.google.com');
+    expect(screen.getByTestId('sender-transport-brand')).toHaveTextContent('BIMI');
+    expect(screen.getByTestId('sender-transport-brand')).toHaveTextContent('MTA-STS');
+    expect(screen.getByTestId('sender-transport-brand')).toHaveTextContent('TLS-RPT');
+  });
 });

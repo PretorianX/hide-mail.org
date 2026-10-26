@@ -7,9 +7,9 @@ const config = require('../config/config');
 const logger = require('../utils/logger');
 const { sanitizeForLog } = require('../utils/sanitize');
 
-const checkResponse = async (domain, res, next) => {
+const checkResponse = async (domain, dkimSelector, res, next) => {
   try {
-    const report = await senderCheckService.checkDomain(domain);
+    const report = await senderCheckService.checkDomain(domain, { dkimSelector });
     return res.status(200).json({ success: true, report });
   } catch (error) {
     if (error instanceof senderCheckService.SenderCheckError) {
@@ -25,7 +25,7 @@ const checkResponse = async (domain, res, next) => {
   }
 };
 
-const report = (req, res, next) => checkResponse(req.body?.domain, res, next);
+const report = (req, res, next) => checkResponse(req.body?.domain, req.body?.dkimSelector, res, next);
 
 const offer = (req, res) => res.status(200).json({
   success: true,
