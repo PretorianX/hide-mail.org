@@ -4,7 +4,11 @@
  */
 
 const { simpleParser } = require('mailparser');
-const { parseDeliveryStatus, BounceReadError } = require('./bounceRead/parseDeliveryStatus');
+const {
+  parseDeliveryStatus,
+  extractOriginalMessageHeaders,
+  BounceReadError,
+} = require('./bounceRead/parseDeliveryStatus');
 
 const MAX_SOURCE_CHARS = 64 * 1024;
 
@@ -147,11 +151,24 @@ const readBounce = async (source) => {
   }
 
   const parsed = parseDeliveryStatus(deliveryStatus);
+  const originalMessage = extractOriginalMessageHeaders(source);
+  const counts = {
+    total: parsed.recipients.length,
+    hard: parsed.recipients.filter((r) => r.class === 'hard').length,
+    soft: parsed.recipients.filter((r) => r.class === 'soft').length,
+    delayed: parsed.recipients.filter((r) => r.class === 'delayed').length,
+    delivered: parsed.recipients.filter((r) => ['delivered', 'relayed', 'expanded'].includes(r.class)).length,
+  };
   return {
     stored: false,
     verdict: verdictOf(parsed.recipients),
     summary: summaryOf(parsed.recipients),
     reportingMta: parsed.reportingMta,
+    receivedFromMta: parsed.receivedFromMta,
+    arrivalDate: parsed.arrivalDate,
+    originalEnvelopeId: parsed.originalEnvelopeId,
+    originalMessage,
+    counts,
     recipients: parsed.recipients,
   };
 };

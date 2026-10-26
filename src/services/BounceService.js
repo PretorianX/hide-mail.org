@@ -57,8 +57,8 @@ class BounceService {
     });
     const payload = await readPayload(response);
     const license = payload.license || payload.data;
-    if (license?.type !== 'bounce') {
-      throw new Error('That key is not a Bounce Read plan.');
+    if (license?.type !== 'bounce' && license?.type !== 'suite') {
+      throw new Error('That key is not a Bounce Read or Deliverability Suite plan.');
     }
     this.saveKey(license.key);
     return license;

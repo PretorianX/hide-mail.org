@@ -127,4 +127,100 @@ describe('Bounce Read page', () => {
       expect(screen.queryByTestId('bounce-empty')).not.toBeInTheDocument();
     });
   });
+
+  test('loads a sample bounce and displays DSN envelope metadata and remediation', async () => {
+    BounceService.read.mockResolvedValue({
+      stored: false,
+      verdict: 'hard',
+      summary: 'Hard failure. Do not retry ada@example.com.',
+      reportingMta: 'dns; mx-out.sender.example',
+      receivedFromMta: 'dns; app-01.sender.example',
+      arrivalDate: 'Wed, 26 Oct 2026 11:42:10 +0000',
+      originalEnvelopeId: 'env-20261026-9941',
+      counts: { total: 1, hard: 1, soft: 0, delayed: 0, delivered: 0 },
+      recipients: [
+        {
+          recipient: 'ada@example.com',
+          originalRecipient: 'old-alias@example.com',
+          action: 'failed',
+          status: '5.1.1',
+          smtpCode: 550,
+          category: 'Addressing Status',
+          class: 'hard',
+          retry: false,
+          title: 'No such mailbox',
+          detail: 'The destination mailbox does not exist. Do not retry it.',
+          remediation: 'Suppress this recipient immediately.',
+          diagnostic: 'smtp; 550 5.1.1 user unknown',
+          remoteMta: 'dns; mx.example.com',
+        },
+      ],
+    });
+    renderBounces();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Load sample' }));
+    expect(screen.getByLabelText('Raw bounce').value).toContain('Original-Envelope-Id');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Read this bounce' }));
+
+    expect(await screen.findByTestId('bounce-dsn-meta')).toHaveTextContent('env-20261026-9941');
+    expect(screen.getByTestId('bounce-remediation-0')).toHaveTextContent('Suppress this recipient immediately.');
+  });
+
+  test('uploads a .eml file via bounces-file-input and renders originalMessage and ISP/reason badges', async () => {
+    BounceService.read.mockResolvedValue({
+      stored: false,
+      verdict: 'hard',
+      summary: 'Hard failure. Do not retry user@gmail.com.',
+      reportingMta: 'dns; mx.sender.example',
+      originalMessage: {
+        messageId: '<msg-777@sender.example>',
+        subject: 'Invoice #777',
+        from: 'billing@sender.example',
+        date: 'Mon, 26 Oct 2026 12:00:00 +0000',
+        listUnsubscribe: '<https://sender.example/unsub>',
+      },
+      recipients: [
+        {
+          recipient: 'user@gmail.com',
+          action: 'failed',
+          status: '5.0.0',
+          smtpCode: '550',
+          reasonCode: 'policy_dmarc',
+          ispHint: 'Gmail',
+          category: 'Security or Policy Status',
+          class: 'hard',
+          retry: false,
+          title: 'DMARC policy rejection',
+          detail: 'The receiving domain rejected the message due to DMARC policy.',
+          remediation: 'Align SPF and DKIM with your From domain.',
+          diagnostic: 'smtp; 550-5.7.26 Unauthenticated email from sender.example is not accepted due to domain\'s DMARC policy.',
+          remoteMta: 'dns; gmail-smtp-in.l.google.com',
+        },
+      ],
+    });
+    renderBounces();
+
+    const fileInput = screen.getByTestId('bounces-file-input');
+    expect(fileInput).toHaveAttribute('accept', '.eml,.dsn,.txt,message/rfc822');
+
+    const emlContent = 'Final-Recipient: rfc822; user@gmail.com\nAction: failed\nStatus: 5.0.0';
+    const file = new File([emlContent], 'bounce.eml', { type: 'message/rfc822' });
+    Object.defineProperty(file, 'text', {
+      value: jest.fn().mockResolvedValue(emlContent),
+    });
+
+    fireEvent.change(fileInput, { target: { files: [file] } });
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Raw bounce').value).toBe(emlContent);
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Read this bounce' }));
+
+    expect(await screen.findByTestId('bounce-original-message')).toHaveTextContent('Invoice #777');
+    expect(screen.getByTestId('bounce-original-message')).toHaveTextContent('<msg-777@sender.example>');
+    expect(screen.getByText('Gmail')).toBeInTheDocument();
+    expect(screen.getByText('policy_dmarc')).toBeInTheDocument();
+  });
 });

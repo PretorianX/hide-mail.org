@@ -152,6 +152,47 @@ const classify = (status, action) => {
   return { class: 'delivered', retry: false };
 };
 
+const SUBJECT_CATEGORY = {
+  0: 'Other or Undefined Status',
+  1: 'Addressing Status',
+  2: 'Mailbox Status',
+  3: 'Mail System Status',
+  4: 'Network & Routing Status',
+  5: 'Mail Delivery Protocol Status',
+  6: 'Message Content or Media Status',
+  7: 'Security or Policy Status',
+};
+
+const categoryOf = (status) => {
+  const parts = String(status || '').split('.');
+  const subject = Number(parts[1]);
+  return SUBJECT_CATEGORY[subject] || 'Other or Undefined Status';
+};
+
+const remediationFor = (status, outcome) => {
+  const parts = String(status || '').split('.');
+  const subject = Number(parts[1]);
+  if (outcome.class === 'hard') {
+    if (subject === 7) {
+      return 'Do not retry immediately. Inspect SPF, DKIM, DMARC alignment (Sender Check) and IP/domain blocklists (Mail Grade) to resolve the policy rejection.';
+    }
+    if (status === '5.2.3' || subject === 6) {
+      return 'Reduce attachment size or fix MIME formatting before sending a new message to this recipient.';
+    }
+    return 'Suppress this address immediately in your mailing list or CRM. Continuing to send to hard-bouncing addresses harms domain reputation.';
+  }
+  if (outcome.class === 'soft' || outcome.class === 'delayed') {
+    if (subject === 2) {
+      return 'Pause deliveries to this recipient for 24–48 hours while the mailbox clears quota or temporary lock, then retry.';
+    }
+    if (subject === 7) {
+      return 'Throttle sending rate to this receiving domain and verify authentication headers before the next retry window.';
+    }
+    return 'Allow standard MTA exponential backoff (retry over 24–72 hours). Suppress only if soft bounces persist across 3+ consecutive campaigns.';
+  }
+  return 'No suppression needed; the message was accepted or relayed onward.';
+};
+
 const explainStatus = (status, action) => {
   const outcome = classify(status, action);
   const known = EXACT[status];
@@ -161,6 +202,8 @@ const explainStatus = (status, action) => {
     retry: outcome.retry,
     title: known ? known.title : generic.title,
     detail: known ? known.detail : generic.detail(status),
+    category: categoryOf(status),
+    remediation: remediationFor(status, outcome),
   };
 };
 
