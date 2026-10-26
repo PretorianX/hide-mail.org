@@ -142,10 +142,10 @@ describe('Complaint Read page', () => {
       feedbackExplanation: 'The recipient clicked "Report Spam" or "Junk" in their mailbox client.',
       version: '1',
       incidents: 1,
-      originalEnvelopeId: 'env-arf-20261026-01',
+      originalEnvelopeId: ['env-arf-20261026-01'],
       reportedUri: ['https://sender.example/promo/october'],
       dkimDomain: 'sender.example',
-      authenticationResults: 'mta.example.net; dkim=pass header.d=sender.example',
+      authenticationResults: ['mta.example.net; dkim=pass header.d=sender.example'],
       workflow: [
         'Immediately add subscriber@example.net to your global suppression list.',
       ],

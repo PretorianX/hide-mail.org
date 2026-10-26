@@ -307,6 +307,14 @@ const plainField = (label, value) => {
   return text;
 };
 
+const optionalRepeatable = (fields, name) => {
+  const values = fields.get(name) || [];
+  const filtered = values
+    .map((v) => v.trim())
+    .filter((v) => v.length > 0 && !/[\u0000-\u001F\u007F]/.test(v));
+  return filtered.length > 0 ? filtered : null;
+};
+
 const verdictFrom = ({ fields, originalMessage = null }) => {
   const rawType = one(fields, 'feedback-type', 'Feedback-Type');
   if (!rawType) {
@@ -378,12 +386,12 @@ const verdictFrom = ({ fields, originalMessage = null }) => {
     mailFrom,
     sourceIp,
     reportedDomain,
-    reportedUri: plainField('Reported-URI', one(fields, 'reported-uri', 'Reported-URI')),
+    reportedUri: optionalRepeatable(fields, 'reported-uri'),
     userAgent: plainField('User-Agent', one(fields, 'user-agent', 'User-Agent')),
     version: plainField('Version', one(fields, 'version', 'Version')),
     incidents,
-    originalEnvelopeId: plainField('Original-Envelope-Id', one(fields, 'original-envelope-id', 'Original-Envelope-Id')),
-    authenticationResults: plainField('Authentication-Results', one(fields, 'authentication-results', 'Authentication-Results')),
+    originalEnvelopeId: optionalRepeatable(fields, 'original-envelope-id'),
+    authenticationResults: optionalRepeatable(fields, 'authentication-results'),
     dkimDomain: plainField('DKIM-Domain', one(fields, 'dkim-domain', 'DKIM-Domain')),
     receivedDate,
     arrivalDate,
