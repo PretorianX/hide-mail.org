@@ -14,9 +14,12 @@ const STATUS = {
   REPORT_TOO_LARGE: 413,
 };
 
-const readResponse = async (xml, res, next) => {
+const readResponse = async (body, res, next) => {
   try {
-    const report = await dmarcReportService.readReport(xml);
+    const input = body && typeof body === 'object' && body.archiveBase64 && !body.xml
+      ? { archiveBase64: body.archiveBase64, format: body.format }
+      : body?.xml;
+    const report = await dmarcReportService.readReport(input);
     return res.status(200).json({ success: true, report });
   } catch (error) {
     if (error instanceof dmarcReportService.DmarcReportError) {
@@ -31,7 +34,7 @@ const readResponse = async (xml, res, next) => {
   }
 };
 
-const read = (req, res, next) => readResponse(req.body?.xml, res, next);
+const read = (req, res, next) => readResponse(req.body, res, next);
 
 const offer = (req, res) => res.status(200).json({
   success: true,
