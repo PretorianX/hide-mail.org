@@ -68,8 +68,9 @@ const resolvePtrHost = async (ip, customDns) => {
   }
   let timer = null;
   try {
+    const reversePromise = resolver.reverse(ip).catch(() => null);
     const hosts = await Promise.race([
-      resolver.reverse(ip),
+      reversePromise,
       new Promise((_, reject) => {
         timer = setTimeout(() => reject(new Error('PTR_TIMEOUT')), PTR_TIMEOUT_MS);
       }),
@@ -132,6 +133,10 @@ const extractZipXmlBuffer = (buf) => {
     }
 
     if (compressedSize === 0) {
+      if (entryName.endsWith('/')) {
+        offset = dataStart;
+        continue;
+      }
       break;
     }
     offset = dataEnd;

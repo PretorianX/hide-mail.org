@@ -138,6 +138,7 @@ const readFileAsBase64 = (file) => new Promise((resolve, reject) => {
 
 const Reports = () => {
   const [xml, setXml] = useState('');
+  const [archiveData, setArchiveData] = useState(null);
   const [report, setReport] = useState(null);
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -157,6 +158,19 @@ const Reports = () => {
   const onSubmit = async (event) => {
     event.preventDefault();
     setError(null);
+    if (archiveData) {
+      setBusy(true);
+      try {
+        const next = await ReportsService.read(archiveData);
+        setReport(next);
+      } catch (err) {
+        setReport(null);
+        setError(err.message || 'DMARC Reports could not read that report.');
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
     if (!xml.trim()) {
       setReport(null);
       setError('Paste a DMARC aggregate report first.');
@@ -192,8 +206,11 @@ const Reports = () => {
       try {
         const archiveBase64 = await readFileAsBase64(file);
         const format = isGz ? 'gzip' : 'zip';
-        const next = await ReportsService.read({ archiveBase64, format });
+        const payload = { archiveBase64, format };
+        const next = await ReportsService.read(payload);
         if (next) {
+          setArchiveData(payload);
+          setXml('');
           setReport(next);
         }
       } catch (err) {
@@ -213,6 +230,7 @@ const Reports = () => {
         return;
       }
       setXml(text);
+      setArchiveData(null);
     } catch (err) {
       setReport(null);
       setError(err.message || 'DMARC Reports could not read that report.');
@@ -232,6 +250,7 @@ const Reports = () => {
 
   const onLoadSample = () => {
     setXml(SAMPLE_DMARC_XML);
+    setArchiveData(null);
     setError(null);
   };
 
@@ -253,8 +272,8 @@ const Reports = () => {
   };
 
   const onCopyCurl = () => {
-    const payload = JSON.stringify({ xml: xml.trim() || '<feedback>...</feedback>' });
-    const snippet = `curl -X POST https://hide-mail.org/api/dmarc-reports \\\n  -H "X-API-Key: hm_live_..." \\\n  -H "Content-Type: application/json" \\\n  -d '${payload.replace(/'/g, "'\\''")}'`;
+    const payload = archiveData || { xml: xml.trim() || '<feedback>...</feedback>' };
+    const snippet = `curl -X POST https://hide-mail.org/api/dmarc-reports \\\n  -H "X-API-Key: hm_live_..." \\\n  -H "Content-Type: application/json" \\\n  -d '${JSON.stringify(payload).replace(/'/g, "'\\''")}'`;
     copyText(snippet, 'curl');
   };
 
@@ -318,7 +337,10 @@ const Reports = () => {
           <textarea
             id="reports-xml"
             value={xml}
-            onChange={(event) => setXml(event.target.value)}
+            onChange={(event) => {
+              setXml(event.target.value);
+              setArchiveData(null);
+            }}
             spellCheck="false"
             placeholder={'<?xml version="1.0"?>\n<feedback>\n  <report_metadata>…</report_metadata>\n</feedback>'}
           />
