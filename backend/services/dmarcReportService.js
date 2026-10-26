@@ -14,6 +14,8 @@ const MAX_SOURCES = 2000;
 const MAX_FIELD = 300;
 const MAX_COUNT = 1_000_000_000;
 const PTR_TIMEOUT_MS = 1500;
+const PTR_CONCURRENCY = 8;
+const MAX_PTR_UNIQUE_IPS = 50;
 
 const KNOWN_ESPS = [
   { provider: 'Google Workspace', suffixes: ['google.com', '1e100.net', 'gmail.com', 'googlemail.com'] },
@@ -28,7 +30,57 @@ const KNOWN_ESPS = [
   { provider: 'Cloudflare', suffixes: ['cloudflare.net'] },
 ];
 
-const NON_ROUTABLE_IPV4 = /^(?:127\.|10\.|192\.168\.|172\.(?:1[6-9]|2\d|3[01])\.|192\.0\.2\.|198\.51\.100\.|203\.0\.113\.)/;
+const parseIpv4Octets = (ip) => {
+  const match = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(String(ip).trim());
+  if (!match) return null;
+  const octets = match.slice(1).map(Number);
+  if (octets.some((n) => n > 255)) return null;
+  return octets;
+};
+
+/** Always skip PTR: link-local, CGNAT, all IPv6 (incl. mapped / ULA / link-local). */
+const isAlwaysSkippedPtrIp = (ip) => {
+  const value = String(ip || '').trim().toLowerCase();
+  if (!value) return true;
+  if (value.includes(':')) return true;
+  const octets = parseIpv4Octets(value);
+  if (!octets) return false;
+  const [a, b] = octets;
+  if (a === 169 && b === 254) return true; // link-local 169.254.0.0/16
+  if (a === 100 && b >= 64 && b <= 127) return true; // CGNAT 100.64.0.0/10
+  return false;
+};
+
+/** Private / loopback / documentation ranges — skipped against the shared resolver. */
+const isNonRoutableIpv4 = (ip) => {
+  const octets = parseIpv4Octets(ip);
+  if (!octets) return false;
+  const [a, b, c] = octets;
+  if (a === 0 || a === 127 || a >= 224) return true;
+  if (a === 10) return true;
+  if (a === 192 && b === 168) return true;
+  if (a === 172 && b >= 16 && b <= 31) return true;
+  if (a === 192 && b === 0 && c === 2) return true;
+  if (a === 198 && b === 51 && c === 100) return true;
+  if (a === 203 && b === 0 && c === 113) return true;
+  return false;
+};
+
+const mapWithConcurrency = async (items, concurrency, mapper) => {
+  if (items.length === 0) return [];
+  const results = new Array(items.length);
+  let nextIndex = 0;
+  const workerCount = Math.min(Math.max(1, concurrency), items.length);
+  const workers = Array.from({ length: workerCount }, async () => {
+    while (nextIndex < items.length) {
+      const index = nextIndex;
+      nextIndex += 1;
+      results[index] = await mapper(items[index], index);
+    }
+  });
+  await Promise.all(workers);
+  return results;
+};
 
 const matchesDomainSuffix = (host, suffix) => host === suffix || host.endsWith(`.${suffix}`);
 
@@ -59,15 +111,15 @@ const classifyProvider = ({ ptrHost, envelopeFrom, authResults }) => {
 
 const resolvePtrHost = async (ip, customDns) => {
   if (!ip) return null;
-  if (!customDns && (NON_ROUTABLE_IPV4.test(ip) || ip === '::1' || ip.toLowerCase().startsWith('2001:db8:'))) {
-    return null;
-  }
+  if (isAlwaysSkippedPtrIp(ip)) return null;
+  if (!customDns && isNonRoutableIpv4(ip)) return null;
   const resolver = customDns || dns;
   if (typeof resolver?.reverse !== 'function') {
     return null;
   }
   let timer = null;
   try {
+    // Attach catch before racing so a late reverse rejection cannot become unhandled.
     const reversePromise = resolver.reverse(ip).catch(() => null);
     const hosts = await Promise.race([
       reversePromise,
@@ -411,8 +463,11 @@ const readReport = async (input, options = {}) => {
   }
 
   const uniqueIps = [...new Set(sources.map((s) => s.sourceIp))];
-  const ptrEntries = await Promise.all(
-    uniqueIps.map(async (ip) => [ip, await resolvePtrHost(ip, options.dns)])
+  const ipsToResolve = uniqueIps.slice(0, MAX_PTR_UNIQUE_IPS);
+  const ptrEntries = await mapWithConcurrency(
+    ipsToResolve,
+    PTR_CONCURRENCY,
+    async (ip) => [ip, await resolvePtrHost(ip, options.dns)]
   );
   const ptrByIp = new Map(ptrEntries);
 
@@ -497,4 +552,7 @@ module.exports = {
   DmarcReportError,
   MAX_XML_CHARS,
   MAX_DECOMPRESSED_BYTES,
+  PTR_CONCURRENCY,
+  MAX_PTR_UNIQUE_IPS,
+  PTR_TIMEOUT_MS,
 };

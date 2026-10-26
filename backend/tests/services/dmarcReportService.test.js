@@ -1,5 +1,12 @@
 const zlib = require('node:zlib');
-const { readReport, extractXmlFromArchive, DmarcReportError } = require('../../services/dmarcReportService');
+const {
+  readReport,
+  extractXmlFromArchive,
+  DmarcReportError,
+  PTR_CONCURRENCY,
+  MAX_PTR_UNIQUE_IPS,
+  PTR_TIMEOUT_MS,
+} = require('../../services/dmarcReportService');
 
 const buildZipBuffer = (entries) => {
   const localParts = [];
@@ -386,6 +393,133 @@ describe('dmarcReportService', () => {
         ptrHost: null,
         provider: null,
       }));
+    });
+
+    it('caps concurrent PTR lookups and unique IPs resolved per report', async () => {
+      const ipCount = MAX_PTR_UNIQUE_IPS + 20;
+      const uniqueXml = feedback(Array.from({ length: ipCount }, (_, i) => {
+        const a = 8 + Math.floor(i / 65025);
+        const b = Math.floor((i % 65025) / 255);
+        const c = i % 255;
+        return record({
+          ip: `${a}.${b}.${c}.10`,
+          count: 1,
+          dkim: 'pass',
+          spf: 'pass',
+          disposition: 'none',
+        });
+      }).join(''));
+
+      let inFlight = 0;
+      let peakInFlight = 0;
+      const fakeDns = {
+        reverse: jest.fn(async (ip) => {
+          inFlight += 1;
+          peakInFlight = Math.max(peakInFlight, inFlight);
+          await new Promise((resolve) => setTimeout(resolve, 15));
+          inFlight -= 1;
+          return [`host-${ip.replace(/\./g, '-')}.example.com`];
+        }),
+      };
+
+      const report = await readReport(uniqueXml, { dns: fakeDns });
+
+      expect(fakeDns.reverse).toHaveBeenCalledTimes(MAX_PTR_UNIQUE_IPS);
+      expect(peakInFlight).toBeLessThanOrEqual(PTR_CONCURRENCY);
+      expect(peakInFlight).toBeGreaterThan(1);
+
+      const resolved = report.sources.filter((s) => s.ptrHost);
+      const unresolved = report.sources.filter((s) => s.ptrHost === null);
+      expect(resolved).toHaveLength(MAX_PTR_UNIQUE_IPS);
+      expect(unresolved).toHaveLength(ipCount - MAX_PTR_UNIQUE_IPS);
+    });
+
+    it('skips PTR for link-local, CGNAT, and IPv6 source IPs', async () => {
+      const xml = feedback([
+        record({
+          ip: '169.254.10.20',
+          count: 2,
+          dkim: 'pass',
+          spf: 'pass',
+          disposition: 'none',
+        }),
+        record({
+          ip: '100.64.1.5',
+          count: 2,
+          dkim: 'pass',
+          spf: 'pass',
+          disposition: 'none',
+        }),
+        record({
+          ip: '2001:db8::1',
+          count: 2,
+          dkim: 'pass',
+          spf: 'pass',
+          disposition: 'none',
+        }),
+        record({
+          ip: '::ffff:8.8.8.8',
+          count: 2,
+          dkim: 'pass',
+          spf: 'pass',
+          disposition: 'none',
+        }),
+        record({
+          ip: '8.8.8.8',
+          count: 1,
+          dkim: 'pass',
+          spf: 'pass',
+          disposition: 'none',
+        }),
+      ].join(''));
+
+      const fakeDns = {
+        reverse: jest.fn(async () => ['dns.google']),
+      };
+
+      const report = await readReport(xml, { dns: fakeDns });
+      const byIp = Object.fromEntries(report.sources.map((s) => [s.sourceIp, s]));
+
+      expect(fakeDns.reverse).toHaveBeenCalledTimes(1);
+      expect(fakeDns.reverse).toHaveBeenCalledWith('8.8.8.8');
+      expect(byIp['169.254.10.20'].ptrHost).toBeNull();
+      expect(byIp['100.64.1.5'].ptrHost).toBeNull();
+      expect(byIp['2001:db8::1'].ptrHost).toBeNull();
+      expect(byIp['::ffff:8.8.8.8'].ptrHost).toBeNull();
+      expect(byIp['8.8.8.8'].ptrHost).toBe('dns.google');
+    });
+
+    it('does not crash or leave unhandled rejections when reverse times out', async () => {
+      const xml = feedback(record({
+        ip: '8.8.4.4',
+        count: 1,
+        dkim: 'pass',
+        spf: 'pass',
+        disposition: 'none',
+      }));
+
+      const unhandled = [];
+      const onUnhandled = (reason) => {
+        unhandled.push(reason);
+      };
+      process.on('unhandledRejection', onUnhandled);
+
+      const fakeDns = {
+        reverse: jest.fn(() => new Promise((resolve) => {
+          // Resolve after the PTR timeout so Promise.race takes the timeout path;
+          // the late settle must not surface as an unhandled rejection.
+          setTimeout(() => resolve(['late.example.com']), PTR_TIMEOUT_MS + 80);
+        })),
+      };
+
+      try {
+        const report = await readReport(xml, { dns: fakeDns });
+        expect(report.sources[0].ptrHost).toBeNull();
+        await new Promise((resolve) => setTimeout(resolve, PTR_TIMEOUT_MS + 120));
+        expect(unhandled).toEqual([]);
+      } finally {
+        process.off('unhandledRejection', onUnhandled);
+      }
     });
   });
 });
