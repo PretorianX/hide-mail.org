@@ -25,9 +25,14 @@ describe('Developers API Explorer & MCP Hub page', () => {
     jest.restoreAllMocks();
   });
 
-  test('styles dark mode inputs, focus rings, and narrow viewports', () => {
+  test('styles dark mode inputs, focus rings, grid overflow guards, and narrow viewports', () => {
     expect(developersCss).toMatch(
       /body\[data-theme='dark'\] \.developers-key-bar input,\s*body\[data-theme='dark'\] \.developers-textarea[\s\S]*-webkit-text-fill-color: #e0e0e0/
+    );
+    expect(developersCss).toMatch(/\.developers-explorer-grid[\s\S]*grid-template-columns:\s*240px minmax\(0, 1fr\)/);
+    expect(developersCss).toMatch(/\.developers-pre[\s\S]*white-space:\s*pre-wrap/);
+    expect(developersCss).toMatch(
+      /body\[data-theme='dark'\] \.developers-page \.developers-endpoint-btn[\s\S]*background-color:\s*transparent/
     );
     expect(developersCss).toMatch(/\.developers-page button:focus-visible[\s\S]*outline: 3px solid/);
     expect(developersCss).toMatch(/@media \(max-width: 640px\)[\s\S]*\.developers-primary-btn[\s\S]*width: 100%/);
