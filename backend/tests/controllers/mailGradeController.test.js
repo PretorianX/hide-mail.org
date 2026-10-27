@@ -121,5 +121,26 @@ describe('Mail Grade HTTP', () => {
 
       expect(res.body.code).toBe('QA_PLAN_REQUIRED');
     });
+
+    it('lets a Deliverability Suite key score mail and create QA mailboxes with one key', async () => {
+      const suiteKey = await issue('suite');
+
+      const graded = await request(app)
+        .post('/mail-grade')
+        .set('Authorization', `Bearer ${suiteKey}`)
+        .send({ source: SOURCE })
+        .expect(200);
+
+      expect(graded.body.report.grade).toMatch(/^[A-F]$/);
+      expect(graded.body.report.envelope.fromAddress).toBe('ada@example.com');
+
+      const qaRes = await request(app)
+        .post('/qa/mailboxes')
+        .set('Authorization', `Bearer ${suiteKey}`)
+        .send({})
+        .expect(201);
+
+      expect(qaRes.body.data.email).toContain('@hide-mail.org');
+    });
   });
 });

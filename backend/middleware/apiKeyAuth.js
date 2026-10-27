@@ -66,7 +66,7 @@ const PLAN_REQUIRED = {
 };
 
 const requireLicenseType = (type) => (req, res, next) => {
-  if (req.apiLicense?.type === type) {
+  if (req.apiLicense?.type === type || req.apiLicense?.type === 'suite') {
     return next();
   }
   const refusal = PLAN_REQUIRED[type];

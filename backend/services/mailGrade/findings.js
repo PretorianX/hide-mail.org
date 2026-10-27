@@ -66,6 +66,20 @@ const isShouting = (subject) => {
   return upper / letters >= 0.8;
 };
 
+const isSubjectAllCaps = (subject) => {
+  const letters = letterCount(subject);
+  if (letters < 10) {
+    return false;
+  }
+  const upper = (subject.match(/[A-Z]/g) || []).length;
+  return upper / letters >= 0.8;
+};
+
+const hasSubjectSpamTokens = (subject) => (
+  /!{3,}|\?{3,}|\${3,}/i.test(subject)
+  || /\b(?:urgent\s*:|act\s+now|free\s+money)\b/i.test(subject)
+);
+
 const collectLinks = (source, parsed) => {
   const haystack = `${source}\n${parsed.text || ''}\n${parsed.html || ''}`;
   const found = haystack.match(/https?:\/\/[^\s<>"')]+/gi) || [];
@@ -88,13 +102,13 @@ const authVerdicts = (headers) => {
   }).filter(Boolean);
 };
 
-const push = (findings, severity, id, title, detail) => {
+const push = (findings, severity, id, title, detail, customPenalty) => {
   findings.push({
     id,
     severity,
     title,
     detail,
-    penalty: PENALTY[severity] || 0,
+    penalty: typeof customPenalty === 'number' ? customPenalty : (PENALTY[severity] || 0),
   });
 };
 
@@ -129,6 +143,18 @@ const buildFindings = ({ parsed, source }) => {
         'Display name hides a different address',
         `The display name contains ${disguised[0]}, which is not ${from[0].address}.`
       );
+      const disguisedDomain = domainOf(disguised[0]);
+      const actualDomain = domainOf(from[0].address);
+      if (disguisedDomain && actualDomain && disguisedDomain !== actualDomain) {
+        push(
+          findings,
+          'fail',
+          'from_display_spoof',
+          'Display name spoofs another domain',
+          `The display name embeds ${disguised[0]} (@${disguisedDomain}) while sending from @${actualDomain}.`,
+          15
+        );
+      }
     }
   }
 
@@ -145,7 +171,16 @@ const buildFindings = ({ parsed, source }) => {
         'Keep the subject between 3 and 78 characters so it is not clipped or empty.'
       );
     }
-    if (isShouting(subject)) {
+    if (isSubjectAllCaps(subject)) {
+      push(
+        findings,
+        'warn',
+        'subject_all_caps',
+        'Subject is mostly uppercase',
+        'At least 80% of a 10+ letter subject is uppercase, which spam filters treat as shouting.',
+        5
+      );
+    } else if (isShouting(subject)) {
       push(
         findings,
         'warn',
@@ -161,6 +196,16 @@ const buildFindings = ({ parsed, source }) => {
         'subject_punctuation',
         'Subject overuses punctuation',
         'Repeated exclamation or question marks read as spam.'
+      );
+    }
+    if (hasSubjectSpamTokens(subject)) {
+      push(
+        findings,
+        'warn',
+        'subject_spam_tokens',
+        'Subject contains spam trigger tokens',
+        'Subject uses excessive punctuation (!!!, ???), currency markers ($$$), or urgency prefixes (URGENT:, ACT NOW, FREE MONEY).',
+        5
       );
     }
   }

@@ -31,12 +31,16 @@ describe('htmlChecks', () => {
     expect(findings.map((f) => f.id)).toEqual(expect.arrayContaining(['image_only_body']));
   });
 
-  it('flags known shortener hosts', () => {
+  it('flags known shortener hosts and punycode domains', () => {
     const findings = buildHtmlFindings({
-      html: '<p><a href="https://bit.ly/abc">read more</a></p>',
+      html: '<p><a href="https://bit.ly/abc">read more</a> <a href="https://cutt.ly/xyz">second</a> <a href="https://xn--80ak6aa92e.com/path">idn</a></p>',
       text: 'read more',
     });
-    expect(findings.map((f) => f.id)).toEqual(expect.arrayContaining(['link_shortener']));
+    const ids = findings.map((f) => f.id);
+    expect(ids).toEqual(expect.arrayContaining(['links_shortener', 'links_punycode']));
+    expect(ids).not.toContain('link_shortener');
+    expect(findings.find((f) => f.id === 'links_shortener').penalty).toBe(8);
+    expect(findings.find((f) => f.id === 'links_punycode').penalty).toBe(8);
   });
 
   it('passes clean HTML with matching https links', () => {
