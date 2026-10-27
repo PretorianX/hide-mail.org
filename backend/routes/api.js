@@ -10,6 +10,7 @@ const dmarcReportRoutes = require('./dmarcReport');
 const bounceReadRoutes = require('./bounceRead');
 const complaintReadRoutes = require('./complaintRead');
 const mcpRoutes = require('./mcp');
+const openApiRoutes = require('./openApi');
 const redisService = require('../services/redisService');
 const logger = require('../utils/logger');
 const { sanitizeEmail } = require('../utils/sanitize');
@@ -330,5 +331,6 @@ router.use('/bounce-read', bounceReadRoutes.api);
 router.use('/complaints', complaintReadRoutes.browser);
 router.use('/complaint-read', complaintReadRoutes.api);
 router.use('/mcp', mcpRoutes);
+router.use('/', openApiRoutes);
 
 module.exports = router; 

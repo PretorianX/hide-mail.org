@@ -365,7 +365,10 @@ const Pro = () => {
         <h2 id="pro-mcp-title">Connect via MCP (Claude / Cursor / Antigravity)</h2>
         <p>
           Point your AI coding assistant or agent at the Official Hide Mail MCP endpoint using your
-          Deliverability Suite, QA API, or standalone tool API key:
+          Deliverability Suite, QA API, or standalone tool API key.{' '}
+          <Link to="/developers">Open Interactive API Explorer</Link>
+          {' · '}
+          <Link to="/developers?tab=mcp">Explore all 9 MCP Tools &amp; Live RPC Tester</Link>.
         </p>
         <pre className="tool-mcp-preview" data-testid="mcp-config-snippet">
           <code>{MCP_SNIPPET}</code>

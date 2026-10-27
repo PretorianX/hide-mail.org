@@ -25,7 +25,8 @@ const readResponse = (source, res, next) => {
   }
 };
 
-const report = (req, res, next) => readResponse(req.body?.source, res, next);
+const report = (req, res, next) =>
+  readResponse(req.body?.source ?? req.body?.raw, res, next);
 
 const offer = (req, res) => res.status(200).json({
   success: true,

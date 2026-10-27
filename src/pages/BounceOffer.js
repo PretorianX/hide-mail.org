@@ -3,22 +3,6 @@ import { Link } from 'react-router';
 import BounceService from '../services/BounceService';
 import LicenseService from '../services/LicenseService';
 
-const CURL_SNIPPET = `curl -X POST https://hide-mail.org/api/bounce-read \\
-  -H "Authorization: Bearer hm_api_YOUR_KEY" \\
-  -H "Content-Type: application/json" \\
-  -d '{"source":"Final-Recipient: rfc822; ada@example.com\\r\\nAction: failed\\r\\nStatus: 5.1.1"}'`;
-
-const MCP_SNIPPET = `{
-  "mcpServers": {
-    "hide-mail": {
-      "url": "https://hide-mail.org/api/mcp",
-      "headers": {
-        "X-API-Key": "hm_live_..."
-      }
-    }
-  }
-}`;
-
 const HANDOFF_POLL_MS = 1000;
 const HANDOFF_POLL_ATTEMPTS = 18;
 const HANDOFF_STORAGE_KEY = 'hidemail_bounce_handoff_token';
@@ -186,15 +170,13 @@ const BounceOffer = () => {
         QA mailboxes, and Pro inbox with one key) or a standalone Bounce Read key.{' '}
         <Link to="/pro">Compare all 4 plans</Link>.
       </p>
-      <pre className="tool-curl-preview" data-testid="bounce-curl-preview">
-        <code>{CURL_SNIPPET}</code>
-      </pre>
-      <div className="tool-mcp-onboarding">
-        <p className="tool-mcp-label">Connect via MCP (Claude / Cursor / Antigravity)</p>
-        <pre className="tool-mcp-preview" data-testid="mcp-config-snippet">
-          <code>{MCP_SNIPPET}</code>
-        </pre>
-      </div>
+      <p className="tool-explorer-links" data-testid="bounce-explorer-links">
+        <Link to="/developers?endpoint=bounces">Open in API Explorer</Link>
+        {' · '}
+        <Link to="/developers?tab=mcp&tool=hide_mail_bounce_read">
+          MCP Server Setup &amp; Tool Schema (<code>hide_mail_bounce_read</code>)
+        </Link>
+      </p>
       {confirming ? <p role="status">Confirming payment…</p> : null}
       {offer ? (
         <p className="bounce-offer-price" data-testid="bounce-price">

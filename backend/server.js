@@ -15,6 +15,7 @@ const config = require('./config/config');
 const logger = require('./utils/logger');
 const apiRoutes = require('./routes/api');
 const mcpRoutes = require('./routes/mcp');
+const openApiRoutes = require('./routes/openApi');
 const billingController = require('./controllers/billingController');
 const attachLicense = require('./middleware/attachLicense');
 const { createOriginVerifier, parseAllowedOrigins } = require('./services/originVerifier');
@@ -120,6 +121,7 @@ const originVerifier = createOriginVerifier({
 
 // Routes with origin verification
 app.use('/api/mcp', mcpRoutes);
+app.use('/api', openApiRoutes);
 app.use('/api', originVerifier, attachLicense, apiRoutes);
 
 // Health check endpoint
