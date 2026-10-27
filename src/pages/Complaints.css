@@ -272,3 +272,92 @@ body[data-theme='dark'] .complaint-result div {
     min-height: 44px;
   }
 }
+
+.complaint-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.complaint-sample-btn,
+.complaint-export-btn {
+  padding: 8px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--card-bg, #fff);
+  color: var(--text-color);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.complaint-result-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.complaint-result-header h2 {
+  margin: 0;
+}
+
+.complaint-export-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.complaint-explanation {
+  margin: 0 0 12px;
+  color: var(--text-secondary);
+}
+
+.complaint-workflow-card {
+  margin-top: 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--card-bg, #fff);
+}
+
+.complaint-workflow-card h3 {
+  margin: 0 0 8px;
+  font-size: 0.98rem;
+}
+
+.complaint-workflow-list {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.9rem;
+}
+
+.complaint-offer-suite {
+  margin: 0;
+  font-size: 0.92rem;
+  color: var(--text-secondary);
+}
+
+.complaint-offer-curl {
+  width: 100%;
+  margin: 6px 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #1a1a1a;
+  color: #f0f0f0;
+  font: 0.8rem/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  overflow-x: auto;
+}
+
+body[data-theme='dark'] .complaint-workflow-card,
+body[data-theme='dark'] .complaint-sample-btn,
+body[data-theme='dark'] .complaint-export-btn {
+  background: var(--background-color);
+  color: var(--dark-text-color);
+}

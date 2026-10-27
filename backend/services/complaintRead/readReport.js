@@ -21,6 +21,31 @@ const ACTION_LABEL = {
   review: 'Do not remove this address automatically.',
 };
 
+const FEEDBACK_EXPLANATION = {
+  abuse: 'The recipient clicked "Report Spam" or "Junk" in their mailbox client (RFC 5965 abuse feedback loop).',
+  fraud: 'The message was flagged as phishing, spoofing, or financial fraud.',
+  virus: 'The receiving filter detected malware or a virus payload in the message.',
+  'not-spam': 'The recipient explicitly marked the message as "Not Spam", confirming they want future mail.',
+  'auth-failure': 'An automated authentication check (SPF, DKIM, or DMARC) failed at the receiving gateway.',
+  other: 'A general feedback report that does not fall into standard abuse or authentication categories.',
+};
+
+const WORKFLOW_STEPS = {
+  suppress: [
+    'Add the recipient address to your global suppression list immediately so no future campaigns are sent.',
+    'Record the Source-IP, Arrival-Date, and User-Agent in your compliance audit log.',
+    'Monitor domain complaint rate to stay well below the 0.1% Google/Yahoo postmaster threshold.',
+  ],
+  keep: [
+    'Ensure the recipient address is active and cleared from any temporary suppression queue.',
+    'Log the positive engagement signal from the feedback loop.',
+  ],
+  review: [
+    'Do not suppress the recipient address automatically — this report was not a user spam complaint.',
+    'Inspect Authentication-Results, Source-IP, and DKIM-Domain to fix any misconfigured sending infrastructure.',
+  ],
+};
+
 const EMAIL = /^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/;
 const DOMAIN = /^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$/;
 const HEADER_LINE = /^([A-Za-z][A-Za-z0-9-]*)\s*:\s*(.*)$/;
@@ -146,6 +171,63 @@ const splitParts = (body, boundary) => {
   return parts;
 };
 
+const extractOriginalMessage = (parts) => {
+  const originalPart = parts.find((part) => {
+    let headers;
+    try {
+      headers = parseFieldBlock(part.headers);
+    } catch (error) {
+      if (error instanceof ComplaintReadError) {
+        return false;
+      }
+      throw error;
+    }
+    const partType = one(headers, 'content-type', 'Content-Type') || '';
+    return /(?:message\/rfc822|text\/rfc822-headers)/i.test(partType);
+  });
+  if (!originalPart) {
+    return null;
+  }
+  let partHeaders;
+  let decoded;
+  try {
+    partHeaders = parseFieldBlock(originalPart.headers);
+    const encoding = one(partHeaders, 'content-transfer-encoding', 'Content-Transfer-Encoding');
+    decoded = decodeBody(originalPart.body, encoding);
+  } catch (error) {
+    if (error instanceof ComplaintReadError) {
+      return null;
+    }
+    throw error;
+  }
+  const { headers: msgHeaderBlock } = splitOuter(decoded);
+  let msgFields;
+  try {
+    msgFields = parseFieldBlock(msgHeaderBlock);
+  } catch (error) {
+    if (error instanceof ComplaintReadError) {
+      return null;
+    }
+    throw error;
+  }
+  const rawMessageId = (msgFields.get('message-id') || [])[0] || null;
+  const rawSubject = (msgFields.get('subject') || [])[0] || null;
+  const rawListUnsub = (msgFields.get('list-unsubscribe') || [])[0] || null;
+
+  const messageId = rawMessageId ? rawMessageId.trim().slice(0, MAX_FIELD_CHARS) : null;
+  const subject = rawSubject ? rawSubject.trim().slice(0, 160) : null;
+  const listUnsubscribe = Boolean(rawListUnsub && rawListUnsub.trim().length > 0);
+
+  if (!messageId && !subject && !listUnsubscribe) {
+    return null;
+  }
+  return {
+    messageId,
+    subject,
+    listUnsubscribe,
+  };
+};
+
 const fieldsFromMultipart = (body, contentType) => {
   const parts = splitParts(body, boundaryOf(contentType));
   const feedbackParts = parts.filter((part) => {
@@ -170,7 +252,10 @@ const fieldsFromMultipart = (body, contentType) => {
   const part = feedbackParts[0];
   const headers = parseFieldBlock(part.headers);
   const encoding = one(headers, 'content-transfer-encoding', 'Content-Transfer-Encoding');
-  return parseFieldBlock(decodeBody(part.body, encoding));
+  return {
+    fields: parseFieldBlock(decodeBody(part.body, encoding)),
+    originalMessage: extractOriginalMessage(parts),
+  };
 };
 
 const isIpv4 = (value) => {
@@ -222,7 +307,15 @@ const plainField = (label, value) => {
   return text;
 };
 
-const verdictFrom = (fields) => {
+const optionalRepeatable = (fields, name) => {
+  const values = fields.get(name) || [];
+  const filtered = values
+    .map((v) => v.trim())
+    .filter((v) => v.length > 0 && !/[\u0000-\u001F\u007F]/.test(v));
+  return filtered.length > 0 ? filtered : null;
+};
+
+const verdictFrom = ({ fields, originalMessage = null }) => {
   const rawType = one(fields, 'feedback-type', 'Feedback-Type');
   if (!rawType) {
     notAComplaint();
@@ -268,19 +361,50 @@ const verdictFrom = (fields) => {
     reportedDomain = candidate;
   }
 
+  const rawIncidents = one(fields, 'incidents', 'Incidents');
+  let incidents = 1;
+  if (rawIncidents != null) {
+    const trimmed = rawIncidents.trim();
+    if (!/^\d+$/.test(trimmed) || Number(trimmed) < 1 || Number(trimmed) > 1000000) {
+      fail('BAD_FIELD', 'Incidents is not a positive count.');
+    }
+    incidents = Number(trimmed);
+  }
+
+  const receivedDate = plainField('Received-Date', one(fields, 'received-date', 'Received-Date'));
+  const arrivalDate = plainField('Arrival-Date', one(fields, 'arrival-date', 'Arrival-Date'));
+
   return {
     stored: false,
     stamp: known.stamp,
     feedbackType,
+    feedbackExplanation: FEEDBACK_EXPLANATION[feedbackType],
     action: known.action,
     actionLabel: ACTION_LABEL[known.action],
+    workflow: WORKFLOW_STEPS[known.action],
     recipient,
     mailFrom,
     sourceIp,
     reportedDomain,
+    reportedUri: optionalRepeatable(fields, 'reported-uri'),
     userAgent: plainField('User-Agent', one(fields, 'user-agent', 'User-Agent')),
-    receivedDate: plainField('Received-Date', one(fields, 'received-date', 'Received-Date')),
-    arrivalDate: plainField('Arrival-Date', one(fields, 'arrival-date', 'Arrival-Date')),
+    version: plainField('Version', one(fields, 'version', 'Version')),
+    incidents,
+    originalEnvelopeId: optionalRepeatable(fields, 'original-envelope-id'),
+    authenticationResults: optionalRepeatable(fields, 'authentication-results'),
+    dkimDomain: plainField('DKIM-Domain', one(fields, 'dkim-domain', 'DKIM-Domain')),
+    receivedDate,
+    arrivalDate,
+    originalMessage,
+    suppressionRecord: {
+      email: recipient,
+      action: known.action,
+      reason: `arf_${feedbackType}`,
+      domain: reportedDomain,
+      sourceIp,
+      messageId: originalMessage?.messageId || null,
+      arrivalDate: arrivalDate || receivedDate || null,
+    },
   };
 };
 
@@ -301,10 +425,16 @@ const fieldBlockFor = (source) => {
   }
   if (/message\/feedback-report/i.test(contentType)) {
     const encoding = one(outer, 'content-transfer-encoding', 'Content-Transfer-Encoding');
-    return parseFieldBlock(decodeBody(body, encoding));
+    return {
+      fields: parseFieldBlock(decodeBody(body, encoding)),
+      originalMessage: null,
+    };
   }
   if (outer.has('feedback-type')) {
-    return outer;
+    return {
+      fields: outer,
+      originalMessage: null,
+    };
   }
   if (outer.has('action') && outer.has('status')) {
     notAComplaint('That is a delivery status, not an abuse complaint.');

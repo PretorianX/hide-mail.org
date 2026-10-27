@@ -69,22 +69,91 @@ describe('complaintReadService', () => {
       'Reported-Domain: sender.example.',
     ].join('\r\n')));
 
-    expect(report).toEqual({
+    expect(report).toEqual(expect.objectContaining({
       stored: false,
       stamp: 'ABUSE',
       feedbackType: 'abuse',
+      feedbackExplanation: expect.stringMatching(/Report Spam/i),
       action: 'suppress',
       actionLabel: 'Remove this address from the list.',
+      workflow: expect.arrayContaining([expect.stringMatching(/suppression list/i)]),
       recipient: 'subscriber@example.net',
       mailFrom: 'news@sender.example',
       sourceIp: '192.0.2.1',
       reportedDomain: 'sender.example',
       userAgent: 'Yahoo!-Mail-Feedback/1.0',
+      version: '1',
+      incidents: 1,
       receivedDate: 'Thu, 8 Mar 2005 14:00:00 -0500',
       arrivalDate: null,
+      originalMessage: {
+        messageId: null,
+        subject: 'Weekly',
+        listUnsubscribe: false,
+      },
+      suppressionRecord: {
+        email: 'subscriber@example.net',
+        action: 'suppress',
+        reason: 'arf_abuse',
+        domain: 'sender.example',
+        sourceIp: '192.0.2.1',
+        messageId: null,
+        arrivalDate: 'Thu, 8 Mar 2005 14:00:00 -0500',
+      },
+    }));
+    expect(JSON.stringify(report)).not.toContain('secret-original-body');
+    expect(JSON.stringify(report)).not.toContain('someone-else@example.net');
+  });
+
+  it('extracts Message-ID, Subject (truncated to 160 chars), and List-Unsubscribe from message/rfc822 headers without leaking body or To', () => {
+    const longSubject = `Campaign ${'A'.repeat(180)}`;
+    const source = [
+      'From: <fbl@receiver.example>',
+      'MIME-Version: 1.0',
+      'Content-Type: multipart/report; report-type=feedback-report; boundary="arf"',
+      '',
+      '--arf',
+      'Content-Type: message/feedback-report',
+      '',
+      'Feedback-Type: abuse',
+      'Original-Rcpt-To: <subscriber@example.net>',
+      'Reported-Domain: sender.example',
+      'Source-IP: 192.0.2.1',
+      'Arrival-Date: Wed, 26 Oct 2026 11:30:00 +0000',
+      '',
+      '--arf',
+      'Content-Type: text/rfc822-headers',
+      '',
+      'From: <news@sender.example>',
+      'To: <someone-else@example.net>',
+      'Message-ID: <campaign-42@sender.example>',
+      `Subject: ${longSubject}`,
+      'List-Unsubscribe: <mailto:unsub@sender.example>, <https://sender.example/unsub>',
+      '',
+      'secret-original-body Message-ID: <fake@body.example>',
+      '--arf--',
+      '',
+    ].join('\r\n');
+
+    const report = readComplaint(source);
+
+    expect(report.originalMessage).toEqual({
+      messageId: '<campaign-42@sender.example>',
+      subject: longSubject.slice(0, 160),
+      listUnsubscribe: true,
+    });
+    expect(report.suppressionRecord).toEqual({
+      email: 'subscriber@example.net',
+      action: 'suppress',
+      reason: 'arf_abuse',
+      domain: 'sender.example',
+      sourceIp: '192.0.2.1',
+      messageId: '<campaign-42@sender.example>',
+      arrivalDate: 'Wed, 26 Oct 2026 11:30:00 +0000',
     });
     expect(JSON.stringify(report)).not.toContain('secret-original-body');
     expect(JSON.stringify(report)).not.toContain('someone-else@example.net');
+    expect(JSON.stringify(report)).not.toContain('fake@body.example');
   });
 
   it('reads a base64 feedback-report part', () => {
