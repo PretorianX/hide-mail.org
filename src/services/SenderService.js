@@ -33,14 +33,20 @@ class SenderService {
     localStorage.removeItem(SENDER_LICENSE_STORAGE_KEY);
   }
 
-  static async check(domain) {
+  static async check(domain, dkimSelector) {
+    const trimmedSelector = typeof dkimSelector === 'string' ? dkimSelector.trim() : '';
+    const body = trimmedSelector ? { domain, dkimSelector: trimmedSelector } : { domain };
     const response = await fetch(`${API_URL}/sender/report`, {
       method: 'POST',
       headers: jsonHeaders,
-      body: JSON.stringify({ domain }),
+      body: JSON.stringify(body),
     });
     const payload = await readPayload(response);
     return payload.report;
+  }
+
+  static async checkDomain(domain, dkimSelector) {
+    return this.check(domain, dkimSelector);
   }
 
   static async loadOffer() {
@@ -57,8 +63,8 @@ class SenderService {
     });
     const payload = await readPayload(response);
     const license = payload.license || payload.data;
-    if (license?.type !== 'sender') {
-      throw new Error('That key is not a Sender Check plan.');
+    if (license?.type !== 'sender' && license?.type !== 'suite') {
+      throw new Error('That key is not a Sender Check or Deliverability Suite plan.');
     }
     this.saveKey(license.key);
     return license;
