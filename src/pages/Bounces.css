@@ -280,3 +280,121 @@ body[data-theme='dark'] .bounce-recipient {
     min-height: 44px;
   }
 }
+
+.bounce-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.bounce-file-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  font-size: 0.85rem;
+}
+
+.bounce-file-label {
+  color: var(--text-secondary);
+}
+
+.bounce-sample-btn,
+.bounce-export-btn {
+  padding: 8px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--card-bg, #fff);
+  color: var(--text-color);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.bounce-result-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.bounce-result-header h2 {
+  margin: 0;
+}
+
+.bounce-export-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.bounce-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px 16px;
+  margin: 12px 0;
+  padding: 12px 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--card-bg, #fff);
+}
+
+.bounce-meta-grid dt {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
+.bounce-meta-grid dd {
+  margin: 2px 0 0;
+  font-weight: 600;
+  font-size: 0.88rem;
+  overflow-wrap: anywhere;
+}
+
+.bounce-recipient-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(247, 148, 29, 0.18);
+  color: #8a5a00;
+}
+
+.bounce-remediation {
+  flex: 1 1 100%;
+  margin-top: 6px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: var(--duck-gray, #f0f0f0);
+  font-size: 0.86rem;
+}
+
+.bounce-offer-suite {
+  margin: 0;
+  font-size: 0.92rem;
+  color: var(--text-secondary);
+}
+
+.bounce-offer-curl {
+  width: 100%;
+  margin: 6px 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #1a1a1a;
+  color: #f0f0f0;
+  font: 0.8rem/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  overflow-x: auto;
+}
+
+body[data-theme='dark'] .bounce-meta-grid,
+body[data-theme='dark'] .bounce-sample-btn,
+body[data-theme='dark'] .bounce-export-btn {
+  background: var(--background-color);
+  color: var(--dark-text-color);
+}
+
+body[data-theme='dark'] .bounce-remediation {
+  background: #1a1a1a;
+}
