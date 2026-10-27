@@ -32,6 +32,7 @@ import Sender from './pages/Sender.js';
 import Reports from './pages/Reports.js';
 import Bounces from './pages/Bounces.js';
 import Complaints from './pages/Complaints.js';
+import Developers from './pages/Developers.js';
 import { LicenseProvider, useLicense } from './context/LicenseContext.js';
 import { trackPageView, analytics } from './services/analytics.js';
 
@@ -54,6 +55,9 @@ function PageViewTracker() {
       '/reports': 'DMARC Reports',
       '/bounces': 'Bounce Read',
       '/complaints': 'Complaint Read',
+      '/developers': 'API Explorer & MCP Hub',
+      '/api-docs': 'API Explorer & MCP Hub',
+      '/mcp': 'MCP Server & Agent Hub',
     };
     
     const title = pageTitles[location.pathname] || 
@@ -857,6 +861,9 @@ function AppContent() {
               <Route path="/reports" element={<Reports />} />
               <Route path="/bounces" element={<Bounces />} />
               <Route path="/complaints" element={<Complaints />} />
+              <Route path="/developers" element={<Developers />} />
+              <Route path="/api-docs" element={<Developers />} />
+              <Route path="/mcp" element={<Developers />} />
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>
             
@@ -867,6 +874,7 @@ function AppContent() {
                 <FooterLink to="/about-us" onClick={(e) => { e.currentTarget.blur(); analytics.navigateTo('About Us'); }}>About Us</FooterLink>
                 <FooterLink to="/contact-us" onClick={(e) => { e.currentTarget.blur(); analytics.navigateTo('Contact Us'); }}>Contact Us</FooterLink>
                 <FooterLink to="/blog" onClick={(e) => { e.currentTarget.blur(); analytics.navigateTo('Blog'); }}>Blog</FooterLink>
+                <FooterLink to="/developers" onClick={(e) => { e.currentTarget.blur(); analytics.navigateTo('API & MCP'); }}>API &amp; MCP</FooterLink>
               </FooterLinks>
               {!isPro ? <ProCta className="footer-donate" compact /> : null}
               <AdSlot

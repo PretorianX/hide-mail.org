@@ -25,7 +25,8 @@ const gradeResponse = async (source, res, next) => {
   }
 };
 
-const report = (req, res, next) => gradeResponse(req.body?.source, res, next);
+const report = (req, res, next) =>
+  gradeResponse(req.body?.source ?? req.body?.raw, res, next);
 
 const offer = (req, res) => res.status(200).json({
   success: true,

@@ -3,22 +3,6 @@ import { Link } from 'react-router';
 import SenderService from '../services/SenderService';
 import LicenseService from '../services/LicenseService';
 
-const CURL_SNIPPET = `curl -X POST https://hide-mail.org/api/sender-check \\
-  -H "Authorization: Bearer hm_api_YOUR_KEY" \\
-  -H "Content-Type: application/json" \\
-  -d '{"domain":"example.com"}'`;
-
-const MCP_SNIPPET = `{
-  "mcpServers": {
-    "hide-mail": {
-      "url": "https://hide-mail.org/api/mcp",
-      "headers": {
-        "X-API-Key": "hm_live_..."
-      }
-    }
-  }
-}`;
-
 const HANDOFF_POLL_MS = 1000;
 const HANDOFF_POLL_ATTEMPTS = 18;
 const HANDOFF_STORAGE_KEY = 'hidemail_sender_handoff_token';
@@ -185,15 +169,13 @@ const SenderOffer = () => {
         unlocks all 5 deliverability APIs, QA mailboxes, and Pro inbox with one key) or a
         standalone Sender Check key. <Link to="/pro">Compare all 4 plans</Link>.
       </p>
-      <pre className="tool-curl-preview" data-testid="sender-curl-preview">
-        <code>{CURL_SNIPPET}</code>
-      </pre>
-      <div className="tool-mcp-onboarding">
-        <p className="tool-mcp-label">Connect via MCP (Claude / Cursor / Antigravity)</p>
-        <pre className="tool-mcp-preview" data-testid="mcp-config-snippet">
-          <code>{MCP_SNIPPET}</code>
-        </pre>
-      </div>
+      <p className="tool-explorer-links" data-testid="sender-explorer-links">
+        <Link to="/developers?endpoint=sender">Open in API Explorer</Link>
+        {' · '}
+        <Link to="/developers?tab=mcp&tool=hide_mail_sender_check">
+          MCP Server Setup &amp; Tool Schema (<code>hide_mail_sender_check</code>)
+        </Link>
+      </p>
       {confirming ? <p role="status">Confirming payment…</p> : null}
       {offer ? (
         <p className="sender-offer-price" data-testid="sender-price">
