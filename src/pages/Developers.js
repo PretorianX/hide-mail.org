@@ -83,6 +83,13 @@ function Developers() {
   const [openApiSpec, setOpenApiSpec] = useState(null);
   const [openApiLoading, setOpenApiLoading] = useState(false);
 
+  useEffect(() => {
+    if (activeTab === 'openapi' && !openApiSpec) {
+      const clientSpec = JSON.stringify(buildClientOpenApiSpec(), null, 2);
+      setOpenApiSpec(clientSpec);
+    }
+  }, [activeTab, openApiSpec]);
+
   const fetchOpenApiSpec = async () => {
     if (openApiSpec) return openApiSpec;
     if (openApiLoading) return null;
