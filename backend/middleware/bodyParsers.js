@@ -11,7 +11,7 @@
 const express = require('express');
 
 const WEBHOOK_PATH = '/api/billing/webhook';
-const REPORT_JSON_PATHS = new Set(['/api/reports/read', '/api/dmarc-reports']);
+const REPORT_JSON_PATHS = new Set(['/api/reports/read', '/api/dmarc-reports', '/api/mcp']);
 
 const readWebhookText = express.text({ type: '*/*', limit: '64kb' });
 

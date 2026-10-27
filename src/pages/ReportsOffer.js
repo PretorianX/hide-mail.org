@@ -1,6 +1,23 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router';
 import ReportsService from '../services/ReportsService';
 import LicenseService from '../services/LicenseService';
+
+const CURL_SNIPPET = `curl -X POST https://hide-mail.org/api/dmarc-reports \\
+  -H "Authorization: Bearer hm_api_YOUR_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{"xml":"<?xml version=\\"1.0\\"?><feedback>...</feedback>"}'`;
+
+const MCP_SNIPPET = `{
+  "mcpServers": {
+    "hide-mail": {
+      "url": "https://hide-mail.org/api/mcp",
+      "headers": {
+        "X-API-Key": "hm_live_..."
+      }
+    }
+  }
+}`;
 
 const HANDOFF_POLL_MS = 1000;
 const HANDOFF_POLL_ATTEMPTS = 18;
@@ -89,10 +106,10 @@ const ReportsOffer = () => {
         return;
       }
       sessionStorage.removeItem(HANDOFF_STORAGE_KEY);
-      if (!paid?.licenseKey || paid.data?.type !== 'reports') {
+      if (!paid?.licenseKey || (paid.data?.type !== 'reports' && paid.data?.type !== 'suite')) {
         setConfirming(false);
         setError(paid?.licenseKey
-          ? 'That payment is not a DMARC Reports plan.'
+          ? 'That payment is not a DMARC Reports or Deliverability Suite plan.'
           : 'Payment is still confirming. Refresh this page in a moment.');
         return;
       }
@@ -161,15 +178,27 @@ const ReportsOffer = () => {
 
   return (
     <section className="reports-offer" aria-labelledby="reports-offer-title">
-      <h2 id="reports-offer-title">DMARC Reports API</h2>
+      <h2 id="reports-offer-title">DMARC Reports API &amp; Deliverability Suite</h2>
       <p>
-        Read reports from a script. <code>POST /api/dmarc-reports</code> with a DMARC Reports key.
-        A QA mailbox key and a Mail Grade key do not work here, and this plan does not change the inbox.
+        Parse RFC 7489 aggregate XML reports from your monitoring job via{' '}
+        <code>POST /api/dmarc-reports</code> (60 req/min, max 512 KB). Authenticate with a{' '}
+        <strong>Deliverability Suite</strong> key ($19.99/mo — unlocks all 5 deliverability APIs,
+        QA mailboxes, and Pro inbox with one key) or a standalone DMARC Reports key.{' '}
+        <Link to="/pro">Compare all 4 plans</Link>.
       </p>
+      <pre className="tool-curl-preview" data-testid="reports-curl-preview">
+        <code>{CURL_SNIPPET}</code>
+      </pre>
+      <div className="tool-mcp-onboarding">
+        <p className="tool-mcp-label">Connect via MCP (Claude / Cursor / Antigravity)</p>
+        <pre className="tool-mcp-preview" data-testid="mcp-config-snippet">
+          <code>{MCP_SNIPPET}</code>
+        </pre>
+      </div>
       {confirming ? <p role="status">Confirming payment…</p> : null}
       {offer ? (
         <p className="reports-offer-price" data-testid="reports-price">
-          ${offer.usd} per month
+          ${offer.usd} per month <span className="tool-suite-note">· or $19.99/mo for the full Deliverability Suite</span>
         </p>
       ) : null}
       {offerError ? <p role="alert">{offerError}</p> : null}
@@ -185,7 +214,7 @@ const ReportsOffer = () => {
       </button>
       {license ? (
         <div data-testid="reports-license">
-          <p>DMARC Reports is active for this browser.</p>
+          <p>DMARC Reports is active for this browser ({license.type === 'suite' ? 'Deliverability Suite' : 'DMARC Reports'}).</p>
           <button type="button" onClick={handleIssue} disabled={busy}>
             {apiKey ? 'Replace API key' : 'Issue API key'}
           </button>
@@ -193,7 +222,7 @@ const ReportsOffer = () => {
         </div>
       ) : (
         <form className="reports-restore" onSubmit={handleRestore}>
-          <label htmlFor="reports-license-key">Already bought? Paste your license key</label>
+          <label htmlFor="reports-license-key">Already bought? Paste your license key (Suite or DMARC Reports)</label>
           <input
             id="reports-license-key"
             value={restoreKey}

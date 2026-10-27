@@ -107,13 +107,13 @@ describe('Pro page', () => {
     sessionStorage.clear();
   });
 
-  test('offers a PayPal order instead of card checkout', async () => {
+  test('offers a PayPal order instead of card checkout and shows the plan comparison', async () => {
     renderPro();
 
     expect(await screen.findByTestId('paypal-donate')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /yearly/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /monthly/i })).not.toBeInTheDocument();
-    expect(screen.queryByTestId('plan-comparison')).not.toBeInTheDocument();
+    expect(await screen.findByTestId('plan-comparison')).toBeInTheDocument();
     expect(screen.getByText(/card checkout is paused/i)).toBeInTheDocument();
   });
 
@@ -390,5 +390,14 @@ describe('Pro page', () => {
 
     await screen.findByRole('dialog', { name: /payment successful/i });
     expect(LicenseService.fetchPaidOrder).toHaveBeenCalledWith('token-abc');
+  });
+
+  test('renders the Connect via MCP configuration snippet', async () => {
+    renderPro();
+
+    const snippet = await screen.findByTestId('mcp-config-snippet');
+    expect(snippet).toHaveTextContent('"mcpServers"');
+    expect(snippet).toHaveTextContent('https://hide-mail.org/api/mcp');
+    expect(snippet).toHaveTextContent('"X-API-Key": "hm_live_..."');
   });
 });

@@ -3,7 +3,14 @@ import { Link } from 'react-router';
 import LicenseService from '../services/LicenseService';
 import { useLicense } from '../context/LicenseContext';
 import DonateButton from '../components/DonateButton';
+import PlanComparison from '../components/PlanComparison';
 import LicenseKeyCopy from '../components/LicenseKeyCopy';
+import {
+  priceLabel,
+  displayCurrencies,
+  readStoredCurrency,
+  storeCurrency,
+} from '../utils/planPricing';
 import './Pro.css';
 
 const remainingDaysOf = (item) => {
@@ -19,6 +26,17 @@ const remainingDaysOf = (item) => {
 const HANDOFF_POLL_MS = 1000;
 const HANDOFF_POLL_ATTEMPTS = 18;
 const HANDOFF_STORAGE_KEY = 'hidemail_handoff_token';
+
+const MCP_SNIPPET = `{
+  "mcpServers": {
+    "hide-mail": {
+      "url": "https://hide-mail.org/api/mcp",
+      "headers": {
+        "X-API-Key": "hm_live_..."
+      }
+    }
+  }
+}`;
 
 const readHandoffToken = () => {
   const params = new URLSearchParams(window.location.search);
@@ -40,6 +58,10 @@ const sleep = (ms) => new Promise((resolve) => {
 
 const Pro = () => {
   const { license, activate } = useLicense();
+  const [plans, setPlans] = useState([]);
+  const [fx, setFx] = useState({ usdRate: null, rates: {} });
+  const [displayCurrency, setDisplayCurrency] = useState(readStoredCurrency);
+  const [tiers, setTiers] = useState(null);
   const [restoreKey, setRestoreKey] = useState('');
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -49,6 +71,50 @@ const Pro = () => {
   const [keyCopied, setKeyCopied] = useState(false);
   const [confirmingPayment, setConfirmingPayment] = useState(false);
   const successDialogRef = useRef(null);
+
+  const currencies = displayCurrencies(fx.rates);
+
+  useEffect(() => {
+    let cancelled = false;
+    const promise = typeof LicenseService.listPlans === 'function'
+      ? LicenseService.listPlans()
+      : null;
+    if (!promise || typeof promise.then !== 'function') {
+      return undefined;
+    }
+    promise
+      .then((payload) => {
+        if (cancelled || !payload) {
+          return;
+        }
+        setPlans(payload.plans || []);
+        setFx({
+          usdRate: payload.usdRate,
+          rates: payload.rates || {},
+        });
+        setTiers(payload.tiers || null);
+        const allowed = displayCurrencies(payload.rates);
+        setDisplayCurrency((current) => (allowed.includes(current) ? current : 'USD'));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const labelFor = (planId, period, fallbackUsd) => {
+    const found = plans.find((item) => item.id === planId);
+    if (found) {
+      return priceLabel(found, displayCurrency, period, fx);
+    }
+    return fallbackUsd ? `$${fallbackUsd} ${period}` : '—';
+  };
+
+  const handleCurrencyChange = (event) => {
+    const next = event.target.value;
+    storeCurrency(next);
+    setDisplayCurrency(next);
+  };
 
   useEffect(() => {
     if (license?.active) {
@@ -235,7 +301,7 @@ const Pro = () => {
               <code data-testid="pro-api-key">{apiKey}</code>
             </p>
           ) : null}
-          {license.type === 'api' ? (
+          {['api', 'suite', 'grade', 'sender', 'reports', 'bounce', 'complaint'].includes(license.type) ? (
             <button type="button" disabled={busy} onClick={handleIssueApiKey}>
               {apiKey ? 'Replace API key' : 'Get a new API key'}
             </button>
@@ -264,6 +330,47 @@ const Pro = () => {
       ) : null}
 
       {error ? <p className="pro-error" role="alert">{error}</p> : null}
+
+      {showSupport && tiers ? (
+        <>
+          {currencies.length > 1 ? (
+            <label className="pro-currency" htmlFor="display-currency">
+              Display currency
+              <select
+                id="display-currency"
+                value={currencies.includes(displayCurrency) ? displayCurrency : 'USD'}
+                onChange={handleCurrencyChange}
+              >
+                {currencies.map((code) => (
+                  <option key={code} value={code}>{code}</option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+          <PlanComparison
+            tiers={{
+              ...tiers,
+              suite: tiers.suite || tiers.api,
+            }}
+            price={{
+              pro: labelFor('monthly', 'per month', '3.49'),
+              api: labelFor('api', 'per month', '7.99'),
+              suite: labelFor('suite', 'per month', '19.99'),
+            }}
+          />
+        </>
+      ) : null}
+
+      <section className="pro-mcp-onboarding" aria-labelledby="pro-mcp-title">
+        <h2 id="pro-mcp-title">Connect via MCP (Claude / Cursor / Antigravity)</h2>
+        <p>
+          Point your AI coding assistant or agent at the Official Hide Mail MCP endpoint using your
+          Deliverability Suite, QA API, or standalone tool API key:
+        </p>
+        <pre className="tool-mcp-preview" data-testid="mcp-config-snippet">
+          <code>{MCP_SNIPPET}</code>
+        </pre>
+      </section>
     </div>
   );
 };

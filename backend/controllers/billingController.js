@@ -53,7 +53,7 @@ const checkout = async (req, res, next) => {
 
     const plan = req.body?.plan;
     const requested = req.body?.type;
-    const type = ['api', 'grade', 'sender', 'reports', 'bounce', 'complaint'].includes(requested)
+    const type = ['api', 'suite', 'grade', 'sender', 'reports', 'bounce', 'complaint'].includes(requested)
       ? requested
       : 'pro';
 
@@ -62,6 +62,7 @@ const checkout = async (req, res, next) => {
     } catch {
       const invalidPlan = {
         api: 'API plan must be monthly',
+        suite: 'Deliverability Suite is a monthly plan',
         grade: 'Mail Grade is a monthly plan',
         sender: 'Sender Check is a monthly plan',
         reports: 'DMARC Reports is a monthly plan',
@@ -424,6 +425,7 @@ const CATALOG = [
   { id: 'monthly', type: 'pro', plan: 'monthly' },
   { id: 'yearly', type: 'pro', plan: 'yearly' },
   { id: 'api', type: 'api', plan: 'monthly' },
+  { id: 'suite', type: 'suite', plan: 'monthly' },
 ];
 
 const listPlans = async (req, res, next) => {
@@ -442,6 +444,7 @@ const listPlans = async (req, res, next) => {
 
     return res.status(200).json({
       success: true,
+      checkoutPaused: Boolean(config.billing.checkoutPaused),
       settlementCurrency: 'UAH',
       defaultDisplayCurrency: 'USD',
       usdRate: Number(ratesPayload.rates.USD),
@@ -455,6 +458,7 @@ const listPlans = async (req, res, next) => {
       // the comparison table instead of going blank.
       return res.status(200).json({
         success: true,
+        checkoutPaused: Boolean(config.billing.checkoutPaused),
         rateUnavailable: true,
         settlementCurrency: 'UAH',
         defaultDisplayCurrency: 'USD',

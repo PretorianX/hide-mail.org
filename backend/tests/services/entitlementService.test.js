@@ -47,6 +47,27 @@ describe('entitlementService', () => {
     expect(entitlements.premiumDomains).toBe(true);
   });
 
+  it('unlocks all 5 deliverability APIs, QA API, and Pro inbox perks on the Deliverability Suite plan', () => {
+    const entitlements = entitlementService.getEntitlements({
+      type: 'suite',
+      status: 'active',
+      expiresAt: Date.now() + 60_000,
+    });
+
+    expect(entitlements.planType).toBe('suite');
+    expect(entitlements.ads).toBe(false);
+    expect(entitlements.customAlias).toBe(true);
+    expect(entitlements.premiumDomains).toBe(true);
+    expect(entitlements.apiAccess).toBe(true);
+    expect(entitlements.gradeApi).toBe(true);
+    expect(entitlements.senderApi).toBe(true);
+    expect(entitlements.reportsApi).toBe(true);
+    expect(entitlements.bounceApi).toBe(true);
+    expect(entitlements.complaintApi).toBe(true);
+    expect(entitlements.forwardingLimit).toBe(100);
+    expect(entitlements.mailboxTtlOptions).toEqual([86400, 604800, 2592000]);
+  });
+
   it('sells Mail Grade without unlocking the inbox', () => {
     const entitlements = entitlementService.getEntitlements({
       type: 'grade',

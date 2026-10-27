@@ -55,9 +55,14 @@ describe('pricingService', () => {
       });
     });
 
-    it('derives yearly and API amounts from their own USD prices', () => {
+    it('derives yearly, API, and Deliverability Suite amounts from their own USD prices', () => {
       expect(pricingService.quotePlan('pro', 'yearly', rates).amountUah).toBe(1030);
       expect(pricingService.quotePlan('api', 'monthly', rates).amountUah).toBe(330);
+      expect(pricingService.quotePlan('suite', 'monthly', rates)).toEqual({
+        usd: 19.99,
+        amountUah: 820,
+        currency: 'UAH',
+      });
     });
 
     it('prices Mail Grade from its own monthly USD list price', () => {

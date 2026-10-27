@@ -1,6 +1,23 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router';
 import ComplaintService from '../services/ComplaintService';
 import LicenseService from '../services/LicenseService';
+
+const CURL_SNIPPET = `curl -X POST https://hide-mail.org/api/complaint-read \\
+  -H "Authorization: Bearer hm_api_YOUR_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{"source":"Feedback-Type: abuse\\r\\nOriginal-Rcpt-To: <subscriber@example.net>\\r\\nSource-IP: 192.0.2.1"}'`;
+
+const MCP_SNIPPET = `{
+  "mcpServers": {
+    "hide-mail": {
+      "url": "https://hide-mail.org/api/mcp",
+      "headers": {
+        "X-API-Key": "hm_live_..."
+      }
+    }
+  }
+}`;
 
 const HANDOFF_POLL_MS = 1000;
 const HANDOFF_POLL_ATTEMPTS = 18;
@@ -89,10 +106,10 @@ const ComplaintOffer = () => {
         return;
       }
       sessionStorage.removeItem(HANDOFF_STORAGE_KEY);
-      if (!paid?.licenseKey || paid.data?.type !== 'complaint') {
+      if (!paid?.licenseKey || (paid.data?.type !== 'complaint' && paid.data?.type !== 'suite')) {
         setConfirming(false);
         setError(paid?.licenseKey
-          ? 'That payment is not a Complaint Read plan.'
+          ? 'That payment is not a Complaint Read or Deliverability Suite plan.'
           : 'Payment is still confirming. Refresh this page in a moment.');
         return;
       }
@@ -161,15 +178,27 @@ const ComplaintOffer = () => {
 
   return (
     <section className="complaint-offer" aria-labelledby="complaint-offer-title">
-      <h2 id="complaint-offer-title">Complaint Read API</h2>
+      <h2 id="complaint-offer-title">Complaint Read API &amp; Deliverability Suite</h2>
       <p>
-        Suppress from a script. <code>POST /api/complaint-read</code> with a Complaint Read key.
-        A QA mailbox key and a Mail Grade key do not work here, and this plan does not change the inbox.
+        Parse RFC 5965 abuse feedback loop (ARF) reports in your suppression worker via{' '}
+        <code>POST /api/complaint-read</code> (120 req/min, max 64 KB). Authenticate with a{' '}
+        <strong>Deliverability Suite</strong> key ($19.99/mo — unlocks all 5 deliverability APIs,
+        QA mailboxes, and Pro inbox with one key) or a standalone Complaint Read key.{' '}
+        <Link to="/pro">Compare all 4 plans</Link>.
       </p>
+      <pre className="tool-curl-preview" data-testid="complaint-curl-preview">
+        <code>{CURL_SNIPPET}</code>
+      </pre>
+      <div className="tool-mcp-onboarding">
+        <p className="tool-mcp-label">Connect via MCP (Claude / Cursor / Antigravity)</p>
+        <pre className="tool-mcp-preview" data-testid="mcp-config-snippet">
+          <code>{MCP_SNIPPET}</code>
+        </pre>
+      </div>
       {confirming ? <p role="status">Confirming payment…</p> : null}
       {offer ? (
         <p className="complaint-offer-price" data-testid="complaint-price">
-          ${offer.usd} per month
+          ${offer.usd} per month <span className="tool-suite-note">· or $19.99/mo for the full Deliverability Suite</span>
         </p>
       ) : null}
       {offerError ? <p role="alert">{offerError}</p> : null}
@@ -185,7 +214,7 @@ const ComplaintOffer = () => {
       </button>
       {license ? (
         <div data-testid="complaint-license">
-          <p>Complaint Read is active for this browser.</p>
+          <p>Complaint Read is active for this browser ({license.type === 'suite' ? 'Deliverability Suite' : 'Complaint Read'}).</p>
           <button type="button" onClick={handleIssue} disabled={busy}>
             {apiKey ? 'Replace API key' : 'Issue API key'}
           </button>
@@ -193,7 +222,7 @@ const ComplaintOffer = () => {
         </div>
       ) : (
         <form className="complaint-restore" onSubmit={handleRestore}>
-          <label htmlFor="complaint-license-key">Already bought? Paste your license key</label>
+          <label htmlFor="complaint-license-key">Already bought? Paste your license key (Suite or Complaint Read)</label>
           <input
             id="complaint-license-key"
             value={restoreKey}

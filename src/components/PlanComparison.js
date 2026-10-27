@@ -34,7 +34,17 @@ const mailboxLifetime = (tier, extensionSeconds) => {
  * promise a limit the service does not apply.
  */
 const PlanComparison = ({ tiers, price }) => {
-  const { free, pro, api, freeExtensionSeconds, premiumDomainCount, apiKeyTtlSeconds } = tiers;
+  const {
+    free,
+    pro,
+    api,
+    suite,
+    freeExtensionSeconds,
+    premiumDomainCount,
+    apiKeyTtlSeconds,
+  } = tiers;
+
+  const hasSuite = Boolean(suite && price.suite);
 
   const rows = [
     {
@@ -42,48 +52,63 @@ const PlanComparison = ({ tiers, price }) => {
       free: 'Free, forever',
       pro: price.pro,
       api: price.api,
+      suite: price.suite || '$19.99 per month',
     },
     {
       label: 'Advertising',
       free: 'Ads on every page — they pay for the free inbox',
       pro: 'No ads at all',
       api: 'No ads at all',
+      suite: 'No ads at all',
     },
     {
       label: 'How long an address lives',
       free: mailboxLifetime(free, freeExtensionSeconds),
       pro: mailboxLifetime(pro),
       api: mailboxLifetime(api),
+      suite: suite ? mailboxLifetime(suite) : mailboxLifetime(api),
     },
     {
       label: 'Choosing the address',
       free: 'A random address is generated for you',
       pro: 'Pick the name yourself, for example invoices@',
       api: 'Pick the name yourself, or let the API generate one',
+      suite: 'Pick the name yourself, or let the API generate one',
     },
     {
       label: 'A different address for every site',
       free: 'Included — add a suffix like .netflix or .shop and it lands in the same inbox',
       pro: 'Included, and short to read because you chose the base name: jane.netflix@',
       api: 'Included, on mailboxes you create by hand or through the API',
+      suite: 'Included, on mailboxes you create by hand or through the API',
     },
     {
       label: 'Forward & Forget',
       free: `${free.forwardingLimit} forwards per hour`,
       pro: `${pro.forwardingLimit} forwards per hour`,
       api: `${api.forwardingLimit} forwards per hour`,
+      suite: `${(suite || api).forwardingLimit} forwards per hour`,
     },
     {
       label: 'QA API access',
       free: 'Not available',
       pro: 'Not included — buy the API plan for this',
       api: `Yes. Keys last ${formatDuration(apiKeyTtlSeconds)} and renew with the plan`,
+      suite: `Included. Same key unlocks QA mailboxes, webhooks, and all 5 mail tools`,
+    },
+    {
+      label: 'Deliverability & Mail Tools APIs',
+      free: 'Free in-browser tools (Mail Grade, Sender, DMARC, Bounces, Complaints)',
+      pro: 'Free in-browser tools',
+      api: 'Free in-browser tools — upgrade to Deliverability Suite for REST APIs',
+      suite: 'All 5 REST APIs (Mail Grade, Sender Check, DMARC Reports, Bounce Read, Complaint Read) at 60–120 req/min',
     },
     {
       label: 'What you need to sign up',
       free: 'Nothing',
       pro: 'Nothing — you get a license key, not an account',
       api: 'Nothing — you get a license key and an API key',
+      suite: 'Nothing — one license key and one API key unlock everything',
     },
   ];
 
@@ -93,6 +118,7 @@ const PlanComparison = ({ tiers, price }) => {
       free: 'Shared public domains',
       pro: `${premiumDomainCount} extra domain${premiumDomainCount === 1 ? '' : 's'} kept off blocklists`,
       api: `${premiumDomainCount} extra domain${premiumDomainCount === 1 ? '' : 's'} kept off blocklists`,
+      suite: `${premiumDomainCount} extra domain${premiumDomainCount === 1 ? '' : 's'} kept off blocklists`,
     });
   }
 
@@ -106,6 +132,7 @@ const PlanComparison = ({ tiers, price }) => {
             <th scope="col">Free</th>
             <th scope="col">Pro</th>
             <th scope="col">API</th>
+            {hasSuite ? <th scope="col">Deliverability Suite</th> : null}
           </tr>
         </thead>
         <tbody>
@@ -115,6 +142,7 @@ const PlanComparison = ({ tiers, price }) => {
               <td data-tier="Free">{row.free}</td>
               <td data-tier="Pro">{row.pro}</td>
               <td data-tier="API">{row.api}</td>
+              {hasSuite ? <td data-tier="Deliverability Suite">{row.suite}</td> : null}
             </tr>
           ))}
         </tbody>
@@ -133,6 +161,7 @@ PlanComparison.propTypes = {
     free: PropTypes.object.isRequired,
     pro: PropTypes.object.isRequired,
     api: PropTypes.object.isRequired,
+    suite: PropTypes.object,
     freeExtensionSeconds: PropTypes.number,
     premiumDomainCount: PropTypes.number,
     apiKeyTtlSeconds: PropTypes.number,
@@ -140,6 +169,7 @@ PlanComparison.propTypes = {
   price: PropTypes.shape({
     pro: PropTypes.string.isRequired,
     api: PropTypes.string.isRequired,
+    suite: PropTypes.string,
   }).isRequired,
 };
 

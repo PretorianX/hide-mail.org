@@ -1,6 +1,23 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router';
 import BounceService from '../services/BounceService';
 import LicenseService from '../services/LicenseService';
+
+const CURL_SNIPPET = `curl -X POST https://hide-mail.org/api/bounce-read \\
+  -H "Authorization: Bearer hm_api_YOUR_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{"source":"Final-Recipient: rfc822; ada@example.com\\r\\nAction: failed\\r\\nStatus: 5.1.1"}'`;
+
+const MCP_SNIPPET = `{
+  "mcpServers": {
+    "hide-mail": {
+      "url": "https://hide-mail.org/api/mcp",
+      "headers": {
+        "X-API-Key": "hm_live_..."
+      }
+    }
+  }
+}`;
 
 const HANDOFF_POLL_MS = 1000;
 const HANDOFF_POLL_ATTEMPTS = 18;
@@ -89,10 +106,10 @@ const BounceOffer = () => {
         return;
       }
       sessionStorage.removeItem(HANDOFF_STORAGE_KEY);
-      if (!paid?.licenseKey || paid.data?.type !== 'bounce') {
+      if (!paid?.licenseKey || (paid.data?.type !== 'bounce' && paid.data?.type !== 'suite')) {
         setConfirming(false);
         setError(paid?.licenseKey
-          ? 'That payment is not a Bounce Read plan.'
+          ? 'That payment is not a Bounce Read or Deliverability Suite plan.'
           : 'Payment is still confirming. Refresh this page in a moment.');
         return;
       }
@@ -161,15 +178,27 @@ const BounceOffer = () => {
 
   return (
     <section className="bounce-offer" aria-labelledby="bounce-offer-title">
-      <h2 id="bounce-offer-title">Bounce Read API</h2>
+      <h2 id="bounce-offer-title">Bounce Read API &amp; Deliverability Suite</h2>
       <p>
-        Classify bounces from a script. <code>POST /api/bounce-read</code> with a Bounce Read key.
-        A QA mailbox key does not work here, and this plan does not change the inbox.
+        Classify RFC 3464 delivery status notifications in your return-path worker via{' '}
+        <code>POST /api/bounce-read</code> (120 req/min, max 64 KB). Authenticate with a{' '}
+        <strong>Deliverability Suite</strong> key ($19.99/mo — unlocks all 5 deliverability APIs,
+        QA mailboxes, and Pro inbox with one key) or a standalone Bounce Read key.{' '}
+        <Link to="/pro">Compare all 4 plans</Link>.
       </p>
+      <pre className="tool-curl-preview" data-testid="bounce-curl-preview">
+        <code>{CURL_SNIPPET}</code>
+      </pre>
+      <div className="tool-mcp-onboarding">
+        <p className="tool-mcp-label">Connect via MCP (Claude / Cursor / Antigravity)</p>
+        <pre className="tool-mcp-preview" data-testid="mcp-config-snippet">
+          <code>{MCP_SNIPPET}</code>
+        </pre>
+      </div>
       {confirming ? <p role="status">Confirming payment…</p> : null}
       {offer ? (
         <p className="bounce-offer-price" data-testid="bounce-price">
-          ${offer.usd} per month
+          ${offer.usd} per month <span className="tool-suite-note">· or $19.99/mo for the full Deliverability Suite</span>
         </p>
       ) : null}
       {offerError ? <p role="alert">{offerError}</p> : null}
@@ -185,7 +214,7 @@ const BounceOffer = () => {
       </button>
       {license ? (
         <div data-testid="bounce-license">
-          <p>Bounce Read is active for this browser.</p>
+          <p>Bounce Read is active for this browser ({license.type === 'suite' ? 'Deliverability Suite' : 'Bounce Read'}).</p>
           <button type="button" onClick={handleIssue} disabled={busy}>
             {apiKey ? 'Replace API key' : 'Issue API key'}
           </button>
@@ -193,7 +222,7 @@ const BounceOffer = () => {
         </div>
       ) : (
         <form className="bounce-restore" onSubmit={handleRestore}>
-          <label htmlFor="bounce-license-key">Already bought? Paste your license key</label>
+          <label htmlFor="bounce-license-key">Already bought? Paste your license key (Suite or Bounce Read)</label>
           <input
             id="bounce-license-key"
             value={restoreKey}

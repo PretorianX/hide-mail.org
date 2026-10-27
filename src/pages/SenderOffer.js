@@ -1,6 +1,23 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router';
 import SenderService from '../services/SenderService';
 import LicenseService from '../services/LicenseService';
+
+const CURL_SNIPPET = `curl -X POST https://hide-mail.org/api/sender-check \\
+  -H "Authorization: Bearer hm_api_YOUR_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{"domain":"example.com"}'`;
+
+const MCP_SNIPPET = `{
+  "mcpServers": {
+    "hide-mail": {
+      "url": "https://hide-mail.org/api/mcp",
+      "headers": {
+        "X-API-Key": "hm_live_..."
+      }
+    }
+  }
+}`;
 
 const HANDOFF_POLL_MS = 1000;
 const HANDOFF_POLL_ATTEMPTS = 18;
@@ -89,10 +106,10 @@ const SenderOffer = () => {
         return;
       }
       sessionStorage.removeItem(HANDOFF_STORAGE_KEY);
-      if (!paid?.licenseKey || paid.data?.type !== 'sender') {
+      if (!paid?.licenseKey || (paid.data?.type !== 'sender' && paid.data?.type !== 'suite')) {
         setConfirming(false);
         setError(paid?.licenseKey
-          ? 'That payment is not a Sender Check plan.'
+          ? 'That payment is not a Sender Check or Deliverability Suite plan.'
           : 'Payment is still confirming. Refresh this page in a moment.');
         return;
       }
@@ -161,15 +178,26 @@ const SenderOffer = () => {
 
   return (
     <section className="sender-offer" aria-labelledby="sender-offer-title">
-      <h2 id="sender-offer-title">Sender Check API</h2>
+      <h2 id="sender-offer-title">Sender Check API &amp; Deliverability Suite</h2>
       <p>
-        Check domains from a script. <code>POST /api/sender-check</code> with a Sender Check key.
-        A mailbox key does not work here, and this plan does not change the inbox.
+        Audit customer or sending domains from a script via <code>POST /api/sender-check</code>{' '}
+        (60 req/min). Authenticate with a <strong>Deliverability Suite</strong> key ($19.99/mo —
+        unlocks all 5 deliverability APIs, QA mailboxes, and Pro inbox with one key) or a
+        standalone Sender Check key. <Link to="/pro">Compare all 4 plans</Link>.
       </p>
+      <pre className="tool-curl-preview" data-testid="sender-curl-preview">
+        <code>{CURL_SNIPPET}</code>
+      </pre>
+      <div className="tool-mcp-onboarding">
+        <p className="tool-mcp-label">Connect via MCP (Claude / Cursor / Antigravity)</p>
+        <pre className="tool-mcp-preview" data-testid="mcp-config-snippet">
+          <code>{MCP_SNIPPET}</code>
+        </pre>
+      </div>
       {confirming ? <p role="status">Confirming payment…</p> : null}
       {offer ? (
         <p className="sender-offer-price" data-testid="sender-price">
-          ${offer.usd} per month
+          ${offer.usd} per month <span className="tool-suite-note">· or $19.99/mo for the full Deliverability Suite</span>
         </p>
       ) : null}
       {offerError ? <p role="alert">{offerError}</p> : null}
@@ -185,7 +213,7 @@ const SenderOffer = () => {
       </button>
       {license ? (
         <div data-testid="sender-license">
-          <p>Sender Check is active for this browser.</p>
+          <p>Sender Check is active for this browser ({license.type === 'suite' ? 'Deliverability Suite' : 'Sender Check'}).</p>
           <button type="button" onClick={handleIssue} disabled={busy}>
             {apiKey ? 'Replace API key' : 'Issue API key'}
           </button>
@@ -193,7 +221,7 @@ const SenderOffer = () => {
         </div>
       ) : (
         <form className="sender-restore" onSubmit={handleRestore}>
-          <label htmlFor="sender-license-key">Already bought? Paste your license key</label>
+          <label htmlFor="sender-license-key">Already bought? Paste your license key (Suite or Sender Check)</label>
           <input
             id="sender-license-key"
             value={restoreKey}
