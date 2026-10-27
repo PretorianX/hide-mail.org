@@ -148,4 +148,99 @@ describe('DMARC Reports page', () => {
     expect(screen.getByTestId('reports-volume-stamp')).toHaveTextContent('—');
     expect(screen.getByTestId('reports-volume-fill')).toHaveStyle({ width: '0%' });
   });
+
+  test('loads sample XML and displays disposition breakdown and recommendations', async () => {
+    ReportsService.read.mockResolvedValue({
+      ...mixedReport,
+      windowDays: 1,
+      adkim: 'r',
+      aspf: 'r',
+      breakdown: {
+        dkimAligned: 8,
+        spfAligned: 6,
+        fullyAligned: 6,
+        dispositions: { none: 8, quarantine: 2, reject: 0 },
+      },
+      recommendations: [
+        {
+          id: 'investigate_unaligned',
+          severity: 'high',
+          title: 'Investigate unaligned sending sources',
+          detail: '198.51.100.4 failed both DKIM and SPF alignment.',
+        },
+      ],
+    });
+    renderReports();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Load sample' }));
+    expect(screen.getByLabelText('Aggregate report').value).toContain('<feedback>');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Read this report' }));
+
+    expect(await screen.findByTestId('reports-breakdown')).toHaveTextContent('Delivered (none)');
+    expect(screen.getByTestId('reports-recommendations')).toHaveTextContent('Investigate unaligned sending sources');
+  });
+
+  test('renders provider and PTR badges and exports CSV for sources', async () => {
+    const writeText = jest.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, { clipboard: { writeText } });
+
+    ReportsService.read.mockResolvedValue({
+      ...mixedReport,
+      sources: [
+        {
+          ...mixedReport.sources[0],
+          provider: 'Google Workspace',
+          ptrHost: 'mail-sor-f41.google.com',
+          sharePercent: 80,
+          envelopeFrom: 'bounce.example.com',
+        },
+        {
+          ...mixedReport.sources[1],
+          provider: null,
+          ptrHost: null,
+          sharePercent: 20,
+          envelopeFrom: null,
+        },
+      ],
+    });
+    renderReports();
+
+    fireEvent.change(screen.getByLabelText('Aggregate report'), {
+      target: { value: '<feedback></feedback>' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Read this report' }));
+
+    expect(await screen.findByTestId('reports-source-provider')).toHaveTextContent('Google Workspace');
+    expect(screen.getByTestId('reports-source-ptr')).toHaveTextContent('mail-sor-f41.google.com');
+
+    fireEvent.click(screen.getByTestId('reports-export-csv'));
+
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining(
+      'source_ip,provider,ptr_host,count,share_percent,disposition,aligned,dkim,spf,header_from,envelope_from'
+    ));
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining(
+      '203.0.113.10,Google Workspace,mail-sor-f41.google.com,8,80,none,true,pass,fail,example.com,bounce.example.com'
+    ));
+  });
+
+  test('supports uploading .xml and .xml.gz files via the file picker', async () => {
+    ReportsService.read.mockResolvedValue(mixedReport);
+    renderReports();
+
+    const fileInput = screen.getByTestId('reports-file-input');
+    const xmlFile = new File(['<feedback><report_metadata/></feedback>'], 'report.xml', { type: 'text/xml' });
+    fireEvent.change(fileInput, { target: { files: [xmlFile] } });
+
+    expect(await screen.findByDisplayValue('<feedback><report_metadata/></feedback>')).toBeInTheDocument();
+
+    const gzFile = new File([new Uint8Array([0x1f, 0x8b, 0x08, 0x00])], 'report.xml.gz', { type: 'application/gzip' });
+    fireEvent.change(fileInput, { target: { files: [gzFile] } });
+
+    expect(await screen.findByTestId('reports-result')).toHaveTextContent('Mixed');
+    expect(ReportsService.read).toHaveBeenCalledWith(expect.objectContaining({
+      format: 'gzip',
+      archiveBase64: expect.any(String),
+    }));
+  });
 });

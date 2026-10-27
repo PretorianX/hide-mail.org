@@ -43,11 +43,12 @@ class ReportsService {
     localStorage.removeItem(REPORTS_LICENSE_STORAGE_KEY);
   }
 
-  static async read(xml) {
+  static async read(input) {
+    const body = input && typeof input === 'object' ? input : { xml: input };
     const response = await fetch(`${API_URL}/reports/read`, {
       method: 'POST',
       headers: jsonHeaders,
-      body: JSON.stringify({ xml }),
+      body: JSON.stringify(body),
     });
     const payload = await readPayload(response);
     return payload.report;
@@ -67,8 +68,8 @@ class ReportsService {
     });
     const payload = await readPayload(response);
     const license = payload.license || payload.data;
-    if (license?.type !== 'reports') {
-      throw new Error('That key is not a DMARC Reports plan.');
+    if (license?.type !== 'reports' && license?.type !== 'suite') {
+      throw new Error('That key is not a DMARC Reports or Deliverability Suite plan.');
     }
     this.saveKey(license.key);
     return license;

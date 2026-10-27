@@ -2,6 +2,7 @@ process.env.VALID_DOMAINS = 'hide-mail.org';
 process.env.REPORTS_PRICE_MONTHLY_USD = '15';
 process.env.CHECKOUT_PAUSED = 'true';
 
+const zlib = require('node:zlib');
 const express = require('express');
 const request = require('supertest');
 const redisService = require('../../services/redisService');
@@ -86,6 +87,25 @@ describe('DMARC Reports HTTP', () => {
       .expect(400);
 
     expect(res.body.code).toBe('REPORT_REQUIRED');
+  });
+
+  it('reads a gzipped archive payload on /reports/read and rejects decompression bombs with 413', async () => {
+    const archiveBase64 = zlib.gzipSync(Buffer.from(XML, 'utf8')).toString('base64');
+    const res = await request(app)
+      .post('/reports/read')
+      .send({ archiveBase64, format: 'gzip' })
+      .expect(200);
+
+    expect(res.body.report.verdict).toBe('Aligned');
+    expect(res.body.report.domain).toBe('example.com');
+
+    const bombBase64 = zlib.gzipSync(Buffer.from(`<feedback>${'x'.repeat(270 * 1024)}</feedback>`, 'utf8')).toString('base64');
+    const tooLarge = await request(app)
+      .post('/reports/read')
+      .send({ archiveBase64: bombBase64, format: 'gzip' })
+      .expect(413);
+
+    expect(tooLarge.body.code).toBe('REPORT_TOO_LARGE');
   });
 
   describe('paid API', () => {
