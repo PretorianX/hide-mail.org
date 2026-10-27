@@ -407,7 +407,7 @@ function Developers() {
             className="developers-small-btn"
             data-testid="open-swagger-ui-link"
           >
-            Open Swagger UI (`/api/docs`) ↗
+            Open Swagger UI (/api/docs) ↗
           </a>
           <a
             href={OPENAPI_SPEC_PATH}
@@ -416,7 +416,7 @@ function Developers() {
             className="developers-small-btn"
             data-testid="openapi-json-link"
           >
-            OpenAPI 3.1 Spec (`/api/openapi.json`) ↗
+            OpenAPI 3.1 Spec (/api/openapi.json) ↗
           </a>
           <button
             type="button"
@@ -424,7 +424,7 @@ function Developers() {
             onClick={handleDownloadOpenApi}
             data-testid="openapi-download-btn"
           >
-            Download `openapi.json`
+            Download openapi.json
           </button>
           <button
             type="button"
@@ -472,7 +472,7 @@ function Developers() {
         </div>
 
         <div className="developers-key-bar">
-          <label htmlFor="developers-api-key">API Key (`hm_api_...`)</label>
+          <label htmlFor="developers-api-key">API Key (hm_api_...)</label>
           <input
             id="developers-api-key"
             type="text"
@@ -551,32 +551,34 @@ function Developers() {
               {currentEndpoint.subRoutes && (
                 <div data-testid="api-subroutes">
                   <h3>All QA Mailbox &amp; Webhook Routes</h3>
-                  <table className="developers-table">
-                    <thead>
-                      <tr>
-                        <th>Method</th>
-                        <th>Route</th>
-                        <th>Description</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {currentEndpoint.subRoutes.map((route) => (
-                        <tr key={`${route.method}-${route.path}`}>
-                          <td>
-                            <span
-                              className={`developers-method-badge method-${route.method.toLowerCase()}`}
-                            >
-                              {route.method}
-                            </span>
-                          </td>
-                          <td>
-                            <code>{route.path}</code>
-                          </td>
-                          <td>{route.description}</td>
+                  <div className="developers-table-wrap">
+                    <table className="developers-table">
+                      <thead>
+                        <tr>
+                          <th>Method</th>
+                          <th>Route</th>
+                          <th>Description</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {currentEndpoint.subRoutes.map((route) => (
+                          <tr key={`${route.method}-${route.path}`}>
+                            <td>
+                              <span
+                                className={`developers-method-badge method-${route.method.toLowerCase()}`}
+                              >
+                                {route.method}
+                              </span>
+                            </td>
+                            <td>
+                              <code>{route.path}</code>
+                            </td>
+                            <td>{route.description}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               )}
 
@@ -596,69 +598,73 @@ function Developers() {
                   }}
                   data-testid="api-jump-to-mcp"
                 >
-                  View MCP tool (`{currentEndpoint.mcpToolName}`) →
+                  View MCP tool ({currentEndpoint.mcpToolName}) →
                 </button>
               </div>
             </article>
 
             {/* Request & Response Schema Tables */}
-            <section className="developers-schema-grid">
+            <section className="developers-schema-stack">
               <div className="developers-card">
                 <h3>Request Body Schema</h3>
-                <table className="developers-table" data-testid="api-request-schema">
-                  <thead>
-                    <tr>
-                      <th>Field</th>
-                      <th>Type</th>
-                      <th>Description</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {currentEndpoint.requestFields.map((field) => (
-                      <tr key={field.name}>
-                        <td>
-                          <code>{field.name}</code>
-                          {field.required && <span className="developers-req-badge">required</span>}
-                        </td>
-                        <td>
-                          <code>{field.type}</code>
-                        </td>
-                        <td>{field.description}</td>
+                <div className="developers-table-wrap">
+                  <table className="developers-table" data-testid="api-request-schema">
+                    <thead>
+                      <tr>
+                        <th>Field</th>
+                        <th>Type</th>
+                        <th>Description</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {currentEndpoint.requestFields.map((field) => (
+                        <tr key={field.name}>
+                          <td>
+                            <code>{field.name}</code>
+                            {field.required && <span className="developers-req-badge">required</span>}
+                          </td>
+                          <td>
+                            <code>{field.type}</code>
+                          </td>
+                          <td>{field.description}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
 
               <div className="developers-card">
-                <h3>Response Contract (`200 OK`)</h3>
-                <table className="developers-table" data-testid="api-response-schema">
-                  <thead>
-                    <tr>
-                      <th>Field</th>
-                      <th>Type</th>
-                      <th>Description</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {currentEndpoint.responseFields.map((field) => (
-                      <tr key={field.name}>
-                        <td>
-                          <code>{field.name}</code>
-                        </td>
-                        <td>
-                          <code>{field.type}</code>
-                        </td>
-                        <td>{field.description}</td>
+                <h3>Response Contract (200 OK)</h3>
+                <div className="developers-table-wrap">
+                  <table className="developers-table" data-testid="api-response-schema">
+                    <thead>
+                      <tr>
+                        <th>Field</th>
+                        <th>Type</th>
+                        <th>Description</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {currentEndpoint.responseFields.map((field) => (
+                        <tr key={field.name}>
+                          <td>
+                            <code>{field.name}</code>
+                          </td>
+                          <td>
+                            <code>{field.type}</code>
+                          </td>
+                          <td>{field.description}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </section>
 
             {/* Code Generator & Sample Response */}
-            <section className="developers-schema-grid">
+            <section className="developers-schema-stack">
               <div className="developers-card">
                 <div className="developers-code-toolbar">
                   <div className="developers-lang-tabs" role="tablist" aria-label="Snippet language">
@@ -694,7 +700,7 @@ function Developers() {
 
               <div className="developers-card">
                 <div className="developers-code-toolbar">
-                  <h3>Sample `200 OK` Payload</h3>
+                  <h3>Sample 200 OK Payload</h3>
                 </div>
                 <pre className="developers-pre" data-testid="api-sample-response">
                   <code>{JSON.stringify(currentEndpoint.sampleResponse, null, 2)}</code>
@@ -727,7 +733,7 @@ function Developers() {
                       onClick={() => setRunnerMode('api')}
                       data-testid="runner-mode-api"
                     >
-                      Authenticated (`{currentEndpoint.path}`)
+                      Authenticated ({currentEndpoint.path})
                     </button>
                     {currentEndpoint.browserPath && (
                       <button
@@ -736,7 +742,7 @@ function Developers() {
                         onClick={() => setRunnerMode('browser')}
                         data-testid="runner-mode-browser"
                       >
-                        Free Browser Preview (`{currentEndpoint.browserPath}`)
+                        Free Browser Preview ({currentEndpoint.browserPath})
                       </button>
                     )}
                   </div>
@@ -793,7 +799,7 @@ function Developers() {
                   rel="noopener noreferrer"
                   className="developers-small-btn"
                 >
-                  Launch Swagger UI (`/api/docs`) ↗
+                  Launch Swagger UI (/api/docs) ↗
                 </a>
                 <a
                   href={OPENAPI_SPEC_PATH}
@@ -801,14 +807,14 @@ function Developers() {
                   rel="noopener noreferrer"
                   className="developers-small-btn"
                 >
-                  Raw `/api/openapi.json` ↗
+                  Raw /api/openapi.json ↗
                 </a>
                 <button
                   type="button"
                   className="developers-small-btn"
                   onClick={handleDownloadOpenApi}
                 >
-                  Download `.json`
+                  Download .json
                 </button>
                 <button
                   type="button"
@@ -848,50 +854,52 @@ function Developers() {
                 <code>https://hide-mail.org/api/mcp</code>
               </div>
 
-              <table className="developers-table">
-                <thead>
-                  <tr>
-                    <th>Transport</th>
-                    <th>Endpoint / Command</th>
-                    <th>Auth</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td>
-                      <strong>Streamable HTTP</strong>
-                    </td>
-                    <td>
-                      <code>POST https://hide-mail.org/api/mcp</code>
-                    </td>
-                    <td>
-                      <code>X-API-Key</code> or <code>Bearer</code>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>
-                      <strong>Discovery / SSE</strong>
-                    </td>
-                    <td>
-                      <code>GET https://hide-mail.org/api/mcp</code>
-                    </td>
-                    <td>
-                      <code>X-API-Key</code> or <code>Bearer</code>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>
-                      <strong>Local Stdio CLI</strong>
-                    </td>
-                    <td>
-                      <code>node ./mcp/hide-mail-mcp.js</code>
-                    </td>
-                    <td>
-                      <code>HIDE_MAIL_API_KEY</code> env
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+              <div className="developers-table-wrap">
+                <table className="developers-table">
+                  <thead>
+                    <tr>
+                      <th>Transport</th>
+                      <th>Endpoint / Command</th>
+                      <th>Auth</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>
+                        <strong>Streamable HTTP</strong>
+                      </td>
+                      <td>
+                        <code>POST https://hide-mail.org/api/mcp</code>
+                      </td>
+                      <td>
+                        <code>X-API-Key</code> or <code>Bearer</code>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <strong>Discovery / SSE</strong>
+                      </td>
+                      <td>
+                        <code>GET https://hide-mail.org/api/mcp</code>
+                      </td>
+                      <td>
+                        <code>X-API-Key</code> or <code>Bearer</code>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <strong>Local Stdio CLI</strong>
+                      </td>
+                      <td>
+                        <code>node ./mcp/hide-mail-mcp.js</code>
+                      </td>
+                      <td>
+                        <code>HIDE_MAIL_API_KEY</code> env
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </article>
 
             <article className="developers-card">
@@ -1012,80 +1020,84 @@ function Developers() {
           <section className="developers-schema-grid">
             <article className="developers-card" data-testid="mcp-resources-card">
               <h3>MCP Resources ({MCP_RESOURCES.length})</h3>
-              <table className="developers-table">
-                <thead>
-                  <tr>
-                    <th>URI &amp; Name</th>
-                    <th>Description</th>
-                    <th>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {MCP_RESOURCES.map((res) => (
-                    <tr key={res.uri}>
-                      <td>
-                        <code>{res.uri}</code>
-                        <div>{res.name}</div>
-                      </td>
-                      <td>{res.description}</td>
-                      <td>
-                        <button
-                          type="button"
-                          className="developers-small-btn"
-                          onClick={() => handleLoadMcpSample(res.sampleRead)}
-                        >
-                          Test read
-                        </button>
-                      </td>
+              <div className="developers-table-wrap">
+                <table className="developers-table">
+                  <thead>
+                    <tr>
+                      <th>URI &amp; Name</th>
+                      <th>Description</th>
+                      <th>Action</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {MCP_RESOURCES.map((res) => (
+                      <tr key={res.uri}>
+                        <td>
+                          <code>{res.uri}</code>
+                          <div>{res.name}</div>
+                        </td>
+                        <td>{res.description}</td>
+                        <td>
+                          <button
+                            type="button"
+                            className="developers-small-btn"
+                            onClick={() => handleLoadMcpSample(res.sampleRead)}
+                          >
+                            Test read
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </article>
 
             <article className="developers-card" data-testid="mcp-prompts-card">
               <h3>MCP Workflow Prompts ({MCP_PROMPTS.length})</h3>
-              <table className="developers-table">
-                <thead>
-                  <tr>
-                    <th>Prompt Name</th>
-                    <th>Arguments &amp; Purpose</th>
-                    <th>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {MCP_PROMPTS.map((prompt) => (
-                    <tr key={prompt.name}>
-                      <td>
-                        <code>{prompt.name}</code>
-                      </td>
-                      <td>
-                        <div>{prompt.description}</div>
-                        <small>
-                          Args:{' '}
-                          {prompt.arguments.map((a) => `${a.name}${a.required ? '*' : ''}`).join(', ')}
-                        </small>
-                      </td>
-                      <td>
-                        <button
-                          type="button"
-                          className="developers-small-btn"
-                          onClick={() => handleLoadMcpSample(prompt.sampleGet)}
-                        >
-                          Test prompt
-                        </button>
-                      </td>
+              <div className="developers-table-wrap">
+                <table className="developers-table">
+                  <thead>
+                    <tr>
+                      <th>Prompt Name</th>
+                      <th>Arguments &amp; Purpose</th>
+                      <th>Action</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {MCP_PROMPTS.map((prompt) => (
+                      <tr key={prompt.name}>
+                        <td>
+                          <code>{prompt.name}</code>
+                        </td>
+                        <td>
+                          <div>{prompt.description}</div>
+                          <small>
+                            Args:{' '}
+                            {prompt.arguments.map((a) => `${a.name}${a.required ? '*' : ''}`).join(', ')}
+                          </small>
+                        </td>
+                        <td>
+                          <button
+                            type="button"
+                            className="developers-small-btn"
+                            onClick={() => handleLoadMcpSample(prompt.sampleGet)}
+                          >
+                            Test prompt
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </article>
           </section>
 
           {/* Live MCP JSON-RPC Playground */}
           <section className="developers-card" data-testid="mcp-rpc-tester">
             <div className="developers-card-header">
-              <h3>Live MCP JSON-RPC 2.0 Playground (`POST /api/mcp`)</h3>
+              <h3>Live MCP JSON-RPC 2.0 Playground (POST /api/mcp)</h3>
               <div className="developers-lang-tabs">
                 {MCP_RPC_PRESETS.map((preset) => (
                   <button
