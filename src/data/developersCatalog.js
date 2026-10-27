@@ -559,6 +559,36 @@ export const generateCodeSnippet = (endpoint, language, apiKey = 'hm_live_...', 
   }
 
   if (language === 'python') {
+    const convertJsonToPython = (obj, indent = 0) => {
+      const indentStr = '    '.repeat(indent);
+      const innerIndentStr = '    '.repeat(indent + 1);
+      
+      if (obj === null) return 'None';
+      if (obj === true) return 'True';
+      if (obj === false) return 'False';
+      if (typeof obj === 'string') return JSON.stringify(obj);
+      if (typeof obj === 'number') return String(obj);
+      
+      if (Array.isArray(obj)) {
+        if (obj.length === 0) return '[]';
+        const items = obj.map(item => `${innerIndentStr}${convertJsonToPython(item, indent + 1)}`);
+        return `[\n${items.join(',\n')}\n${indentStr}]`;
+      }
+      
+      if (typeof obj === 'object') {
+        const keys = Object.keys(obj);
+        if (keys.length === 0) return '{}';
+        const items = keys.map(key => 
+          `${innerIndentStr}${JSON.stringify(key)}: ${convertJsonToPython(obj[key], indent + 1)}`
+        );
+        return `{\n${items.join(',\n')}\n${indentStr}}`;
+      }
+      
+      return String(obj);
+    };
+    
+    const pythonDict = convertJsonToPython(parsedBody, 1).replace(/\n/g, '\n    ');
+    
     return [
       `import requests`,
       ``,
@@ -568,7 +598,7 @@ export const generateCodeSnippet = (endpoint, language, apiKey = 'hm_live_...', 
       `        "Authorization": "Bearer ${effectiveKey}",`,
       `        "Content-Type": "application/json",`,
       `    },`,
-      `    json=${prettyJson.replace(/\btrue\b/g, 'True').replace(/\bfalse\b/g, 'False').replace(/\bnull\b/g, 'None').replace(/\n/g, '\n    ')},`,
+      `    json=${pythonDict},`,
       `    timeout=15,`,
       `)`,
       `print(response.status_code, response.json())`,

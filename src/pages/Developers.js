@@ -80,33 +80,57 @@ function Developers() {
   const [rpcRunning, setRpcRunning] = useState(false);
   const [rpcResponse, setRpcResponse] = useState(null);
   const [openApiCopied, setOpenApiCopied] = useState(false);
+  const [openApiSpec, setOpenApiSpec] = useState(null);
+  const [openApiLoading, setOpenApiLoading] = useState(false);
 
-  const openApiSpecString = useMemo(
-    () => JSON.stringify(buildClientOpenApiSpec(), null, 2),
-    []
-  );
+  const fetchOpenApiSpec = async () => {
+    if (openApiSpec) return openApiSpec;
+    if (openApiLoading) return null;
+    
+    setOpenApiLoading(true);
+    try {
+      const res = await fetch(resolveApiUrl('/api/openapi.json'));
+      const spec = await res.json();
+      const specString = JSON.stringify(spec, null, 2);
+      setOpenApiSpec(specString);
+      return specString;
+    } catch {
+      // Fallback to client-built spec if backend fetch fails
+      const fallback = JSON.stringify(buildClientOpenApiSpec(), null, 2);
+      setOpenApiSpec(fallback);
+      return fallback;
+    } finally {
+      setOpenApiLoading(false);
+    }
+  };
 
   const handleCopyOpenApi = async () => {
     try {
-      await navigator.clipboard?.writeText(openApiSpecString);
-      setOpenApiCopied(true);
-      setTimeout(() => setOpenApiCopied(false), 2000);
+      const spec = await fetchOpenApiSpec();
+      if (spec) {
+        await navigator.clipboard?.writeText(spec);
+        setOpenApiCopied(true);
+        setTimeout(() => setOpenApiCopied(false), 2000);
+      }
     } catch {
       // Clipboard API unavailable
     }
   };
 
-  const handleDownloadOpenApi = () => {
+  const handleDownloadOpenApi = async () => {
     try {
-      const blob = new Blob([openApiSpecString], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement('a');
-      anchor.href = url;
-      anchor.download = 'hide-mail-openapi-3.1.json';
-      document.body.appendChild(anchor);
-      anchor.click();
-      document.body.removeChild(anchor);
-      URL.revokeObjectURL(url);
+      const spec = await fetchOpenApiSpec();
+      if (spec) {
+        const blob = new Blob([spec], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = 'hide-mail-openapi-3.1.json';
+        document.body.appendChild(anchor);
+        anchor.click();
+        document.body.removeChild(anchor);
+        URL.revokeObjectURL(url);
+      }
     } catch {
       // Blob download unavailable
     }
@@ -793,7 +817,7 @@ function Developers() {
               Insomnia, Bruno, OpenAPI Generator, or Swagger UI at <code>/api/docs</code>.
             </p>
             <pre className="developers-pre" data-testid="openapi-spec-preview">
-              <code>{openApiSpecString}</code>
+              <code>{openApiSpec || (openApiLoading ? 'Loading OpenAPI spec...' : 'Click Copy or Download to load the spec')}</code>
             </pre>
           </section>
         </div>
