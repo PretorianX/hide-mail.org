@@ -466,6 +466,64 @@ export const REST_ENDPOINTS = [
     },
   },
   {
+    id: 'invites',
+    title: 'Invite Read API',
+    shortTitle: 'Invite Read',
+    category: 'Deliverability Suite',
+    method: 'POST',
+    path: '/api/invite-read',
+    browserPath: '/api/invites/report',
+    toolPagePath: '/invites',
+    mcpToolName: 'hide_mail_invite_read',
+    authPlans: ['suite', 'invite'],
+    rateLimit: '120 req / min',
+    browserRateLimit: '20 req / 10 min',
+    maxPayload: '64 KB JSON',
+    summary:
+      'Read one iCalendar meeting request into the organizer, the time, and whether it is a new request, an update, or a cancellation.',
+    requestFields: [
+      {
+        name: 'source',
+        type: 'string',
+        required: true,
+        description: 'Raw iCalendar object or a message that carries a text/calendar part (alias: "raw").',
+      },
+    ],
+    responseFields: [
+      { name: 'report.stamp', type: 'string', description: 'REQUEST, UPDATE, CANCEL, REPLY, COUNTER, REFRESH, PUBLISH, EVENT, or TASK.' },
+      { name: 'report.summary', type: 'string', description: 'Meeting title.' },
+      { name: 'report.when', type: 'object', description: 'Month, day, and time label for the meeting stub.' },
+      { name: 'report.organizer', type: 'object', description: 'Organizer name and email.' },
+      { name: 'report.attendees', type: 'array', description: 'Attendees with their reply status.' },
+      { name: 'report.warnings', type: 'array', description: 'From or Reply-To mismatches, unknown timezones, and meetings already in the past.' },
+    ],
+    sampleRequest: {
+      source: [
+        'BEGIN:VCALENDAR',
+        'METHOD:REQUEST',
+        'BEGIN:VEVENT',
+        'SUMMARY:Design review',
+        'DTSTART:20261112T150000Z',
+        'DTEND:20261112T153000Z',
+        'ORGANIZER;CN=Ada Lovelace:mailto:ada@lab.example',
+        'END:VEVENT',
+        'END:VCALENDAR',
+      ].join('\n'),
+    },
+    sampleResponse: {
+      success: true,
+      report: {
+        stored: false,
+        stamp: 'REQUEST',
+        kind: 'request',
+        summary: 'Design review',
+        when: { month: 'NOV', day: '12', timeLabel: '15:00–15:30 UTC' },
+        organizer: { name: 'Ada Lovelace', email: 'ada@lab.example' },
+        warnings: [],
+      },
+    },
+  },
+  {
     id: 'qa',
     title: 'QA Mailbox & Webhook API',
     shortTitle: 'QA Mailboxes',
@@ -874,6 +932,35 @@ export const MCP_TOOLS = [
         name: 'hide_mail_complaint_read',
         arguments: {
           raw: 'Feedback-Type: abuse\nOriginal-Rcpt-To: <subscriber@example.net>\nSource-IP: 192.0.2.1\nReported-Domain: sender.example',
+        },
+      },
+    },
+  },
+  {
+    name: 'hide_mail_invite_read',
+    category: 'Deliverability Suite',
+    requiredPlans: ['suite', 'invite'],
+    restEndpointId: 'invites',
+    description:
+      'Read one iCalendar meeting request into the organizer, the time, and whether it is a new request, an update, or a cancellation.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        raw: {
+          type: 'string',
+          description: 'Raw iCalendar object or a message that carries a text/calendar part.',
+        },
+      },
+      required: ['raw'],
+    },
+    sampleCall: {
+      jsonrpc: '2.0',
+      id: 6,
+      method: 'tools/call',
+      params: {
+        name: 'hide_mail_invite_read',
+        arguments: {
+          raw: 'BEGIN:VCALENDAR\nMETHOD:REQUEST\nBEGIN:VEVENT\nSUMMARY:Design review\nDTSTART:20261112T150000Z\nORGANIZER:mailto:ada@lab.example\nEND:VEVENT\nEND:VCALENDAR',
         },
       },
     },

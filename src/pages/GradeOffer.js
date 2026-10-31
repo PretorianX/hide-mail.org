@@ -166,7 +166,7 @@ const GradeOffer = () => {
       <p>
         Score raw MIME messages from your CI/CD pipeline or staging environment via{' '}
         <code>POST /api/mail-grade</code> (120 req/min, max 64 KB). Authenticate with a{' '}
-        <strong>Deliverability Suite</strong> key ($19.99/mo — unlocks all 5 deliverability APIs,
+        <strong>Deliverability Suite</strong> key ($19.99/mo — unlocks all 6 deliverability APIs,
         QA mailboxes, and Pro inbox with one key) or a standalone Mail Grade key.{' '}
         <Link to="/pro">Compare all 4 plans</Link>.
       </p>

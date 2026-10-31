@@ -47,7 +47,7 @@ describe('entitlementService', () => {
     expect(entitlements.premiumDomains).toBe(true);
   });
 
-  it('unlocks all 5 deliverability APIs, QA API, and Pro inbox perks on the Deliverability Suite plan', () => {
+  it('unlocks all 6 deliverability APIs, QA API, and Pro inbox perks on the Deliverability Suite plan', () => {
     const entitlements = entitlementService.getEntitlements({
       type: 'suite',
       status: 'active',
@@ -64,6 +64,7 @@ describe('entitlementService', () => {
     expect(entitlements.reportsApi).toBe(true);
     expect(entitlements.bounceApi).toBe(true);
     expect(entitlements.complaintApi).toBe(true);
+    expect(entitlements.inviteApi).toBe(true);
     expect(entitlements.forwardingLimit).toBe(100);
     expect(entitlements.mailboxTtlOptions).toEqual([86400, 604800, 2592000]);
   });
@@ -160,6 +161,22 @@ describe('entitlementService', () => {
     expect(entitlements.reportsApi).toBe(false);
     expect(entitlements.gradeApi).toBe(false);
     expect(entitlements.apiAccess).toBe(false);
+    expect(entitlements.mailboxTtlOptions).toEqual([]);
+  });
+
+  it('sells Invite Read without unlocking the inbox or another tool', () => {
+    const entitlements = entitlementService.getEntitlements({
+      type: 'invite',
+      status: 'active',
+      expiresAt: Date.now() + 60_000,
+    });
+
+    expect(entitlements.planType).toBe('invite');
+    expect(entitlements.inviteApi).toBe(true);
+    expect(entitlements.complaintApi).toBe(false);
+    expect(entitlements.gradeApi).toBe(false);
+    expect(entitlements.apiAccess).toBe(false);
+    expect(entitlements.ads).toBe(true);
     expect(entitlements.mailboxTtlOptions).toEqual([]);
   });
 

@@ -10,6 +10,7 @@ const toolFlags = (active) => ({
   reportsApi: active === 'reports',
   bounceApi: active === 'bounce',
   complaintApi: active === 'complaint',
+  inviteApi: active === 'invite',
 });
 
 const inboxFree = (active) => ({
@@ -39,6 +40,7 @@ const paidEntitlements = (planType) => ({
   reportsApi: planType === 'suite',
   bounceApi: planType === 'suite',
   complaintApi: planType === 'suite',
+  inviteApi: planType === 'suite',
   forwardingLimit: config.forwarding.proLimit,
   mailboxTtlSeconds: config.pro.defaultMailboxTtlSeconds,
   mailboxTtlOptions: mailboxTtlOptions(),
@@ -73,6 +75,11 @@ const complaintEntitlements = () => ({
   planType: 'complaint',
 });
 
+const inviteEntitlements = () => ({
+  ...inboxFree('invite'),
+  planType: 'invite',
+});
+
 const getEntitlements = (license) => {
   if (!licenseService.isActive(license)) {
     return freeEntitlements();
@@ -92,6 +99,9 @@ const getEntitlements = (license) => {
   if (planTypeOf(license) === 'complaint') {
     return complaintEntitlements();
   }
+  if (planTypeOf(license) === 'invite') {
+    return inviteEntitlements();
+  }
   return paidEntitlements(planTypeOf(license));
 };
 
@@ -110,6 +120,7 @@ const describeTiers = () => ({
   reports: reportsEntitlements(),
   bounce: bounceEntitlements(),
   complaint: complaintEntitlements(),
+  invite: inviteEntitlements(),
   freeExtensionSeconds: config.emailExtensionSeconds,
   premiumDomainCount: config.premiumDomains.length,
   apiKeyTtlSeconds: config.billing.apiKeyTtlSeconds,

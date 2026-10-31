@@ -164,6 +164,30 @@ describe('WayForPay customer return', () => {
       expect(bounceTarget.searchParams.get('handoffToken')).toMatch(/^[0-9a-f-]{36}$/i);
     });
 
+    it('sends an Invite Read payer to /invites rather than the Pro page', async () => {
+      const orderService = require('../../services/orderService');
+      await orderService.createOrder({
+        id: 'invite-monthly-abc',
+        plan: 'monthly',
+        type: 'invite',
+        amount: 990,
+        currency: 'UAH',
+      });
+
+      const billingController = require('../../controllers/billingController');
+      const res = mockRes();
+
+      await billingController.customerReturn(
+        { query: { orderReference: 'invite-monthly-abc' }, body: {} },
+        res
+      );
+
+      const [, inviteUrl] = res.redirect.mock.calls[0];
+      const inviteTarget = new URL(inviteUrl);
+      expect(inviteTarget.origin + inviteTarget.pathname).toBe('https://hide-mail.org/invites');
+      expect(inviteTarget.searchParams.get('handoffToken')).toMatch(/^[0-9a-f-]{36}$/i);
+    });
+
     it('sends a Complaint Read payer to /complaints rather than the Pro page', async () => {
       const orderService = require('../../services/orderService');
       await orderService.createOrder({
