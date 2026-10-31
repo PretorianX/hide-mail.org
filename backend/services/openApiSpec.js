@@ -1,6 +1,6 @@
 /**
  * Official OpenAPI 3.1.0 Specification & Swagger UI builder for Hide Mail.
- * Covers all 5 Deliverability Suite APIs, QA Mailbox & Webhook REST APIs,
+ * Covers all 6 Deliverability Suite APIs, QA Mailbox & Webhook REST APIs,
  * Model Context Protocol (MCP) endpoints, and Billing/License key endpoints.
  */
 
@@ -11,6 +11,7 @@ const MCP_TOOL_NAMES = [
   'hide_mail_dmarc_report',
   'hide_mail_bounce_read',
   'hide_mail_complaint_read',
+  'hide_mail_invite_read',
   'hide_mail_qa_create_mailbox',
   'hide_mail_qa_list_messages',
   'hide_mail_qa_get_message',
@@ -27,14 +28,14 @@ const buildOpenApiSpec = (options = {}) => {
       title: 'Hide Mail Deliverability Suite, QA Mailbox & MCP API',
       version: '2.0.0',
       summary:
-        'Stateless email deliverability diagnostics (Mail Grade, Sender Check, DMARC Reports, Bounce Read, Complaint Read), disposable QA mailboxes, and Model Context Protocol (MCP) JSON-RPC 2.0 server.',
+        'Stateless email deliverability diagnostics (Mail Grade, Sender Check, DMARC Reports, Bounce Read, Complaint Read, Invite Read), disposable QA mailboxes, and Model Context Protocol (MCP) JSON-RPC 2.0 server.',
       description: [
         'Authenticate with `Authorization: Bearer hm_api_...` or `X-API-Key: hm_api_...`.',
         '',
         '### Plan Entitlements',
-        '- **Deliverability Suite (`suite`, $19.99/mo)**: Unlocks all 5 deliverability APIs, QA Mailboxes & Webhooks, Pro Inbox, and all 9 MCP tools with a single API key.',
+        '- **Deliverability Suite (`suite`, $19.99/mo)**: Unlocks all 6 deliverability APIs, QA Mailboxes & Webhooks, Pro Inbox, and all 10 MCP tools with a single API key.',
         '- **QA API (`api`, $7.99/mo)**: Unlocks `/api/qa/*` endpoints and QA MCP tools.',
-        '- **Standalone Tool Keys (`grade`, `sender`, `reports`, `bounce`, `complaint`)**: Unlock that specific tool endpoint and its corresponding MCP tool.',
+        '- **Standalone Tool Keys (`grade`, `sender`, `reports`, `bounce`, `complaint`, `invite`)**: Unlock that specific tool endpoint and its corresponding MCP tool.',
       ].join('\n'),
       contact: {
         name: 'Hide Mail Developer Support',
@@ -51,7 +52,7 @@ const buildOpenApiSpec = (options = {}) => {
       {
         name: 'Deliverability Suite',
         description:
-          'Stateless RFC 5322, DNS (MX/SPF/DKIM/DMARC/BIMI/MTA-STS), RFC 7489 DMARC XML, RFC 3464 DSN bounce, and RFC 5965 ARF complaint analysis.',
+          'Stateless RFC 5322, DNS (MX/SPF/DKIM/DMARC/BIMI/MTA-STS), RFC 7489 DMARC XML, RFC 3464 DSN bounce, RFC 5965 ARF complaint, and iCalendar meeting-request analysis.',
       },
       {
         name: 'QA Mailboxes',
@@ -256,6 +257,36 @@ const buildOpenApiSpec = (options = {}) => {
               description: 'Raw RFC 5965 Abuse Reporting Format (ARF) feedback loop message (alias: `raw`).',
               example:
                 'Feedback-Type: abuse\r\nOriginal-Rcpt-To: <subscriber@example.net>\r\nSource-IP: 192.0.2.1\r\nReported-Domain: sender.example',
+            },
+          },
+        },
+        InviteReadRequest: {
+          type: 'object',
+          required: ['source'],
+          properties: {
+            source: {
+              type: 'string',
+              description: 'Raw iCalendar object or a message that carries a text/calendar part (alias: `raw`).',
+              example: 'BEGIN:VCALENDAR\\nMETHOD:REQUEST\\nBEGIN:VEVENT\\nSUMMARY:Design review\\nDTSTART:20261112T150000Z\\nEND:VEVENT\\nEND:VCALENDAR',
+            },
+          },
+        },
+        InviteReadResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            report: {
+              type: 'object',
+              properties: {
+                stored: { type: 'boolean', example: false },
+                stamp: { type: 'string', example: 'REQUEST' },
+                kind: { type: 'string', example: 'request' },
+                summary: { type: 'string', example: 'Design review' },
+                when: { type: 'object' },
+                organizer: { type: 'object' },
+                attendees: { type: 'array', items: { type: 'object' } },
+                warnings: { type: 'array', items: { type: 'object' } },
+              },
             },
           },
         },
@@ -516,6 +547,37 @@ const buildOpenApiSpec = (options = {}) => {
               content: {
                 'application/json': {
                   schema: { $ref: '#/components/schemas/ComplaintReadResponse' },
+                },
+              },
+            },
+            401: {
+              description: 'Missing or invalid API key',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+          },
+        },
+      },
+      '/api/invite-read': {
+        post: {
+          tags: ['Deliverability Suite'],
+          operationId: 'readInvite',
+          summary: 'Read one meeting request into the organizer, the time, and the action it asks for',
+          description:
+            'Reads an iCalendar REQUEST, update, cancellation, or reply. Requires `suite` or `invite` plan (`120 req/min`).',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/InviteReadRequest' },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: 'Parsed meeting request',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/InviteReadResponse' },
                 },
               },
             },

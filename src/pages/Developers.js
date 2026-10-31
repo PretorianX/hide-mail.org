@@ -940,7 +940,7 @@ function Developers() {
               <div className="developers-lang-tabs">
                 {[
                   { id: 'all', label: `All (${MCP_TOOLS.length})` },
-                  { id: 'suite', label: 'Deliverability Suite (5)' },
+                  { id: 'suite', label: 'Deliverability Suite (6)' },
                   { id: 'qa', label: 'QA Mailboxes (4)' },
                 ].map((filter) => (
                   <button

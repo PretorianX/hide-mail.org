@@ -1,6 +1,6 @@
 /**
  * Official Hide Mail Model Context Protocol (MCP) Server service.
- * Exposes all 5 Deliverability Suite tools, 4 QA Mailbox tools,
+ * Exposes all 6 Deliverability Suite tools, 4 QA Mailbox tools,
  * live pricing & remediation resources, and deliverability workflow prompts.
  */
 
@@ -15,6 +15,7 @@ const senderCheckService = require('./senderCheckService');
 const dmarcReportService = require('./dmarcReportService');
 const bounceReadService = require('./bounceReadService');
 const complaintReadService = require('./complaintReadService');
+const inviteReadService = require('./inviteReadService');
 const { resolveActiveRecipient } = require('./recipientResolver');
 
 const PROTOCOL_VERSION = '2024-11-05';
@@ -221,6 +222,23 @@ const TOOL_DEFINITIONS = [
         raw: {
           type: 'string',
           description: 'Raw RFC 5965 ARF feedback report message.',
+        },
+      },
+      required: ['raw'],
+    },
+  },
+  {
+    name: 'hide_mail_invite_read',
+    description:
+      'Read one iCalendar meeting request into the organizer, the time, and whether it is a new request, an update, or a cancellation.',
+    requiredEntitlement: 'inviteApi',
+    requiredPlan: 'invite',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        raw: {
+          type: 'string',
+          description: 'Raw iCalendar object or a message that carries a text/calendar part.',
         },
       },
       required: ['raw'],
@@ -582,6 +600,11 @@ const executeTool = async (name, args = {}, license) => {
       return complaintReadService.readComplaint(raw);
     }
 
+    case 'hide_mail_invite_read': {
+      const raw = args.raw ?? args.source;
+      return inviteReadService.readInvite(raw);
+    }
+
     case 'hide_mail_qa_create_mailbox': {
       const domains = allowedDomainsForLicense(license);
       const requestedDomain = args.domain;
@@ -772,6 +795,9 @@ const readResource = (uri) => {
       },
       complaint: {
         monthly: pricingService.usdPrice('complaint', 'monthly'),
+      },
+      invite: {
+        monthly: pricingService.usdPrice('invite', 'monthly'),
       },
     };
     return {

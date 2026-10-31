@@ -53,7 +53,7 @@ const checkout = async (req, res, next) => {
 
     const plan = req.body?.plan;
     const requested = req.body?.type;
-    const type = ['api', 'suite', 'grade', 'sender', 'reports', 'bounce', 'complaint'].includes(requested)
+    const type = ['api', 'suite', 'grade', 'sender', 'reports', 'bounce', 'complaint', 'invite'].includes(requested)
       ? requested
       : 'pro';
 
@@ -68,6 +68,7 @@ const checkout = async (req, res, next) => {
         reports: 'DMARC Reports is a monthly plan',
         bounce: 'Bounce Read is a monthly plan',
         complaint: 'Complaint Read is a monthly plan',
+        invite: 'Invite Read is a monthly plan',
         pro: 'plan must be monthly or yearly',
       };
       return res.status(400).json({
@@ -305,6 +306,7 @@ const customerReturn = async (req, res, next) => {
         reports: '/reports',
         bounce: '/bounces',
         complaint: '/complaints',
+        invite: '/invites',
       }[order?.type];
       if (returnPath) {
         target.pathname = returnPath;

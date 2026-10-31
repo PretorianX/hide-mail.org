@@ -32,6 +32,7 @@ import Sender from './pages/Sender.js';
 import Reports from './pages/Reports.js';
 import Bounces from './pages/Bounces.js';
 import Complaints from './pages/Complaints.js';
+import Invites from './pages/Invites.js';
 import Developers from './pages/Developers.js';
 import { LicenseProvider, useLicense } from './context/LicenseContext.js';
 import { trackPageView, analytics } from './services/analytics.js';
@@ -55,6 +56,7 @@ function PageViewTracker() {
       '/reports': 'DMARC Reports',
       '/bounces': 'Bounce Read',
       '/complaints': 'Complaint Read',
+      '/invites': 'Invite Read',
       '/developers': 'API Explorer & MCP Hub',
       '/api-docs': 'API Explorer & MCP Hub',
       '/mcp': 'MCP Server & Agent Hub',
@@ -861,6 +863,7 @@ function AppContent() {
               <Route path="/reports" element={<Reports />} />
               <Route path="/bounces" element={<Bounces />} />
               <Route path="/complaints" element={<Complaints />} />
+              <Route path="/invites" element={<Invites />} />
               <Route path="/developers" element={<Developers />} />
               <Route path="/api-docs" element={<Developers />} />
               <Route path="/mcp" element={<Developers />} />

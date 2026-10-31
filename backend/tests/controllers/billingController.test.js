@@ -30,6 +30,7 @@ jest.mock('../../config/config', () => {
       reportsUsd: 15,
       bounceUsd: 18,
       complaintUsd: 21,
+      inviteUsd: 24,
       checkoutPaused: false,
     },
   };
@@ -48,7 +49,7 @@ jest.mock('../../services/licenseService', () => ({
   findByRecToken: jest.fn(),
   createApiKey: jest.fn(),
   validateApiKey: jest.fn(),
-  canIssueApiKey: (type) => ['api', 'grade', 'sender', 'reports', 'bounce', 'complaint'].includes(type),
+  canIssueApiKey: (type) => ['api', 'grade', 'sender', 'reports', 'bounce', 'complaint', 'invite'].includes(type),
   getLicense: jest.fn(),
   isActive: jest.fn(),
   maskKey: jest.fn(() => 'HM-****-DDDD'),
@@ -80,6 +81,7 @@ const SENDER_UAH = 490;
 const REPORTS_UAH = 620;
 const BOUNCE_UAH = 740;
 const COMPLAINT_UAH = 870;
+const INVITE_UAH = 990;
 
 const mockRes = () => {
   const res = {};
@@ -308,6 +310,32 @@ describe('billingController', () => {
       expect(orderService.createOrder).toHaveBeenCalledWith(
         expect.objectContaining({ type: 'complaint', amount: COMPLAINT_UAH })
       );
+    });
+
+    it('charges the Invite Read price for an Invite Read order', async () => {
+      const req = { body: { plan: 'monthly', type: 'invite' } };
+      const res = mockRes();
+
+      await billingController.checkout(req, res);
+
+      const payload = res.json.mock.calls[0][0];
+      expect(payload.data.orderReference).toMatch(/^invite-monthly-/);
+      expect(payload.data.productName).toEqual(['Invite Read API Monthly']);
+      expect(payload.data.amount).toBe(INVITE_UAH);
+      expect(orderService.createOrder).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'invite', amount: INVITE_UAH })
+      );
+    });
+
+    it('rejects a yearly Invite Read order because that tariff is monthly only', async () => {
+      const req = { body: { plan: 'yearly', type: 'invite' } };
+      const res = mockRes();
+
+      await billingController.checkout(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json.mock.calls[0][0].error).toMatch(/Invite Read is a monthly plan/);
+      expect(orderService.createOrder).not.toHaveBeenCalled();
     });
 
     it('rejects a yearly Complaint Read order because that tariff is monthly only', async () => {
@@ -892,6 +920,22 @@ describe('billingController', () => {
 
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json.mock.calls[0][0].apiKey).toBe('hm_api_complaint');
+    });
+
+    it('hands an Invite Read subscriber a fresh key without treating it as the QA API', async () => {
+      licenseService.getLicense.mockResolvedValue({ ...activeApiLicense, type: 'invite' });
+      licenseService.isActive.mockReturnValue(true);
+      licenseService.createApiKey.mockResolvedValue('hm_api_invite');
+      licenseService.validateApiKey.mockResolvedValue({
+        expiresAt: Date.now() + 20 * 24 * 60 * 60 * 1000,
+        remainingDays: 20,
+      });
+
+      const res = mockRes();
+      await billingController.issueApiKey({ body: { key: activeApiLicense.key } }, res);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json.mock.calls[0][0].apiKey).toBe('hm_api_invite');
     });
 
     it('hands a Mail Grade subscriber a fresh key without treating it as the QA API', async () => {

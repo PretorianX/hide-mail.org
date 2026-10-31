@@ -47,8 +47,12 @@ const RATE_LIMITS = {
   bounceRead: { requests: 120, windowSeconds: 60 },
   // Free in-browser Complaint Read reports.
   complaintReport: { requests: 20, windowSeconds: 600 },
+  // Free in-browser Invite Read reports.
+  inviteReport: { requests: 20, windowSeconds: 600 },
   // Paid Complaint Read API.
   complaintRead: { requests: 120, windowSeconds: 60 },
+  // Paid Invite Read API.
+  inviteRead: { requests: 120, windowSeconds: 60 },
 };
 
 /**
@@ -128,6 +132,8 @@ module.exports = {
   bounceRead: createRateLimiter('bounceRead'),
   complaintReport: createRateLimiter('complaintReport'),
   complaintRead: createRateLimiter('complaintRead'),
+  inviteReport: createRateLimiter('inviteReport'),
+  inviteRead: createRateLimiter('inviteRead'),
   default: createRateLimiter('default'),
   RATE_LIMITS,
 };

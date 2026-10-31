@@ -166,7 +166,7 @@ const ReportsOffer = () => {
       <p>
         Parse RFC 7489 aggregate XML reports from your monitoring job via{' '}
         <code>POST /api/dmarc-reports</code> (60 req/min, max 512 KB). Authenticate with a{' '}
-        <strong>Deliverability Suite</strong> key ($19.99/mo — unlocks all 5 deliverability APIs,
+        <strong>Deliverability Suite</strong> key ($19.99/mo — unlocks all 6 deliverability APIs,
         QA mailboxes, and Pro inbox with one key) or a standalone DMARC Reports key.{' '}
         <Link to="/pro">Compare all 4 plans</Link>.
       </p>

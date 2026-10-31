@@ -166,7 +166,7 @@ const SenderOffer = () => {
       <p>
         Audit customer or sending domains from a script via <code>POST /api/sender-check</code>{' '}
         (60 req/min). Authenticate with a <strong>Deliverability Suite</strong> key ($19.99/mo —
-        unlocks all 5 deliverability APIs, QA mailboxes, and Pro inbox with one key) or a
+        unlocks all 6 deliverability APIs, QA mailboxes, and Pro inbox with one key) or a
         standalone Sender Check key. <Link to="/pro">Compare all 4 plans</Link>.
       </p>
       <p className="tool-explorer-links" data-testid="sender-explorer-links">

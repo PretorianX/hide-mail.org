@@ -309,8 +309,8 @@ describe('Official Hide Mail MCP Server (mcpController & mcpService)', () => {
     });
   });
 
-  describe('tools/list & tools/call across all 9 tools', () => {
-    it('lists all 9 strongly-typed tools', async () => {
+  describe('tools/list & tools/call across all 10 tools', () => {
+    it('lists all 10 strongly-typed tools', async () => {
       const res = createRes();
       await mcpController.handlePost(
         {
@@ -329,6 +329,7 @@ describe('Official Hide Mail MCP Server (mcpController & mcpService)', () => {
         'hide_mail_dmarc_report',
         'hide_mail_bounce_read',
         'hide_mail_complaint_read',
+        'hide_mail_invite_read',
         'hide_mail_qa_create_mailbox',
         'hide_mail_qa_list_messages',
         'hide_mail_qa_get_message',
@@ -340,7 +341,7 @@ describe('Official Hide Mail MCP Server (mcpController & mcpService)', () => {
       });
     });
 
-    it('allows a suite key to call all 5 deliverability tools including gzipped DMARC reports', async () => {
+    it('allows a suite key to call all 6 deliverability tools including gzipped DMARC reports', async () => {
       // 1. hide_mail_grade_email
       const gradeRes = createRes();
       await mcpController.handlePost(
@@ -477,6 +478,37 @@ describe('Official Hide Mail MCP Server (mcpController & mcpService)', () => {
         (err) => { throw err; }
       );
       expect(complaintRes.body.result.structuredContent.feedbackType).toBe('abuse');
+
+      const inviteRes = createRes();
+      await mcpController.handlePost(
+        {
+          headers: { 'x-api-key': keys.suite },
+          body: {
+            jsonrpc: '2.0',
+            id: 16,
+            method: 'tools/call',
+            params: {
+              name: 'hide_mail_invite_read',
+              arguments: {
+                raw: [
+                  'BEGIN:VCALENDAR',
+                  'METHOD:REQUEST',
+                  'BEGIN:VEVENT',
+                  'DTSTART:20261112T150000Z',
+                  'SUMMARY:Design review',
+                  'ORGANIZER:mailto:ada@lab.example',
+                  'END:VEVENT',
+                  'END:VCALENDAR',
+                ].join('\n'),
+              },
+            },
+          },
+        },
+        inviteRes,
+        (err) => { throw err; }
+      );
+      expect(inviteRes.body.result.structuredContent.stamp).toBe('REQUEST');
+      expect(inviteRes.body.result.structuredContent.summary).toBe('Design review');
     });
 
     it('rejects a zip that claims a huge uncompressed size without decompressing (zip bomb)', () => {
