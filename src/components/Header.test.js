@@ -49,6 +49,7 @@ describe('Header Component', () => {
     expect(nav.getByRole('link', { name: 'Reports' })).toHaveAttribute('href', '/reports');
     expect(nav.getByRole('link', { name: 'Bounces' })).toHaveAttribute('href', '/bounces');
     expect(nav.getByRole('link', { name: 'Complaints' })).toHaveAttribute('href', '/complaints');
+    expect(nav.getByRole('link', { name: 'Invites' })).toHaveAttribute('href', '/invites');
     expect(nav.getByRole('link', { name: 'API & MCP' })).toHaveAttribute('href', '/developers');
     expect(nav.getByRole('link', { name: 'Go Pro' })).toHaveAttribute('href', '/pro');
 
@@ -62,7 +63,7 @@ describe('Header Component', () => {
 
     expect(nav.getByRole('link', { name: 'Go Pro' })).toHaveClass('nav-pro-cta');
 
-    ['Home', 'Blog', 'About', 'Contact', 'Grade', 'Sender', 'Reports', 'Bounces', 'Complaints', 'API & MCP'].forEach(label => {
+    ['Home', 'Blog', 'About', 'Contact', 'Grade', 'Sender', 'Reports', 'Bounces', 'Complaints', 'Invites', 'API & MCP'].forEach(label => {
       expect(nav.getByRole('link', { name: label })).not.toHaveClass('nav-pro-cta');
     });
   });
@@ -80,7 +81,7 @@ describe('Header ink on the orange bar', () => {
     renderHeader();
     const nav = within(screen.getByRole('navigation'));
 
-    ['Home', 'Blog', 'About', 'Contact', 'Grade', 'Sender', 'Reports', 'Bounces', 'Complaints', 'API & MCP'].forEach(label => {
+    ['Home', 'Blog', 'About', 'Contact', 'Grade', 'Sender', 'Reports', 'Bounces', 'Complaints', 'Invites', 'API & MCP'].forEach(label => {
       expect(inkOf(nav.getByRole('link', { name: label }))).toBe(toRgb(HEADER_INK));
     });
   });

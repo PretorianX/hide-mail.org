@@ -73,8 +73,8 @@ const isActive = (license) => {
   return license.expiresAt > Date.now();
 };
 
-const LICENSE_TYPES = new Set(['pro', 'api', 'grade', 'sender', 'reports', 'bounce', 'complaint', 'suite']);
-const API_KEY_TYPES = new Set(['api', 'grade', 'sender', 'reports', 'bounce', 'complaint', 'suite']);
+const LICENSE_TYPES = new Set(['pro', 'api', 'grade', 'sender', 'reports', 'bounce', 'complaint', 'invite', 'suite']);
+const API_KEY_TYPES = new Set(['api', 'grade', 'sender', 'reports', 'bounce', 'complaint', 'invite', 'suite']);
 
 const canIssueApiKey = (type) => API_KEY_TYPES.has(type);
 

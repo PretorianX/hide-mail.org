@@ -94,14 +94,14 @@ const PlanComparison = ({ tiers, price }) => {
       free: 'Not available',
       pro: 'Not included — buy the API plan for this',
       api: `Yes. Keys last ${formatDuration(apiKeyTtlSeconds)} and renew with the plan`,
-      suite: `Included. Same key unlocks QA mailboxes, webhooks, and all 5 mail tools`,
+      suite: `Included. Same key unlocks QA mailboxes, webhooks, and all 6 mail tools`,
     },
     {
       label: 'Deliverability & Mail Tools APIs',
-      free: 'Free in-browser tools (Mail Grade, Sender, DMARC, Bounces, Complaints)',
+      free: 'Free in-browser tools (Mail Grade, Sender, DMARC, Bounces, Complaints, Invites)',
       pro: 'Free in-browser tools',
       api: 'Free in-browser tools — upgrade to Deliverability Suite for REST APIs',
-      suite: 'All 5 REST APIs (Mail Grade, Sender Check, DMARC Reports, Bounce Read, Complaint Read) at 60–120 req/min',
+      suite: 'All 6 REST APIs (Mail Grade, Sender Check, DMARC Reports, Bounce Read, Complaint Read, Invite Read) at 60–120 req/min',
     },
     {
       label: 'What you need to sign up',

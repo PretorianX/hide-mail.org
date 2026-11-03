@@ -75,6 +75,12 @@ const PRODUCTS = {
       regularMode: 'monthly',
     },
   },
+  invite: {
+    monthly: {
+      productName: 'Invite Read API Monthly',
+      regularMode: 'monthly',
+    },
+  },
 };
 
 const resolveProduct = (type, plan) => {

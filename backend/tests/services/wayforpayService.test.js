@@ -250,6 +250,21 @@ describe('wayforpayService', () => {
       expect(payload.productPrice).toEqual([870]);
       expect(() => wayforpayService.resolveProduct('complaint', 'yearly')).toThrow(/unsupported complaint plan/i);
     });
+
+    it('names the Invite Read product on its own monthly tariff', () => {
+      const payload = wayforpayService.buildCheckoutPayload({
+        type: 'invite',
+        plan: 'monthly',
+        orderReference: 'invite-monthly-test',
+        orderDate: 1700000000,
+        dateNext: '18.09.2026',
+        amount: 990,
+      });
+
+      expect(payload.productName).toEqual(['Invite Read API Monthly']);
+      expect(payload.productPrice).toEqual([990]);
+      expect(() => wayforpayService.resolveProduct('invite', 'yearly')).toThrow(/unsupported invite plan/i);
+    });
   });
 
   describe('classifyTransactionStatus', () => {

@@ -63,6 +63,10 @@ const PLAN_REQUIRED = {
     error: 'This key is not a Complaint Read API key',
     code: 'COMPLAINT_PLAN_REQUIRED',
   },
+  invite: {
+    error: 'This key is not an Invite Read API key',
+    code: 'INVITE_PLAN_REQUIRED',
+  },
 };
 
 const requireLicenseType = (type) => (req, res, next) => {

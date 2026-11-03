@@ -171,6 +171,7 @@ describe('config', () => {
       expect(config.billing.reportsUsd).toBe(15);
       expect(config.billing.bounceUsd).toBe(18);
       expect(config.billing.complaintUsd).toBe(21);
+      expect(config.billing.inviteUsd).toBe(24);
       expect(config.billing.currency).toBe('UAH');
       expect(config.billing.fxCacheSeconds).toBe(7200);
       expect(config.billing.fxStaleSeconds).toBe(86400);
