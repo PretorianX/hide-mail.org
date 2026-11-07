@@ -99,6 +99,7 @@ Key configuration options in `.env`:
 | `REPORTS_PRICE_MONTHLY_USD` | DMARC Reports API list price in USD. This plan only reads aggregate reports |
 | `BOUNCE_PRICE_MONTHLY_USD` | Bounce Read API list price in USD. This plan only classifies delivery statuses |
 | `COMPLAINT_PRICE_MONTHLY_USD` | Complaint Read API list price in USD. This plan only reads abuse feedback reports |
+| `ONECLICK_PRICE_MONTHLY_USD` | One-Click API list price in USD. This plan only checks one-click unsubscribe headers |
 | `FX_CACHE_SECONDS` / `FX_STALE_SECONDS` | Fresh FX cache TTL (default 2h) and maximum stale-cache age (default 24h) |
 | `PREMIUM_DOMAINS` | Pro-only domains; empty means Pro uses `VALID_DOMAINS` |
 
@@ -284,6 +285,21 @@ The page is free. The paid offer is the Bounce Read API (`BOUNCE_PRICE_MONTHLY_U
 Complaint Read turns one RFC 5965 feedback report into the address to suppress, keep, or review. Open `/complaints` and paste the report. The report is not stored.
 
 The page is free. The paid offer is the Complaint Read API (`COMPLAINT_PRICE_MONTHLY_USD`, default $21): `POST /api/complaint-read` with a Complaint Read key. That key cannot open a mailbox, grade a message, or call the other tool APIs.
+
+## One-Click
+
+One-Click decides whether a mailing lets someone unsubscribe with one POST. It is not a mailbox, and it does not grade a message. Open `/one-click`, paste the raw message, and Hide Mail says pass or fail: an `https` URI in `List-Unsubscribe`, plus `List-Unsubscribe-Post: List-Unsubscribe=One-Click`. Mailto or http alone fails. The message is read in memory and is not stored. Hide Mail does not call the unsubscribe URL.
+
+The check on the page is free. The paid offer is the One-Click API, a monthly plan of its own (`ONECLICK_PRICE_MONTHLY_USD`, default $27):
+
+```bash
+curl -sS -H "Authorization: Bearer $ONECLICK_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"source":"From: News <news@sender.example>\nList-Unsubscribe: <https://sender.example/unsub>\nList-Unsubscribe-Post: List-Unsubscribe=One-Click\n\nHello"}' \
+  https://hide-mail.org/api/one-click-read
+```
+
+A QA mailbox key and a Mail Grade key are rejected on that route, and a One-Click key cannot create mailboxes, grade a message, or call the other tool APIs. Buying One-Click does not remove ads or change inbox limits. Card checkout follows the same WayForPay pause as the other plans; while it is paused the page still checks messages for free. After a One-Click payment the browser returns to `/one-click`.
 
 ## Attachments
 

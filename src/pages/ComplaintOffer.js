@@ -166,7 +166,7 @@ const ComplaintOffer = () => {
       <p>
         Parse RFC 5965 abuse feedback loop (ARF) reports in your suppression worker via{' '}
         <code>POST /api/complaint-read</code> (120 req/min, max 64 KB). Authenticate with a{' '}
-        <strong>Deliverability Suite</strong> key ($19.99/mo — unlocks all 5 deliverability APIs,
+        <strong>Deliverability Suite</strong> key ($19.99/mo — unlocks all 6 deliverability APIs,
         QA mailboxes, and Pro inbox with one key) or a standalone Complaint Read key.{' '}
         <Link to="/pro">Compare all 4 plans</Link>.
       </p>

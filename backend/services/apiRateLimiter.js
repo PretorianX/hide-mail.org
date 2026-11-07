@@ -49,6 +49,10 @@ const RATE_LIMITS = {
   complaintReport: { requests: 20, windowSeconds: 600 },
   // Paid Complaint Read API.
   complaintRead: { requests: 120, windowSeconds: 60 },
+  // Free in-browser One-Click checks.
+  oneClickReport: { requests: 20, windowSeconds: 600 },
+  // Paid One-Click API.
+  oneClickRead: { requests: 120, windowSeconds: 60 },
 };
 
 /**
@@ -128,6 +132,8 @@ module.exports = {
   bounceRead: createRateLimiter('bounceRead'),
   complaintReport: createRateLimiter('complaintReport'),
   complaintRead: createRateLimiter('complaintRead'),
+  oneClickReport: createRateLimiter('oneClickReport'),
+  oneClickRead: createRateLimiter('oneClickRead'),
   default: createRateLimiter('default'),
   RATE_LIMITS,
 };

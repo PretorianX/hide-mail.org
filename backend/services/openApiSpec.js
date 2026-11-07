@@ -1,6 +1,6 @@
 /**
  * Official OpenAPI 3.1.0 Specification & Swagger UI builder for Hide Mail.
- * Covers all 5 Deliverability Suite APIs, QA Mailbox & Webhook REST APIs,
+ * Covers all 6 Deliverability Suite APIs, QA Mailbox & Webhook REST APIs,
  * Model Context Protocol (MCP) endpoints, and Billing/License key endpoints.
  */
 
@@ -11,6 +11,7 @@ const MCP_TOOL_NAMES = [
   'hide_mail_dmarc_report',
   'hide_mail_bounce_read',
   'hide_mail_complaint_read',
+  'hide_mail_one_click',
   'hide_mail_qa_create_mailbox',
   'hide_mail_qa_list_messages',
   'hide_mail_qa_get_message',
@@ -27,14 +28,14 @@ const buildOpenApiSpec = (options = {}) => {
       title: 'Hide Mail Deliverability Suite, QA Mailbox & MCP API',
       version: '2.0.0',
       summary:
-        'Stateless email deliverability diagnostics (Mail Grade, Sender Check, DMARC Reports, Bounce Read, Complaint Read), disposable QA mailboxes, and Model Context Protocol (MCP) JSON-RPC 2.0 server.',
+        'Stateless email deliverability diagnostics (Mail Grade, Sender Check, DMARC Reports, Bounce Read, Complaint Read, One-Click), disposable QA mailboxes, and Model Context Protocol (MCP) JSON-RPC 2.0 server.',
       description: [
         'Authenticate with `Authorization: Bearer hm_api_...` or `X-API-Key: hm_api_...`.',
         '',
         '### Plan Entitlements',
-        '- **Deliverability Suite (`suite`, $19.99/mo)**: Unlocks all 5 deliverability APIs, QA Mailboxes & Webhooks, Pro Inbox, and all 9 MCP tools with a single API key.',
+        '- **Deliverability Suite (`suite`, $19.99/mo)**: Unlocks all 6 deliverability APIs, QA Mailboxes & Webhooks, Pro Inbox, and all 10 MCP tools with a single API key.',
         '- **QA API (`api`, $7.99/mo)**: Unlocks `/api/qa/*` endpoints and QA MCP tools.',
-        '- **Standalone Tool Keys (`grade`, `sender`, `reports`, `bounce`, `complaint`)**: Unlock that specific tool endpoint and its corresponding MCP tool.',
+        '- **Standalone Tool Keys (`grade`, `sender`, `reports`, `bounce`, `complaint`, `oneclick`)**: Unlock that specific tool endpoint and its corresponding MCP tool.',
       ].join('\n'),
       contact: {
         name: 'Hide Mail Developer Support',
@@ -51,7 +52,7 @@ const buildOpenApiSpec = (options = {}) => {
       {
         name: 'Deliverability Suite',
         description:
-          'Stateless RFC 5322, DNS (MX/SPF/DKIM/DMARC/BIMI/MTA-STS), RFC 7489 DMARC XML, RFC 3464 DSN bounce, and RFC 5965 ARF complaint analysis.',
+          'Stateless RFC 5322, DNS (MX/SPF/DKIM/DMARC/BIMI/MTA-STS), RFC 7489 DMARC XML, RFC 3464 DSN bounce, RFC 5965 ARF complaint, and RFC 8058 one-click unsubscribe analysis.',
       },
       {
         name: 'QA Mailboxes',
@@ -256,6 +257,36 @@ const buildOpenApiSpec = (options = {}) => {
               description: 'Raw RFC 5965 Abuse Reporting Format (ARF) feedback loop message (alias: `raw`).',
               example:
                 'Feedback-Type: abuse\r\nOriginal-Rcpt-To: <subscriber@example.net>\r\nSource-IP: 192.0.2.1\r\nReported-Domain: sender.example',
+            },
+          },
+        },
+        OneClickRequest: {
+          type: 'object',
+          required: ['source'],
+          properties: {
+            source: {
+              type: 'string',
+              description: 'Raw RFC 5322 message to check for RFC 8058 one-click unsubscribe (alias: `raw`).',
+              example:
+                'From: News <news@sender.example>\r\nList-Unsubscribe: <https://sender.example/unsub>\r\nList-Unsubscribe-Post: List-Unsubscribe=One-Click\r\n\r\nHello',
+            },
+          },
+        },
+        OneClickResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            report: {
+              type: 'object',
+              properties: {
+                stored: { type: 'boolean', example: false },
+                verdict: { type: 'string', enum: ['pass', 'fail'], example: 'pass' },
+                stamp: { type: 'string', example: 'PASS' },
+                summary: { type: 'string' },
+                postUri: { type: 'string', example: 'https://sender.example/unsub' },
+                postHeader: { type: 'string', example: 'List-Unsubscribe=One-Click' },
+                reasons: { type: 'array', items: { type: 'string' } },
+              },
             },
           },
         },
@@ -516,6 +547,37 @@ const buildOpenApiSpec = (options = {}) => {
               content: {
                 'application/json': {
                   schema: { $ref: '#/components/schemas/ComplaintReadResponse' },
+                },
+              },
+            },
+            401: {
+              description: 'Missing or invalid API key',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+          },
+        },
+      },
+      '/api/one-click-read': {
+        post: {
+          tags: ['Deliverability Suite'],
+          operationId: 'readOneClick',
+          summary: 'Decide whether a message meets the RFC 8058 one-click unsubscribe rule',
+          description:
+            'Checks for an https List-Unsubscribe URI and List-Unsubscribe-Post: List-Unsubscribe=One-Click. Does not fetch the URI or store the message. Requires `suite` or `oneclick` plan (`120 req/min`).',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/OneClickRequest' },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: 'One-click unsubscribe verdict',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/OneClickResponse' },
                 },
               },
             },

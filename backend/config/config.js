@@ -131,6 +131,7 @@ const config = {
     reportsUsd: parsePositiveNumber(process.env.REPORTS_PRICE_MONTHLY_USD, '15', 'REPORTS_PRICE_MONTHLY_USD'),
     bounceUsd: parsePositiveNumber(process.env.BOUNCE_PRICE_MONTHLY_USD, '18', 'BOUNCE_PRICE_MONTHLY_USD'),
     complaintUsd: parsePositiveNumber(process.env.COMPLAINT_PRICE_MONTHLY_USD, '21', 'COMPLAINT_PRICE_MONTHLY_USD'),
+    oneclickUsd: parsePositiveNumber(process.env.ONECLICK_PRICE_MONTHLY_USD, '27', 'ONECLICK_PRICE_MONTHLY_USD'),
     fxCacheSeconds: parsePositiveNumber(process.env.FX_CACHE_SECONDS, 7200, 'FX_CACHE_SECONDS'),
     fxStaleSeconds: parsePositiveNumber(process.env.FX_STALE_SECONDS, 86400, 'FX_STALE_SECONDS'),
     monthlyTtlSeconds: parseInt(process.env.PRO_LICENSE_MONTHLY_SECONDS || 30 * 24 * 60 * 60, 10),

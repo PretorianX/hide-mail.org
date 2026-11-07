@@ -466,6 +466,61 @@ export const REST_ENDPOINTS = [
     },
   },
   {
+    id: 'one-click',
+    title: 'One-Click API',
+    shortTitle: 'One-Click',
+    category: 'Deliverability Suite',
+    method: 'POST',
+    path: '/api/one-click-read',
+    browserPath: '/api/one-click/report',
+    toolPagePath: '/one-click',
+    mcpToolName: 'hide_mail_one_click',
+    authPlans: ['suite', 'oneclick'],
+    rateLimit: '120 req / min',
+    browserRateLimit: '20 req / 10 min',
+    maxPayload: '64 KB JSON',
+    summary:
+      'Decide whether a raw message meets the RFC 8058 one-click unsubscribe rule: an https List-Unsubscribe URI plus List-Unsubscribe-Post.',
+    requestFields: [
+      {
+        name: 'source',
+        type: 'string',
+        required: true,
+        description: 'Raw RFC 5322 message, headers and body (alias: "raw"). The message is not stored.',
+      },
+    ],
+    responseFields: [
+      { name: 'report.stamp', type: 'string', description: 'PASS or FAIL.' },
+      { name: 'report.verdict', type: 'string', description: 'pass or fail.' },
+      { name: 'report.postUri', type: 'string', description: 'HTTPS URI a receiver would POST to, when the check passes.' },
+      { name: 'report.postHeader', type: 'string', description: 'List-Unsubscribe-Post value when it is exactly List-Unsubscribe=One-Click.' },
+      { name: 'report.reasons[]', type: 'array', description: 'Why the message failed the one-click rule.' },
+      { name: 'report.stored', type: 'boolean', description: 'Always false.' },
+    ],
+    sampleRequest: {
+      source: [
+        'From: News <news@sender.example>',
+        'Subject: October',
+        'List-Unsubscribe: <mailto:unsub@sender.example>, <https://sender.example/unsub/opaque>',
+        'List-Unsubscribe-Post: List-Unsubscribe=One-Click',
+        '',
+        'Hello',
+      ].join('\n'),
+    },
+    sampleResponse: {
+      success: true,
+      report: {
+        stored: false,
+        verdict: 'pass',
+        stamp: 'PASS',
+        summary: 'A receiver can POST one-click to https://sender.example/unsub/opaque.',
+        postUri: 'https://sender.example/unsub/opaque',
+        postHeader: 'List-Unsubscribe=One-Click',
+        reasons: [],
+      },
+    },
+  },
+  {
     id: 'qa',
     title: 'QA Mailbox & Webhook API',
     shortTitle: 'QA Mailboxes',
@@ -874,6 +929,35 @@ export const MCP_TOOLS = [
         name: 'hide_mail_complaint_read',
         arguments: {
           raw: 'Feedback-Type: abuse\nOriginal-Rcpt-To: <subscriber@example.net>\nSource-IP: 192.0.2.1\nReported-Domain: sender.example',
+        },
+      },
+    },
+  },
+  {
+    name: 'hide_mail_one_click',
+    category: 'Deliverability Suite',
+    requiredPlans: ['suite', 'oneclick'],
+    restEndpointId: 'one-click',
+    description:
+      'Decide whether a raw message meets the RFC 8058 one-click unsubscribe rule.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        raw: {
+          type: 'string',
+          description: 'Raw RFC 5322 message whose List-Unsubscribe headers should be checked.',
+        },
+      },
+      required: ['raw'],
+    },
+    sampleCall: {
+      jsonrpc: '2.0',
+      id: 6,
+      method: 'tools/call',
+      params: {
+        name: 'hide_mail_one_click',
+        arguments: {
+          raw: 'From: News <news@sender.example>\nList-Unsubscribe: <https://sender.example/unsub>\nList-Unsubscribe-Post: List-Unsubscribe=One-Click\n\nHello',
         },
       },
     },

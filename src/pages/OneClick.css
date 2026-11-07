@@ -1,0 +1,280 @@
+.oneclick-page {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 8px 12px 32px;
+  color: var(--text-color);
+}
+
+.oneclick-page h1 {
+  margin: 0 0 8px;
+}
+
+.oneclick-lead {
+  margin-top: 0;
+  color: var(--text-secondary);
+}
+
+.oneclick-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.oneclick-slip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 8px;
+  padding: 16px;
+  border: 2px dashed var(--duck-orange);
+  border-radius: 12px;
+  background: var(--card-bg, #fff);
+}
+
+.oneclick-stamp {
+  flex: 0 0 auto;
+  min-width: 112px;
+  min-height: 72px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 4px solid var(--duck-orange);
+  box-shadow: inset 0 0 0 3px rgba(247, 148, 29, 0.28);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  line-height: 1.1;
+  text-align: center;
+  background: var(--card-bg, #fff);
+}
+
+.oneclick-stamp-empty {
+  color: var(--text-secondary);
+  font-size: 2rem;
+  letter-spacing: 0;
+}
+
+.oneclick-stamp[data-verdict='pass'] {
+  color: #1b7f3a;
+}
+
+.oneclick-stamp[data-verdict='fail'] {
+  color: #b42318;
+}
+
+.oneclick-slip-copy {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
+.oneclick-waiting,
+.oneclick-summary {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.oneclick-url {
+  margin: 0 0 4px;
+  font-size: 1.15rem;
+  font-weight: 800;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.oneclick-form textarea {
+  width: 100%;
+  min-height: 220px;
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font: 0.9rem/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: var(--text-color);
+  background: var(--card-bg, #fff);
+  resize: vertical;
+}
+
+.oneclick-submit {
+  align-self: flex-start;
+}
+
+.oneclick-empty {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.oneclick-error {
+  margin: 0;
+  color: var(--danger-color, #b42318);
+  font-weight: 700;
+}
+
+.oneclick-result {
+  margin-top: 24px;
+}
+
+.oneclick-result h2 {
+  margin: 0 0 8px;
+}
+
+.oneclick-result ul {
+  margin: 0 0 12px;
+  padding-left: 20px;
+}
+
+.oneclick-result dl {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+}
+
+.oneclick-result div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  padding: 10px 12px;
+  border-left: 4px solid var(--duck-orange);
+  background: var(--duck-gray);
+  border-radius: 0 8px 8px 0;
+}
+
+.oneclick-result dt {
+  flex: 1 1 140px;
+  font-weight: 700;
+}
+
+.oneclick-result dd {
+  flex: 2 1 200px;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.oneclick-offer {
+  margin-top: 36px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.oneclick-offer-price {
+  font-size: 1.4rem;
+  font-weight: 800;
+  margin: 0;
+}
+
+.oneclick-restore {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+}
+
+.oneclick-restore input {
+  flex: 1 1 180px;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font: inherit;
+  color: var(--text-color);
+  background: var(--card-bg, #fff);
+}
+
+.oneclick-page textarea:focus-visible,
+.oneclick-page button:focus-visible,
+.oneclick-page input:focus-visible,
+.oneclick-page a:focus-visible {
+  outline: 3px solid var(--duck-orange);
+  outline-offset: 2px;
+}
+
+body[data-theme='dark'] .oneclick-page {
+  color: var(--dark-text-color);
+}
+
+body[data-theme='dark'] .oneclick-lead,
+body[data-theme='dark'] .oneclick-empty,
+body[data-theme='dark'] .oneclick-waiting,
+body[data-theme='dark'] .oneclick-summary {
+  color: var(--dark-text-secondary);
+}
+
+body[data-theme='dark'] .oneclick-slip,
+body[data-theme='dark'] .oneclick-stamp {
+  background: var(--background-color);
+  border-color: var(--duck-orange);
+}
+
+body[data-theme='dark'] .oneclick-stamp-empty {
+  color: var(--dark-text-secondary);
+}
+
+body[data-theme='dark'] .oneclick-stamp[data-verdict='pass'] {
+  color: #7ddea0;
+}
+
+body[data-theme='dark'] .oneclick-stamp[data-verdict='fail'] {
+  color: #ff8a80;
+}
+
+body[data-theme='dark'] .oneclick-page textarea,
+body[data-theme='dark'] .oneclick-page input {
+  background-color: #1a1a1a;
+  color: #e0e0e0;
+  -webkit-text-fill-color: #e0e0e0;
+  caret-color: #e0e0e0;
+  border-color: #444444;
+  color-scheme: dark;
+}
+
+body[data-theme='dark'] .oneclick-result div {
+  background: var(--background-color);
+}
+
+@media (max-width: 640px) {
+  .oneclick-page {
+    padding: 0 4px 24px;
+  }
+
+  .oneclick-page h1 {
+    font-size: 1.6rem;
+    margin-bottom: 4px;
+  }
+
+  .oneclick-lead {
+    margin-bottom: 10px;
+    font-size: 0.95rem;
+  }
+
+  .oneclick-slip {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .oneclick-stamp {
+    min-width: 96px;
+    min-height: 56px;
+    font-size: 1.05rem;
+  }
+
+  .oneclick-url {
+    font-size: 1rem;
+  }
+
+  .oneclick-form textarea {
+    min-height: 120px;
+  }
+
+  .oneclick-submit,
+  .oneclick-offer button {
+    width: 100%;
+    min-height: 44px;
+  }
+}
