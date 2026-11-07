@@ -30,6 +30,7 @@ jest.mock('../../config/config', () => {
       reportsUsd: 15,
       bounceUsd: 18,
       complaintUsd: 21,
+      oneclickUsd: 27,
       checkoutPaused: false,
     },
   };
@@ -48,7 +49,7 @@ jest.mock('../../services/licenseService', () => ({
   findByRecToken: jest.fn(),
   createApiKey: jest.fn(),
   validateApiKey: jest.fn(),
-  canIssueApiKey: (type) => ['api', 'grade', 'sender', 'reports', 'bounce', 'complaint'].includes(type),
+  canIssueApiKey: (type) => ['api', 'grade', 'sender', 'reports', 'bounce', 'complaint', 'oneclick'].includes(type),
   getLicense: jest.fn(),
   isActive: jest.fn(),
   maskKey: jest.fn(() => 'HM-****-DDDD'),
@@ -80,6 +81,7 @@ const SENDER_UAH = 490;
 const REPORTS_UAH = 620;
 const BOUNCE_UAH = 740;
 const COMPLAINT_UAH = 870;
+const ONECLICK_UAH = 1120;
 
 const mockRes = () => {
   const res = {};
@@ -308,6 +310,32 @@ describe('billingController', () => {
       expect(orderService.createOrder).toHaveBeenCalledWith(
         expect.objectContaining({ type: 'complaint', amount: COMPLAINT_UAH })
       );
+    });
+
+    it('charges the One-Click price for a One-Click order', async () => {
+      const req = { body: { plan: 'monthly', type: 'oneclick' } };
+      const res = mockRes();
+
+      await billingController.checkout(req, res);
+
+      const payload = res.json.mock.calls[0][0];
+      expect(payload.data.orderReference).toMatch(/^oneclick-monthly-/);
+      expect(payload.data.productName).toEqual(['One-Click API Monthly']);
+      expect(payload.data.amount).toBe(ONECLICK_UAH);
+      expect(orderService.createOrder).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'oneclick', amount: ONECLICK_UAH })
+      );
+    });
+
+    it('rejects a yearly One-Click order because that tariff is monthly only', async () => {
+      const req = { body: { plan: 'yearly', type: 'oneclick' } };
+      const res = mockRes();
+
+      await billingController.checkout(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json.mock.calls[0][0].error).toMatch(/One-Click is a monthly plan/);
+      expect(orderService.createOrder).not.toHaveBeenCalled();
     });
 
     it('rejects a yearly Complaint Read order because that tariff is monthly only', async () => {

@@ -75,6 +75,12 @@ const PRODUCTS = {
       regularMode: 'monthly',
     },
   },
+  oneclick: {
+    monthly: {
+      productName: 'One-Click API Monthly',
+      regularMode: 'monthly',
+    },
+  },
 };
 
 const resolveProduct = (type, plan) => {

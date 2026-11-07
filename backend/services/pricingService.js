@@ -14,6 +14,7 @@ const USD_KEYS = {
   reports: { monthly: 'reportsUsd' },
   bounce: { monthly: 'bounceUsd' },
   complaint: { monthly: 'complaintUsd' },
+  oneclick: { monthly: 'oneclickUsd' },
 };
 
 const usdPrice = (type, plan) => {

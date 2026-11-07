@@ -188,6 +188,30 @@ describe('WayForPay customer return', () => {
       expect(complaintTarget.searchParams.get('handoffToken')).toMatch(/^[0-9a-f-]{36}$/i);
     });
 
+    it('sends a One-Click payer to /one-click rather than the Pro page', async () => {
+      const orderService = require('../../services/orderService');
+      await orderService.createOrder({
+        id: 'oneclick-monthly-abc',
+        plan: 'monthly',
+        type: 'oneclick',
+        amount: 1120,
+        currency: 'UAH',
+      });
+
+      const billingController = require('../../controllers/billingController');
+      const res = mockRes();
+
+      await billingController.customerReturn(
+        { query: { orderReference: 'oneclick-monthly-abc' }, body: {} },
+        res
+      );
+
+      const [, oneClickUrl] = res.redirect.mock.calls[0];
+      const oneClickTarget = new URL(oneClickUrl);
+      expect(oneClickTarget.origin + oneClickTarget.pathname).toBe('https://hide-mail.org/one-click');
+      expect(oneClickTarget.searchParams.get('handoffToken')).toMatch(/^[0-9a-f-]{36}$/i);
+    });
+
     it('redirects to the Pro page even without an order reference', async () => {
       const billingController = require('../../controllers/billingController');
       const res = mockRes();

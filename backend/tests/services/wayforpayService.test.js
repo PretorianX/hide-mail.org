@@ -250,6 +250,21 @@ describe('wayforpayService', () => {
       expect(payload.productPrice).toEqual([870]);
       expect(() => wayforpayService.resolveProduct('complaint', 'yearly')).toThrow(/unsupported complaint plan/i);
     });
+
+    it('names the One-Click product on its own monthly tariff', () => {
+      const payload = wayforpayService.buildCheckoutPayload({
+        type: 'oneclick',
+        plan: 'monthly',
+        orderReference: 'oneclick-monthly-test',
+        orderDate: 1700000000,
+        dateNext: '18.09.2026',
+        amount: 1120,
+      });
+
+      expect(payload.productName).toEqual(['One-Click API Monthly']);
+      expect(payload.productPrice).toEqual([1120]);
+      expect(() => wayforpayService.resolveProduct('oneclick', 'yearly')).toThrow(/unsupported oneclick plan/i);
+    });
   });
 
   describe('classifyTransactionStatus', () => {
