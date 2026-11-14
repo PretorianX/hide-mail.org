@@ -309,8 +309,8 @@ describe('Official Hide Mail MCP Server (mcpController & mcpService)', () => {
     });
   });
 
-  describe('tools/list & tools/call across all 9 tools', () => {
-    it('lists all 9 strongly-typed tools', async () => {
+  describe('tools/list & tools/call across all 10 tools', () => {
+    it('lists all 10 strongly-typed tools', async () => {
       const res = createRes();
       await mcpController.handlePost(
         {
@@ -329,6 +329,7 @@ describe('Official Hide Mail MCP Server (mcpController & mcpService)', () => {
         'hide_mail_dmarc_report',
         'hide_mail_bounce_read',
         'hide_mail_complaint_read',
+        'hide_mail_tls_report',
         'hide_mail_qa_create_mailbox',
         'hide_mail_qa_list_messages',
         'hide_mail_qa_get_message',
@@ -340,7 +341,7 @@ describe('Official Hide Mail MCP Server (mcpController & mcpService)', () => {
       });
     });
 
-    it('allows a suite key to call all 5 deliverability tools including gzipped DMARC reports', async () => {
+    it('allows a suite key to call all 6 deliverability tools including gzipped DMARC reports', async () => {
       // 1. hide_mail_grade_email
       const gradeRes = createRes();
       await mcpController.handlePost(
@@ -477,6 +478,54 @@ describe('Official Hide Mail MCP Server (mcpController & mcpService)', () => {
         (err) => { throw err; }
       );
       expect(complaintRes.body.result.structuredContent.feedbackType).toBe('abuse');
+
+      const tlsRes = createRes();
+      await mcpController.handlePost(
+        {
+          headers: { 'x-api-key': keys.suite },
+          body: {
+            jsonrpc: '2.0',
+            id: 16,
+            method: 'tools/call',
+            params: {
+              name: 'hide_mail_tls_report',
+              arguments: {
+                raw: JSON.stringify({
+                  'organization-name': 'Company-X',
+                  'date-range': {
+                    'start-datetime': '2016-04-01T00:00:00Z',
+                    'end-datetime': '2016-04-01T23:59:59Z',
+                  },
+                  'contact-info': 'sts-reporting@company-x.example',
+                  'report-id': 'rpt-1',
+                  policies: [{
+                    policy: {
+                      'policy-type': 'sts',
+                      'policy-string': ['mode: testing'],
+                      'policy-domain': 'company-y.example',
+                      'mx-host': ['mx.company-y.example'],
+                    },
+                    summary: {
+                      'total-successful-session-count': 2,
+                      'total-failure-session-count': 1,
+                    },
+                    'failure-details': [{
+                      'result-type': 'certificate-expired',
+                      'sending-mta-ip': '192.0.2.10',
+                      'receiving-mx-hostname': 'mx.company-y.example',
+                      'receiving-ip': '192.0.2.20',
+                      'failed-session-count': 1,
+                    }],
+                  }],
+                }),
+              },
+            },
+          },
+        },
+        tlsRes,
+        (err) => { throw err; }
+      );
+      expect(tlsRes.body.result.structuredContent.stamp).toBe('FAILURES');
     });
 
     it('rejects a zip that claims a huge uncompressed size without decompressing (zip bomb)', () => {

@@ -12,6 +12,7 @@ process.env.SENDER_PRICE_MONTHLY_USD = '12';
 process.env.REPORTS_PRICE_MONTHLY_USD = '15';
 process.env.BOUNCE_PRICE_MONTHLY_USD = '18';
 process.env.COMPLAINT_PRICE_MONTHLY_USD = '21';
+process.env.TLS_PRICE_MONTHLY_USD = '24';
 
 const pricingService = require('../../services/pricingService');
 
@@ -108,6 +109,15 @@ describe('pricingService', () => {
         currency: 'UAH',
       });
       expect(() => pricingService.quotePlan('complaint', 'yearly', rates)).toThrow(/unsupported complaint plan/i);
+    });
+
+    it('prices TLS Reports from its own monthly USD list price', () => {
+      expect(pricingService.quotePlan('tls', 'monthly', rates)).toEqual({
+        usd: 24,
+        amountUah: 990,
+        currency: 'UAH',
+      });
+      expect(() => pricingService.quotePlan('tls', 'yearly', rates)).toThrow(/unsupported tls plan/i);
     });
   });
 

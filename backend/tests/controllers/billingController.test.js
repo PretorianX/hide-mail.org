@@ -30,6 +30,7 @@ jest.mock('../../config/config', () => {
       reportsUsd: 15,
       bounceUsd: 18,
       complaintUsd: 21,
+      tlsUsd: 24,
       checkoutPaused: false,
     },
   };
@@ -48,7 +49,7 @@ jest.mock('../../services/licenseService', () => ({
   findByRecToken: jest.fn(),
   createApiKey: jest.fn(),
   validateApiKey: jest.fn(),
-  canIssueApiKey: (type) => ['api', 'grade', 'sender', 'reports', 'bounce', 'complaint'].includes(type),
+  canIssueApiKey: (type) => ['api', 'grade', 'sender', 'reports', 'bounce', 'complaint', 'tls'].includes(type),
   getLicense: jest.fn(),
   isActive: jest.fn(),
   maskKey: jest.fn(() => 'HM-****-DDDD'),
@@ -80,6 +81,7 @@ const SENDER_UAH = 490;
 const REPORTS_UAH = 620;
 const BOUNCE_UAH = 740;
 const COMPLAINT_UAH = 870;
+const TLS_UAH = 990;
 
 const mockRes = () => {
   const res = {};
@@ -318,6 +320,32 @@ describe('billingController', () => {
 
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json.mock.calls[0][0].error).toMatch(/Complaint Read is a monthly plan/);
+      expect(orderService.createOrder).not.toHaveBeenCalled();
+    });
+
+    it('charges the TLS Reports price for a TLS Reports order', async () => {
+      const req = { body: { plan: 'monthly', type: 'tls' } };
+      const res = mockRes();
+
+      await billingController.checkout(req, res);
+
+      const payload = res.json.mock.calls[0][0];
+      expect(payload.data.orderReference).toMatch(/^tls-monthly-/);
+      expect(payload.data.productName).toEqual(['TLS Reports API Monthly']);
+      expect(payload.data.amount).toBe(TLS_UAH);
+      expect(orderService.createOrder).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'tls', amount: TLS_UAH })
+      );
+    });
+
+    it('rejects a yearly TLS Reports order because that tariff is monthly only', async () => {
+      const req = { body: { plan: 'yearly', type: 'tls' } };
+      const res = mockRes();
+
+      await billingController.checkout(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json.mock.calls[0][0].error).toMatch(/TLS Reports is a monthly plan/);
       expect(orderService.createOrder).not.toHaveBeenCalled();
     });
 
@@ -892,6 +920,22 @@ describe('billingController', () => {
 
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json.mock.calls[0][0].apiKey).toBe('hm_api_complaint');
+    });
+
+    it('hands a TLS Reports subscriber a fresh key without treating it as the QA API', async () => {
+      licenseService.getLicense.mockResolvedValue({ ...activeApiLicense, type: 'tls' });
+      licenseService.isActive.mockReturnValue(true);
+      licenseService.createApiKey.mockResolvedValue('hm_api_tls');
+      licenseService.validateApiKey.mockResolvedValue({
+        expiresAt: Date.now() + 20 * 24 * 60 * 60 * 1000,
+        remainingDays: 20,
+      });
+
+      const res = mockRes();
+      await billingController.issueApiKey({ body: { key: activeApiLicense.key } }, res);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json.mock.calls[0][0].apiKey).toBe('hm_api_tls');
     });
 
     it('hands a Mail Grade subscriber a fresh key without treating it as the QA API', async () => {
