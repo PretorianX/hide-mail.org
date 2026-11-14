@@ -466,6 +466,50 @@ export const REST_ENDPOINTS = [
     },
   },
   {
+    id: 'tls',
+    title: 'TLS Reports API',
+    shortTitle: 'TLS Reports',
+    category: 'Deliverability Suite',
+    method: 'POST',
+    path: '/api/tls-reports',
+    browserPath: '/api/tls/report',
+    toolPagePath: '/tls',
+    mcpToolName: 'hide_mail_tls_report',
+    authPlans: ['suite', 'tls'],
+    rateLimit: '120 req / min',
+    browserRateLimit: '20 req / 10 min',
+    maxPayload: '64 KB JSON',
+    summary:
+      'Parse an RFC 8460 SMTP TLS report into the receiving hosts that failed the handshake and why.',
+    requestFields: [
+      {
+        name: 'source',
+        type: 'string',
+        required: true,
+        description: 'RFC 8460 JSON report. Unzip a .json.gz file first (alias: "raw").',
+      },
+    ],
+    responseFields: [
+      { name: 'report.stamp', type: 'string', description: 'FAILURES, CLEAR, or EMPTY.' },
+      { name: 'report.summary', type: 'string', description: 'One sentence naming the worst host, when a host failed.' },
+      { name: 'report.failedSessions', type: 'number', description: 'Failed SMTP sessions summed across policies.' },
+      { name: 'report.policies[]', type: 'array', description: 'Per-domain policy, counts, and failure rows.' },
+    ],
+    sampleRequest: {
+      source: '{"organization-name":"Northwind Post","date-range":{"start-datetime":"2026-11-01T00:00:00Z","end-datetime":"2026-11-01T23:59:59Z"},"contact-info":"tls-reports@northwind.example","report-id":"nov-01","policies":[{"policy":{"policy-type":"sts","policy-string":["mode: enforce"],"policy-domain":"northwind.example","mx-host":["mx1.northwind.example"]},"summary":{"total-successful-session-count":840,"total-failure-session-count":26},"failure-details":[{"result-type":"certificate-expired","sending-mta-ip":"203.0.113.8","receiving-mx-hostname":"mx1.northwind.example","receiving-ip":"203.0.113.20","failed-session-count":26}]}]}',
+    },
+    sampleResponse: {
+      success: true,
+      report: {
+        stored: false,
+        stamp: 'FAILURES',
+        verdict: 'failures',
+        summary: '26 sessions failed TLS. mx1.northwind.example presented an expired certificate.',
+        failedSessions: 26,
+      },
+    },
+  },
+  {
     id: 'qa',
     title: 'QA Mailbox & Webhook API',
     shortTitle: 'QA Mailboxes',
@@ -874,6 +918,35 @@ export const MCP_TOOLS = [
         name: 'hide_mail_complaint_read',
         arguments: {
           raw: 'Feedback-Type: abuse\nOriginal-Rcpt-To: <subscriber@example.net>\nSource-IP: 192.0.2.1\nReported-Domain: sender.example',
+        },
+      },
+    },
+  },
+  {
+    name: 'hide_mail_tls_report',
+    category: 'Deliverability Suite',
+    requiredPlans: ['suite', 'tls'],
+    restEndpointId: 'tls',
+    description:
+      'Parse an RFC 8460 SMTP TLS report into the receiving hosts that failed the handshake and why.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        raw: {
+          type: 'string',
+          description: 'RFC 8460 SMTP TLS reporting JSON document. Unzip a .json.gz file first.',
+        },
+      },
+      required: ['raw'],
+    },
+    sampleCall: {
+      jsonrpc: '2.0',
+      id: 6,
+      method: 'tools/call',
+      params: {
+        name: 'hide_mail_tls_report',
+        arguments: {
+          raw: '{"organization-name":"Northwind Post","date-range":{"start-datetime":"2026-11-01T00:00:00Z","end-datetime":"2026-11-01T23:59:59Z"},"contact-info":"tls-reports@northwind.example","report-id":"nov-01","policies":[{"policy":{"policy-type":"sts","policy-string":["mode: enforce"],"policy-domain":"northwind.example","mx-host":["mx1.northwind.example"]},"summary":{"total-successful-session-count":1,"total-failure-session-count":0}}]}',
         },
       },
     },

@@ -75,6 +75,12 @@ const PRODUCTS = {
       regularMode: 'monthly',
     },
   },
+  tls: {
+    monthly: {
+      productName: 'TLS Reports API Monthly',
+      regularMode: 'monthly',
+    },
+  },
 };
 
 const resolveProduct = (type, plan) => {
