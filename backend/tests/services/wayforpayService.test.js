@@ -250,6 +250,21 @@ describe('wayforpayService', () => {
       expect(payload.productPrice).toEqual([870]);
       expect(() => wayforpayService.resolveProduct('complaint', 'yearly')).toThrow(/unsupported complaint plan/i);
     });
+
+    it('names the TLS Reports product on its own monthly tariff', () => {
+      const payload = wayforpayService.buildCheckoutPayload({
+        type: 'tls',
+        plan: 'monthly',
+        orderReference: 'tls-monthly-test',
+        orderDate: 1700000000,
+        dateNext: '18.09.2026',
+        amount: 990,
+      });
+
+      expect(payload.productName).toEqual(['TLS Reports API Monthly']);
+      expect(payload.productPrice).toEqual([990]);
+      expect(() => wayforpayService.resolveProduct('tls', 'yearly')).toThrow(/unsupported tls plan/i);
+    });
   });
 
   describe('classifyTransactionStatus', () => {

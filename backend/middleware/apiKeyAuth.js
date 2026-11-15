@@ -63,6 +63,10 @@ const PLAN_REQUIRED = {
     error: 'This key is not a Complaint Read API key',
     code: 'COMPLAINT_PLAN_REQUIRED',
   },
+  tls: {
+    error: 'This key is not a TLS Reports API key',
+    code: 'TLS_PLAN_REQUIRED',
+  },
 };
 
 const requireLicenseType = (type) => (req, res, next) => {

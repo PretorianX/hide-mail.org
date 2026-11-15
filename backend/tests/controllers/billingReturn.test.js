@@ -188,6 +188,30 @@ describe('WayForPay customer return', () => {
       expect(complaintTarget.searchParams.get('handoffToken')).toMatch(/^[0-9a-f-]{36}$/i);
     });
 
+    it('sends a TLS Reports payer to /tls rather than the Pro page', async () => {
+      const orderService = require('../../services/orderService');
+      await orderService.createOrder({
+        id: 'tls-monthly-abc',
+        plan: 'monthly',
+        type: 'tls',
+        amount: 990,
+        currency: 'UAH',
+      });
+
+      const billingController = require('../../controllers/billingController');
+      const res = mockRes();
+
+      await billingController.customerReturn(
+        { query: { orderReference: 'tls-monthly-abc' }, body: {} },
+        res
+      );
+
+      const [, tlsUrl] = res.redirect.mock.calls[0];
+      const tlsTarget = new URL(tlsUrl);
+      expect(tlsTarget.origin + tlsTarget.pathname).toBe('https://hide-mail.org/tls');
+      expect(tlsTarget.searchParams.get('handoffToken')).toMatch(/^[0-9a-f-]{36}$/i);
+    });
+
     it('redirects to the Pro page even without an order reference', async () => {
       const billingController = require('../../controllers/billingController');
       const res = mockRes();
