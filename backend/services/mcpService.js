@@ -15,6 +15,7 @@ const senderCheckService = require('./senderCheckService');
 const dmarcReportService = require('./dmarcReportService');
 const bounceReadService = require('./bounceReadService');
 const complaintReadService = require('./complaintReadService');
+const tlsReportService = require('./tlsReportService');
 const { resolveActiveRecipient } = require('./recipientResolver');
 
 const PROTOCOL_VERSION = '2024-11-05';
@@ -221,6 +222,23 @@ const TOOL_DEFINITIONS = [
         raw: {
           type: 'string',
           description: 'Raw RFC 5965 ARF feedback report message.',
+        },
+      },
+      required: ['raw'],
+    },
+  },
+  {
+    name: 'hide_mail_tls_report',
+    description:
+      'Parse an RFC 8460 SMTP TLS report into the receiving hosts that failed the handshake and why.',
+    requiredEntitlement: 'tlsApi',
+    requiredPlan: 'tls',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        raw: {
+          type: 'string',
+          description: 'RFC 8460 SMTP TLS reporting JSON document. Unzip a .json.gz file first.',
         },
       },
       required: ['raw'],
@@ -582,6 +600,11 @@ const executeTool = async (name, args = {}, license) => {
       return complaintReadService.readComplaint(raw);
     }
 
+    case 'hide_mail_tls_report': {
+      const raw = args.raw ?? args.source;
+      return tlsReportService.readTlsReport(raw);
+    }
+
     case 'hide_mail_qa_create_mailbox': {
       const domains = allowedDomainsForLicense(license);
       const requestedDomain = args.domain;
@@ -772,6 +795,9 @@ const readResource = (uri) => {
       },
       complaint: {
         monthly: pricingService.usdPrice('complaint', 'monthly'),
+      },
+      tls: {
+        monthly: pricingService.usdPrice('tls', 'monthly'),
       },
     };
     return {

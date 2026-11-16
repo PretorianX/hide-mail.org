@@ -166,7 +166,7 @@ const BounceOffer = () => {
       <p>
         Classify RFC 3464 delivery status notifications in your return-path worker via{' '}
         <code>POST /api/bounce-read</code> (120 req/min, max 64 KB). Authenticate with a{' '}
-        <strong>Deliverability Suite</strong> key ($19.99/mo — unlocks all 5 deliverability APIs,
+        <strong>Deliverability Suite</strong> key ($19.99/mo — unlocks all 6 deliverability APIs,
         QA mailboxes, and Pro inbox with one key) or a standalone Bounce Read key.{' '}
         <Link to="/pro">Compare all 4 plans</Link>.
       </p>

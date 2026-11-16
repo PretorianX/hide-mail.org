@@ -20,6 +20,7 @@ A temporary email service that provides disposable email addresses for privacy a
 - DMARC Reports: paste a DMARC aggregate report and get a source-by-source alignment summary, plus a separate DMARC Reports API plan for reading reports from a script
 - Bounce Read: paste a delivery status and see which addresses failed permanently, plus a separate Bounce Read API plan
 - Complaint Read: paste an abuse feedback report and get the address to suppress, plus a separate Complaint Read API plan
+- TLS Reports: paste an SMTP TLS report and see which hosts failed the handshake, plus a separate TLS Reports API plan
 
 ## Quick Start
 
@@ -99,6 +100,7 @@ Key configuration options in `.env`:
 | `REPORTS_PRICE_MONTHLY_USD` | DMARC Reports API list price in USD. This plan only reads aggregate reports |
 | `BOUNCE_PRICE_MONTHLY_USD` | Bounce Read API list price in USD. This plan only classifies delivery statuses |
 | `COMPLAINT_PRICE_MONTHLY_USD` | Complaint Read API list price in USD. This plan only reads abuse feedback reports |
+| `TLS_PRICE_MONTHLY_USD` | TLS Reports API list price in USD. This plan only reads SMTP TLS reports |
 | `FX_CACHE_SECONDS` / `FX_STALE_SECONDS` | Fresh FX cache TTL (default 2h) and maximum stale-cache age (default 24h) |
 | `PREMIUM_DOMAINS` | Pro-only domains; empty means Pro uses `VALID_DOMAINS` |
 
@@ -284,6 +286,12 @@ The page is free. The paid offer is the Bounce Read API (`BOUNCE_PRICE_MONTHLY_U
 Complaint Read turns one RFC 5965 feedback report into the address to suppress, keep, or review. Open `/complaints` and paste the report. The report is not stored.
 
 The page is free. The paid offer is the Complaint Read API (`COMPLAINT_PRICE_MONTHLY_USD`, default $21): `POST /api/complaint-read` with a Complaint Read key. That key cannot open a mailbox, grade a message, or call the other tool APIs.
+
+## TLS Reports
+
+TLS Reports reads an SMTP TLS report a receiver already sent. It is not a mailbox, and it does not look up MTA-STS or TLS-RPT in DNS. Open `/tls`, paste the JSON (unzip a `.json.gz` file first), and Hide Mail names the hosts that failed the handshake and why. The report is read in memory and is not stored.
+
+The page is free. The paid offer is the TLS Reports API (`TLS_PRICE_MONTHLY_USD`, default $24): `POST /api/tls-reports` with a TLS Reports key. That key cannot open a mailbox, grade a message, or call the other tool APIs. After a TLS Reports payment the browser returns to `/tls`.
 
 ## Attachments
 
