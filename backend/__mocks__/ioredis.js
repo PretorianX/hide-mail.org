@@ -26,6 +26,14 @@ class RedisMock {
   }
 
   async set(key, value, ...args) {
+    // Minimal support for the NX flag (ioredis: `.set(key, value, 'NX')`),
+    // additive only — existing callers that pass other/no extra args are
+    // unaffected. Mirrors real Redis: NX only writes if the key is absent,
+    // returning null (not 'OK') when it already exists.
+    const flags = args.map((arg) => String(arg).toUpperCase());
+    if (flags.includes('NX') && Object.prototype.hasOwnProperty.call(this.data, key)) {
+      return null;
+    }
     this.data[key] = value;
     return 'OK';
   }

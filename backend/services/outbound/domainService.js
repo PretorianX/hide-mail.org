@@ -22,7 +22,9 @@ const { verifyDomain } = require('./domainVerifier');
 const META_PREFIX = 'outbound:domain:meta:';
 const GATE_PREFIX = 'outbound:domain:gate:';
 const accountDomainsKey = (accountId) => `outbound:account:${accountId}:domains`;
-const accountLicenseKeyIndexKey = (accountId) => `outbound:account:${accountId}:licenseKey`;
+// Single source of truth for this key lives in accountService.js (it's the
+// one that writes it, in createAccount); import rather than duplicate it.
+const { accountLicenseKeyIndexKey } = accountService;
 
 class DomainError extends Error {
   constructor(code, message) {
@@ -74,50 +76,85 @@ const generateDomainKeyMaterial = () => {
   };
 };
 
+// Reached whenever this (or a concurrent) caller loses the atomic claim below
+// — either because the domain was already fully registered (sequential case)
+// or because another request's claim won a genuine race a moment earlier
+// (concurrent case). Same account -> idempotent return of whatever is there;
+// different/unknown account -> DOMAIN_TAKEN. `existing` may still be the
+// other claimant's minimal in-flight placeholder (valid JSON, `accountId`
+// already set, `selector`/`records` not yet) if we lost a very tight race —
+// that's fine: ownership is already decidable from `accountId` alone, and a
+// same-account caller who hits that sliver of a window simply gets the
+// not-yet-complete record back (a follow-up call sees the finished one).
+const resolveExistingDomainClaim = ({ accountId, domain, existing }) => {
+  if (!existing) {
+    // The claim failed but there's nothing to read back (the other claimant
+    // hasn't written even its placeholder yet, or raced us on a delete) —
+    // never silently proceed as if we'd won; report it as taken.
+    throw new DomainError('DOMAIN_TAKEN', `Domain ${domain} is already being registered`);
+  }
+  if (existing.accountId !== accountId) {
+    throw new DomainError('DOMAIN_TAKEN', `Domain ${domain} is already registered to another account`);
+  }
+  return { domain, selector: existing.selector, records: existing.records, state: existing.state };
+};
+
 const addDomain = async ({ accountId, domain: rawDomain }) => {
   const domain = normalizeDomain(rawDomain);
-  const existing = await readMeta(domain);
+  const metaKey = `${META_PREFIX}${domain}`;
 
-  if (existing) {
-    if (existing.accountId !== accountId) {
-      throw new DomainError('DOMAIN_TAKEN', `Domain ${domain} is already registered to another account`);
-    }
-    // Same account re-adding a domain it already owns: idempotent, no
-    // regeneration (regenerating the keypair/selector would silently break
-    // DNS records the owner may have already published).
-    return { domain, selector: existing.selector, records: existing.records, state: existing.state };
+  // Atomically claim the domain name with a conditional (NX) write before
+  // generating/encrypting anything. A plain read-then-write (the previous
+  // approach) lets two concurrent addDomain calls for the SAME brand-new
+  // domain both observe "no existing meta" and both proceed, with the second
+  // write silently clobbering the first. SET ... NX is atomic in real Redis
+  // (and in the test mock, see __mocks__/ioredis.js), so only one caller can
+  // ever win it for a given key.
+  const claimPlaceholder = JSON.stringify({ accountId, state: 'pending' });
+  const claimed = await redisService.client.set(metaKey, claimPlaceholder, 'NX');
+
+  if (!claimed) {
+    const existing = await readMeta(domain);
+    return resolveExistingDomainClaim({ accountId, domain, existing });
   }
 
-  const selector = `hm-${crypto.randomBytes(4).toString('hex')}`;
-  const { publicKeyPem, privateKeyPem } = generateDomainKeyMaterial();
-  const privateKeyEnc = keyCrypto.encrypt(privateKeyPem, config.outbound.keyEncryptionSecret);
-  const records = buildExpectedRecords({ domain, selector, publicKeyPem });
+  try {
+    const selector = `hm-${crypto.randomBytes(4).toString('hex')}`;
+    const { publicKeyPem, privateKeyPem } = generateDomainKeyMaterial();
+    const privateKeyEnc = keyCrypto.encrypt(privateKeyPem, config.outbound.keyEncryptionSecret);
+    const records = buildExpectedRecords({ domain, selector, publicKeyPem });
 
-  const meta = {
-    accountId,
-    selector,
-    publicKeyPem,
-    privateKeyEnc,
-    state: 'pending',
-    suspended: false,
-    dailyLimit: config.outbound.dailyLimitDefault,
-    createdAt: Date.now(),
-    lastCheckedAt: null,
-    records,
-  };
+    const meta = {
+      accountId,
+      selector,
+      publicKeyPem,
+      privateKeyEnc,
+      state: 'pending',
+      suspended: false,
+      dailyLimit: config.outbound.dailyLimitDefault,
+      createdAt: Date.now(),
+      lastCheckedAt: null,
+      records,
+    };
 
-  await writeMeta(domain, meta);
-  await redisService.client.sadd(accountDomainsKey(accountId), domain);
-  await writeGateRecord({
-    accountId,
-    domain,
-    selector,
-    privateKeyEnc,
-    state: meta.state,
-    suspended: meta.suspended,
-  });
+    await writeMeta(domain, meta);
+    await redisService.client.sadd(accountDomainsKey(accountId), domain);
+    await writeGateRecord({
+      accountId,
+      domain,
+      selector,
+      privateKeyEnc,
+      state: meta.state,
+      suspended: meta.suspended,
+    });
 
-  return { domain, selector, records, state: meta.state };
+    return { domain, selector, records, state: meta.state };
+  } catch (error) {
+    // Don't leave a half-finished claim permanently blocking this domain
+    // name if key generation/encryption/persistence fails partway through.
+    await redisService.client.del(metaKey);
+    throw error;
+  }
 };
 
 const checkDomain = async ({ accountId, domain: rawDomain }) => {

@@ -51,4 +51,5 @@ module.exports = {
   listAccounts,
   extendAccount,
   getAccountByKey,
+  accountLicenseKeyIndexKey,
 };

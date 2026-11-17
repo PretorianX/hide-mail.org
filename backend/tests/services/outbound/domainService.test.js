@@ -72,6 +72,93 @@ describe('outbound domainService', () => {
       expect(second).toEqual(first);
     });
 
+    describe('race: two addDomain calls for the same brand-new domain', () => {
+      it('claims the domain atomically via SET NX, not a plain read-then-write', async () => {
+        const { accountId } = await accountService.createAccount({ label: 'Acme', days: 30 });
+        const setSpy = jest.spyOn(redisService.client, 'set');
+
+        await domainService.addDomain({ accountId, domain: 'race-claim.example.com' });
+
+        const metaKey = 'outbound:domain:meta:race-claim.example.com';
+        const claimCall = setSpy.mock.calls.find(([key, , ...flags]) => key === metaKey && flags.includes('NX'));
+        expect(claimCall).toBeTruthy();
+
+        setSpy.mockRestore();
+      });
+
+      it('safely refuses (DOMAIN_TAKEN) and persists nothing when the atomic claim is forced to fail and no claimant has written anything yet', async () => {
+        const { accountId } = await accountService.createAccount({ label: 'Acme', days: 30 });
+        const domain = 'race-empty.example.com';
+        const metaKey = `outbound:domain:meta:${domain}`;
+
+        // Forces the NX claim itself to report failure, simulating a
+        // concurrent request having won the atomic claim a moment earlier —
+        // without that other request actually existing to assert against.
+        const setSpy = jest.spyOn(redisService.client, 'set').mockImplementationOnce(async () => null);
+
+        await expect(domainService.addDomain({ accountId, domain })).rejects.toMatchObject({
+          code: 'DOMAIN_TAKEN',
+        });
+
+        setSpy.mockRestore();
+        expect(await redisService.client.get(metaKey)).toBeNull();
+      });
+
+      it('throws DOMAIN_TAKEN for a different account when a forced claim failure finds the real winner\'s record, and leaves exactly one meta record', async () => {
+        const owner = await accountService.createAccount({ label: 'Owner', days: 30 });
+        const other = await accountService.createAccount({ label: 'Other', days: 30 });
+        const domain = 'race-other.example.com';
+        const metaKey = `outbound:domain:meta:${domain}`;
+
+        const added = await domainService.addDomain({ accountId: owner.accountId, domain });
+
+        const originalSet = redisService.client.set.bind(redisService.client);
+        const setSpy = jest.spyOn(redisService.client, 'set');
+        setSpy.mockImplementation(async (key, value, ...args) => {
+          if (key === metaKey && args.includes('NX')) {
+            // Force this claim attempt to lose, as if another request had
+            // already won the atomic NX race for this exact domain.
+            return null;
+          }
+          return originalSet(key, value, ...args);
+        });
+
+        await expect(
+          domainService.addDomain({ accountId: other.accountId, domain })
+        ).rejects.toMatchObject({ code: 'DOMAIN_TAKEN' });
+
+        setSpy.mockRestore();
+
+        const raw = await redisService.client.get(metaKey);
+        expect(JSON.parse(raw)).toMatchObject({ accountId: owner.accountId, selector: added.selector });
+      });
+
+      it('returns the winner\'s own data (idempotent) for the SAME account when a forced claim failure finds its own record', async () => {
+        const { accountId } = await accountService.createAccount({ label: 'Acme', days: 30 });
+        const domain = 'race-same.example.com';
+        const metaKey = `outbound:domain:meta:${domain}`;
+
+        const added = await domainService.addDomain({ accountId, domain });
+
+        const originalSet = redisService.client.set.bind(redisService.client);
+        const setSpy = jest.spyOn(redisService.client, 'set');
+        setSpy.mockImplementation(async (key, value, ...args) => {
+          if (key === metaKey && args.includes('NX')) {
+            return null;
+          }
+          return originalSet(key, value, ...args);
+        });
+
+        const result = await domainService.addDomain({ accountId, domain });
+
+        setSpy.mockRestore();
+
+        expect(result).toEqual(added);
+        const raw = await redisService.client.get(metaKey);
+        expect(JSON.parse(raw).accountId).toBe(accountId);
+      });
+    });
+
     it('writes a gate record whose TTL is within a few seconds of the account licence remaining time', async () => {
       const { accountId } = await accountService.createAccount({ label: 'Acme', days: 10 });
       const expireSpy = jest.spyOn(redisService.client, 'expire');
