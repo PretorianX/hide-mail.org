@@ -7,6 +7,8 @@ const metrics = require('./metricsService');
 const config = require('../config/config');
 const logger = require('../utils/logger');
 const { sanitizeEmail } = require('../utils/sanitize');
+const { isOutboundBounceRecipient } = require('./outbound/bounceEnvelope');
+const bounceMailbackService = require('./outbound/bounceMailbackService');
 
 const serializeAttachments = (attachments = []) =>
   attachments.map((att) => ({
@@ -48,6 +50,15 @@ const buildStoredEmail = ({ parsedMail, rawBody, deliveredTo, siteLabel }) => ({
  * @returns {Promise<{delivered: boolean, mailbox?: string, email?: Object, reason?: string}>}
  */
 const deliverInboundMessage = async ({ recipient, rawBody }) => {
+  if (isOutboundBounceRecipient(recipient)) {
+    const mailback = await bounceMailbackService.processBounceMailback({ recipient, rawBody });
+    logger.info(
+      `Inbound: Outbound bounce mail-back for ${sanitizeEmail(recipient)}` +
+        ` handled=${mailback.handled} reason=${mailback.reason || mailback.eventType || 'ok'}`
+    );
+    return { delivered: false, reason: 'outbound_bounce_mailback', mailback };
+  }
+
   const route = await resolveActiveRecipient(recipient);
 
   if (!route) {

@@ -9,6 +9,7 @@ const { resolveKnownRecipient } = require('./services/recipientResolver');
 const forwardingService = require('./services/forwardingService');
 const dnsRecheckJob = require('./services/outbound/dnsRecheckJob');
 const eventConsumer = require('./services/outbound/eventConsumer');
+const { shouldAcceptOutboundBounceRcpt } = require('./services/outbound/inboundBounceRcpt');
 const metrics = require('./services/metricsService');
 const billingMetricsCollector = require('./services/billingMetricsCollector');
 const httpMetricsMiddleware = require('./middleware/httpMetrics');
@@ -179,6 +180,13 @@ const smtpServer = new SMTPServer({
     (async () => {
       try {
         logger.info(`SMTP: RCPT TO: ${address.address}`);
+
+        // Late outbound DSN mail-back (b-<id>@hm-bounce.<domain> or return-path target)
+        if (shouldAcceptOutboundBounceRcpt(address.address)) {
+          logger.info(`SMTP: Accepted outbound bounce recipient: ${address.address}`);
+          metrics.smtpRecipientsAcceptedTotal.inc();
+          return callback();
+        }
         
         // Extract domain from email
         const domain = address.address.split('@')[1];
