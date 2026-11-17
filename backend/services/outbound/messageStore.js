@@ -2,7 +2,8 @@
  * Outbound message persistence and idempotency replay store.
  *
  * Redis keys:
- *   outbound:message:<id>                              JSON message record (no body/subject)
+ *   outbound:message:<id>                              JSON message record (no body; subject +
+ *                                                      send metadata kept for Activity)
  *   outbound:idempotency:<accountId>:<idempotencyKey>  JSON { statusCode, body } of first response
  *   outbound:account:<accountId>:messages              ZSET score=createdAt, member=messageId
  */
@@ -16,7 +17,18 @@ const accountMessagesKey = (accountId) => `outbound:account:${accountId}:message
 
 const messageTtlSeconds = () => Math.max(1, Math.ceil(config.outbound.messageRetentionDays * 86400));
 
-const createMessage = async ({ id, accountId, domain, recipient, reference }) => {
+const createMessage = async ({
+  id,
+  accountId,
+  domain,
+  recipient,
+  reference,
+  subject = null,
+  from = null,
+  envelopeFrom = null,
+  clientIp = null,
+  sendKeyName = null,
+}) => {
   const createdAt = Date.now();
   const record = {
     id,
@@ -24,6 +36,11 @@ const createMessage = async ({ id, accountId, domain, recipient, reference }) =>
     domain,
     recipient,
     reference: reference ?? null,
+    subject: subject ?? null,
+    from: from ?? null,
+    envelopeFrom: envelopeFrom ?? null,
+    clientIp: clientIp ?? null,
+    sendKeyName: sendKeyName ?? null,
     status: 'queued',
     createdAt,
     lastEventAt: null,

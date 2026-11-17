@@ -106,6 +106,7 @@ const requireSendKey = async (req, res, next) => {
     }
 
     req.accountId = validated.accountId;
+    req.sendKeyName = validated.name;
     return next();
   } catch (error) {
     return next(error);

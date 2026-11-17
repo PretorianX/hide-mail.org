@@ -295,4 +295,44 @@ describe('outbound sendService.sendMessage', () => {
       privateKey: testPrivateKeyPem,
     });
   });
+
+  it('persists subject, from, envelopeFrom, clientIp, and sendKeyName on the message record', async () => {
+    const domainService = { getDomainMeta: jest.fn().mockResolvedValue(verifiedMeta) };
+    const accountRateLimiter = {
+      checkAndIncrement: jest.fn().mockResolvedValue({ allowed: true, limit: 600, retryAfterSeconds: 60 }),
+    };
+    const deps = {
+      domainService,
+      accountRateLimiter,
+      capService: {
+        checkAndIncrement: jest.fn().mockResolvedValue({ allowed: true, remaining: 9, resetAt: 1 }),
+        releaseIncrement: jest.fn(),
+      },
+      messageStore,
+      suppressionService: { isSuppressed: jest.fn().mockResolvedValue(false) },
+      mimeTransport: { sendMail: jest.fn().mockResolvedValue({ messageId: 'smtp-1' }) },
+    };
+
+    const result = await sendService.sendMessage(
+      {
+        ...basePayload(),
+        clientIp: '198.51.100.20',
+        sendKeyName: 'ci',
+      },
+      deps
+    );
+
+    const stored = await messageStore.getMessage(result.id);
+    expect(stored).toMatchObject({
+      subject: 'Invoice',
+      from: { name: 'Example', email: 'billing@mail.example.com' },
+      envelopeFrom: `b-${result.id}@hm-bounce.mail.example.com`,
+      clientIp: '198.51.100.20',
+      sendKeyName: 'ci',
+      recipient: 'client@example.org',
+    });
+    expect(stored.body).toBeUndefined();
+    expect(stored.text).toBeUndefined();
+    expect(stored.html).toBeUndefined();
+  });
 });

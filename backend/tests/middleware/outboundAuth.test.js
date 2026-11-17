@@ -12,7 +12,11 @@ const redisService = require('../../services/redisService');
 
 const app = express();
 app.get('/protected', requireSendKey, (req, res) => {
-  res.status(200).json({ success: true, accountId: req.accountId });
+  res.status(200).json({
+    success: true,
+    accountId: req.accountId,
+    sendKeyName: req.sendKeyName,
+  });
 });
 
 const createOutboundAccount = (days = 30) => accountService.createAccount({ label: 'Acme', days });
@@ -22,7 +26,7 @@ describe('requireSendKey middleware', () => {
     redisService.client.data = {};
   });
 
-  it('calls next() with req.accountId set for a valid key and an active account licence', async () => {
+  it('calls next() with req.accountId and req.sendKeyName for a valid key and active licence', async () => {
     const account = await createOutboundAccount();
     const { key } = await sendKeyService.createSendKey({ accountId: account.accountId, name: 'prod' });
 
@@ -32,6 +36,7 @@ describe('requireSendKey middleware', () => {
       .expect(200);
 
     expect(res.body.accountId).toBe(account.accountId);
+    expect(res.body.sendKeyName).toBe('prod');
   });
 
   it('returns 403 when the owning account\'s licence has since expired', async () => {
