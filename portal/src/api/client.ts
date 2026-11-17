@@ -14,6 +14,41 @@ export class ApiError extends Error {
   }
 }
 
+/** Normalize both `{ error: string }` and Express `{ error: { message, correlationId } }`. */
+export function readApiErrorMessage(body: unknown, fallback: string): { message: string; code?: string } {
+  if (!body || typeof body !== 'object') {
+    return { message: fallback };
+  }
+
+  const record = body as Record<string, unknown>;
+  const topCode = typeof record.code === 'string' ? record.code : undefined;
+
+  if (typeof record.error === 'string' && record.error.trim()) {
+    return { message: record.error, code: topCode };
+  }
+
+  if (record.error && typeof record.error === 'object') {
+    const nested = record.error as Record<string, unknown>;
+    const nestedMessage =
+      typeof nested.message === 'string' && nested.message.trim() ? nested.message : fallback;
+    const correlationId =
+      typeof nested.correlationId === 'string' && nested.correlationId.trim()
+        ? nested.correlationId
+        : undefined;
+    const nestedCode = typeof nested.code === 'string' ? nested.code : topCode;
+    return {
+      message: correlationId ? `${nestedMessage} (${correlationId})` : nestedMessage,
+      code: nestedCode,
+    };
+  }
+
+  if (typeof record.message === 'string' && record.message.trim()) {
+    return { message: record.message, code: topCode };
+  }
+
+  return { message: fallback, code: topCode };
+}
+
 function correlationId(): string {
   return crypto.randomUUID();
 }
@@ -51,9 +86,10 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
     let code: string | undefined;
     let message = `HTTP ${response.status}`;
     try {
-      const body = (await response.json()) as { error?: string; code?: string };
-      code = body.code;
-      if (body.error) message = body.error;
+      const body = await response.json();
+      const parsed = readApiErrorMessage(body, message);
+      message = parsed.message;
+      code = parsed.code;
     } catch {
       /* ignore */
     }
@@ -66,9 +102,9 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
     let body: unknown;
     try {
       body = await response.json();
-      const parsed = body as { error?: string; code?: string };
+      const parsed = readApiErrorMessage(body, message);
+      message = parsed.message;
       code = parsed.code;
-      if (parsed.error) message = parsed.error;
     } catch {
       /* ignore */
     }

@@ -602,7 +602,9 @@ export const REST_ENDPOINTS = [
       { method: 'GET', path: '/api/outbound/suppressions', description: 'List suppressed recipients.' },
       { method: 'POST', path: '/api/outbound/suppressions', description: 'Add a suppression.' },
       { method: 'DELETE', path: '/api/outbound/suppressions/{email}', description: 'Remove a suppression.' },
+      { method: 'GET', path: '/api/outbound/suppressions/export', description: 'Export suppressions as CSV.' },
       { method: 'POST', path: '/api/outbound/metrics-token', description: 'Issue hm_metrics_… scrape token (once).' },
+      { method: 'GET', path: '/api/outbound/metrics-token', description: 'Get metrics token metadata (masked; no raw key).' },
       { method: 'GET', path: '/api/outbound/metrics', description: 'Prometheus text for the account (Bearer hm_metrics_…).' },
     ],
     requestFields: [
@@ -666,7 +668,93 @@ export const REST_ENDPOINTS = [
       status: 'queued',
     },
   },
+  {
+    id: 'billing-plans',
+    title: 'Billing Plans',
+    shortTitle: 'Plans',
+    category: 'Billing & Licenses',
+    method: 'GET',
+    path: '/api/billing/plans',
+    browserPath: null,
+    toolPagePath: '/pro',
+    mcpToolName: null,
+    authPlans: [],
+    authScheme: 'none',
+    rateLimit: 'public',
+    browserRateLimit: null,
+    maxPayload: 'n/a',
+    summary:
+      'Public catalog of Hide Mail plans, display currencies, FX rates, and entitlement tiers. No authentication required.',
+    requestFields: [],
+    responseFields: [
+      { name: 'plans', type: 'array', description: 'Plan rows with id, amount, and USD list price.' },
+      { name: 'tiers', type: 'object', description: 'Entitlement matrix when FX is unavailable.' },
+      { name: 'settlementCurrency', type: 'string', description: 'Settlement currency (UAH).' },
+    ],
+    sampleRequest: {},
+    sampleResponse: {
+      settlementCurrency: 'UAH',
+      defaultDisplayCurrency: 'USD',
+      plans: [{ id: 'api', usd: 7.99, amount: 332 }],
+    },
+  },
+  {
+    id: 'billing-api-key',
+    title: 'Issue API Key',
+    shortTitle: 'Issue API Key',
+    category: 'Billing & Licenses',
+    method: 'POST',
+    path: '/api/billing/license/api-key',
+    browserPath: null,
+    toolPagePath: '/pro',
+    mcpToolName: null,
+    authPlans: ['api', 'grade', 'sender', 'reports', 'bounce', 'complaint', 'tls', 'suite'],
+    authScheme: 'none',
+    rateLimit: 'public (license in body)',
+    browserRateLimit: null,
+    maxPayload: '1 KB',
+    summary:
+      'Issue or rotate a time-limited hm_api_… bearer key from an active license key. Pass the license as JSON body field `key` (HM-XXXX-XXXX-XXXX-XXXX).',
+    requestFields: [
+      {
+        name: 'key',
+        type: 'string',
+        required: true,
+        description: 'Active license key (HM-XXXX-XXXX-XXXX-XXXX).',
+      },
+    ],
+    responseFields: [
+      { name: 'success', type: 'boolean', description: 'True when a key was issued.' },
+      { name: 'apiKey', type: 'string', description: 'hm_api_… bearer key (shown once).' },
+      { name: 'expiresAt', type: 'string', description: 'ISO-8601 expiry timestamp.' },
+      { name: 'remainingDays', type: 'number', description: 'Whole days remaining on the issued key.' },
+    ],
+    sampleRequest: {
+      key: 'HM-XXXX-XXXX-XXXX-XXXX',
+    },
+    sampleResponse: {
+      success: true,
+      apiKey: 'hm_api_...',
+      expiresAt: '2026-12-17T00:00:00.000Z',
+      remainingDays: 30,
+    },
+  },
 ];
+
+const normalizeCatalogPath = (apiPath) =>
+  String(apiPath || '').replace(/:([A-Za-z_][A-Za-z0-9_]*)/g, '{$1}');
+
+/** Paths covered by the REST explorer (including sub-routes) plus the MCP hub. */
+export const listCatalogCoveredPaths = () => {
+  const paths = new Set(['/api/mcp']);
+  REST_ENDPOINTS.forEach((ep) => {
+    paths.add(normalizeCatalogPath(ep.path));
+    (ep.subRoutes || []).forEach((route) => {
+      paths.add(normalizeCatalogPath(route.path));
+    });
+  });
+  return [...paths].sort();
+};
 
 export const generateCodeSnippet = (endpoint, language, apiKey = 'hm_api_...', requestBodyString = '') => {
   const defaultPlaceholder =
@@ -677,6 +765,9 @@ export const generateCodeSnippet = (endpoint, language, apiKey = 'hm_api_...', r
         : 'hm_api_...';
   const effectiveKey = (apiKey && apiKey.trim()) || defaultPlaceholder;
   const url = `https://hide-mail.org${endpoint.path}`;
+  const method = String(endpoint.method || 'POST').toUpperCase();
+  const hasBody = method !== 'GET' && method !== 'HEAD' && method !== 'DELETE';
+  const omitAuth = endpoint.authScheme === 'none';
   let parsedBody = endpoint.sampleRequest;
   if (requestBodyString) {
     try {
@@ -685,27 +776,33 @@ export const generateCodeSnippet = (endpoint, language, apiKey = 'hm_api_...', r
       parsedBody = endpoint.sampleRequest;
     }
   }
-  const compactJson = JSON.stringify(parsedBody);
-  const prettyJson = JSON.stringify(parsedBody, null, 2);
+  const compactJson = JSON.stringify(parsedBody ?? {});
+  const prettyJson = JSON.stringify(parsedBody ?? {}, null, 2);
   const authHeaderName =
     endpoint.authScheme === 'license' ? 'X-License-Key' : 'Authorization';
   const authHeaderValue =
     endpoint.authScheme === 'license' ? effectiveKey : `Bearer ${effectiveKey}`;
 
   if (language === 'javascript') {
-    return [
+    const headerLines = [];
+    if (!omitAuth) {
+      headerLines.push(`    '${authHeaderName}': '${authHeaderValue}',`);
+    }
+    if (hasBody) {
+      headerLines.push(`    'Content-Type': 'application/json',`);
+    }
+    const lines = [
       `const response = await fetch('${url}', {`,
-      `  method: '${endpoint.method}',`,
-      `  headers: {`,
-      `    '${authHeaderName}': '${authHeaderValue}',`,
-      `    'Content-Type': 'application/json',`,
-      `  },`,
-      `  body: JSON.stringify(${prettyJson.replace(/\n/g, '\n  ')}),`,
-      `});`,
-      ``,
-      `const result = await response.json();`,
-      `console.log(result);`,
-    ].join('\n');
+      `  method: '${method}',`,
+    ];
+    if (headerLines.length) {
+      lines.push(`  headers: {`, ...headerLines, `  },`);
+    }
+    if (hasBody) {
+      lines.push(`  body: JSON.stringify(${prettyJson.replace(/\n/g, '\n  ')}),`);
+    }
+    lines.push(`});`, ``, `const result = await response.json();`, `console.log(result);`);
+    return lines.join('\n');
   }
 
   if (language === 'python') {
@@ -737,31 +834,38 @@ export const generateCodeSnippet = (endpoint, language, apiKey = 'hm_api_...', r
       return String(obj);
     };
     
-    const pythonDict = convertJsonToPython(parsedBody, 1).replace(/\n/g, '\n    ');
-    
-    return [
-      `import requests`,
-      ``,
-      `response = requests.post(`,
-      `    "${url}",`,
-      `    headers={`,
-      `        "${authHeaderName}": "${authHeaderValue}",`,
-      `        "Content-Type": "application/json",`,
-      `    },`,
-      `    json=${pythonDict},`,
-      `    timeout=15,`,
-      `)`,
-      `print(response.status_code, response.json())`,
-    ].join('\n');
+    const pythonDict = convertJsonToPython(parsedBody ?? {}, 1).replace(/\n/g, '\n    ');
+    const requestFn = method === 'GET' ? 'requests.get' : `requests.${method.toLowerCase()}`;
+    const headerLines = [];
+    if (!omitAuth) {
+      headerLines.push(`        "${authHeaderName}": "${authHeaderValue}",`);
+    }
+    if (hasBody) {
+      headerLines.push(`        "Content-Type": "application/json",`);
+    }
+    const lines = [`import requests`, ``, `response = ${requestFn}(`, `    "${url}",`];
+    if (headerLines.length) {
+      lines.push(`    headers={`, ...headerLines, `    },`);
+    }
+    if (hasBody) {
+      lines.push(`    json=${pythonDict},`);
+    }
+    lines.push(`    timeout=15,`, `)`, `print(response.status_code, response.json())`);
+    return lines.join('\n');
   }
 
   // Default: curl
-  return [
-    `curl -X ${endpoint.method} ${url} \\`,
-    `  -H "${authHeaderName}: ${authHeaderValue}" \\`,
-    `  -H "Content-Type: application/json" \\`,
-    `  -d '${compactJson.replace(/'/g, "'\\''")}'`,
-  ].join('\n');
+  const curlLines = [`curl -X ${method} ${url}`];
+  if (!omitAuth) {
+    curlLines.push(`  -H "${authHeaderName}: ${authHeaderValue}"`);
+  }
+  if (hasBody) {
+    curlLines.push(`  -H "Content-Type: application/json"`);
+    curlLines.push(`  -d '${compactJson.replace(/'/g, "'\\''")}'`);
+  }
+  return curlLines
+    .map((line, index) => (index < curlLines.length - 1 ? `${line} \\` : line))
+    .join('\n');
 };
 
 export const MCP_CLIENT_CONFIGS = [
