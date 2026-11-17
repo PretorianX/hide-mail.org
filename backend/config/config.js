@@ -87,6 +87,7 @@ const config = {
     messageRetentionDays: parsePositiveNumber(process.env.OUTBOUND_MESSAGE_RETENTION_DAYS, 30, 'OUTBOUND_MESSAGE_RETENTION_DAYS'),
     idempotencyTtlSeconds: parsePositiveNumber(process.env.OUTBOUND_IDEMPOTENCY_TTL_SECONDS, 86400, 'OUTBOUND_IDEMPOTENCY_TTL_SECONDS'),
     maxMessageBytes: parsePositiveNumber(process.env.OUTBOUND_MAX_MESSAGE_BYTES, 10485760, 'OUTBOUND_MAX_MESSAGE_BYTES'),
+    ratePerMinuteDefault: parsePositiveNumber(process.env.OUTBOUND_RATE_PER_MINUTE, 600, 'OUTBOUND_RATE_PER_MINUTE'),
   },
 
   // SMTP Configuration for Forward & Forget feature
