@@ -100,7 +100,7 @@ describe('outbound dnsRecheckJob', () => {
 
       const stop = dnsRecheckJob.start();
 
-      expect(setIntervalSpy).toHaveBeenCalledWith(dnsRecheckJob.runOnce, 3600 * 1000);
+      expect(setIntervalSpy).toHaveBeenCalledWith(expect.any(Function), 3600 * 1000);
       expect(timer.unref).toHaveBeenCalledTimes(1);
 
       stop();
@@ -114,7 +114,20 @@ describe('outbound dnsRecheckJob', () => {
 
       dnsRecheckJob.start();
 
-      expect(setIntervalSpy).toHaveBeenCalledWith(dnsRecheckJob.runOnce, 30 * 1000);
+      expect(setIntervalSpy).toHaveBeenCalledWith(expect.any(Function), 30 * 1000);
+    });
+
+    it('catches and logs a top-level runOnce rejection from the interval callback', async () => {
+      const error = new Error('Redis unavailable');
+      jest.spyOn(redisService.client, 'smembers').mockRejectedValue(error);
+      const timer = { unref: jest.fn() };
+      const setIntervalSpy = jest.spyOn(global, 'setInterval').mockReturnValue(timer);
+
+      dnsRecheckJob.start();
+      const intervalCallback = setIntervalSpy.mock.calls[0][0];
+
+      await expect(intervalCallback()).resolves.toBeUndefined();
+      expect(logger.error).toHaveBeenCalledWith('DNS recheck job failed', error);
     });
   });
 });

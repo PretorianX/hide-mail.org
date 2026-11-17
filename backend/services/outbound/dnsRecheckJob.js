@@ -32,7 +32,10 @@ const runOnce = async () => {
 
 const start = () => {
   const intervalSeconds = Number(process.env.OUTBOUND_DNS_RECHECK_SECONDS || 3600);
-  const timer = setInterval(runOnce, intervalSeconds * 1000);
+  const timer = setInterval(
+    () => runOnce().catch((error) => logger.error('DNS recheck job failed', error)),
+    intervalSeconds * 1000
+  );
   timer.unref();
   return () => clearInterval(timer);
 };
