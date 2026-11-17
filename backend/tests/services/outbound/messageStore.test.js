@@ -66,6 +66,47 @@ describe('outbound messageStore', () => {
     });
   });
 
+  describe('listRecentMessages', () => {
+    it('indexes creates and returns newest first', async () => {
+      jest.useFakeTimers({ now: 1_700_000_000_000 });
+      try {
+        await messageStore.createMessage({
+          id: 'msg-old',
+          accountId: 'acct-1',
+          domain: 'mail.example.com',
+          recipient: 'a@example.com',
+          reference: null,
+        });
+        jest.setSystemTime(1_700_000_000_100);
+        await messageStore.createMessage({
+          id: 'msg-new',
+          accountId: 'acct-1',
+          domain: 'mail.example.com',
+          recipient: 'b@example.com',
+          reference: null,
+        });
+
+        const listed = await messageStore.listRecentMessages({ accountId: 'acct-1', limit: 10 });
+        expect(listed.map((m) => m.id)).toEqual(['msg-new', 'msg-old']);
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('skips expired message ids still present in the index', async () => {
+      await messageStore.createMessage({
+        id: 'msg-gone',
+        accountId: 'acct-1',
+        domain: 'mail.example.com',
+        recipient: 'a@example.com',
+        reference: null,
+      });
+      delete redisService.client.data['outbound:message:msg-gone'];
+
+      await expect(messageStore.listRecentMessages({ accountId: 'acct-1' })).resolves.toEqual([]);
+    });
+  });
+
   describe('idempotency', () => {
     it('returns null before anything is stored', async () => {
       await expect(

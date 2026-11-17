@@ -4,6 +4,7 @@
  * Redis keys:
  *   outbound:message:<id>                              JSON message record (no body/subject)
  *   outbound:idempotency:<accountId>:<idempotencyKey>  JSON { statusCode, body } of first response
+ *   outbound:account:<accountId>:messages              ZSET score=createdAt, member=messageId
  */
 
 const redisService = require('../redisService');
@@ -11,6 +12,9 @@ const config = require('../../config/config');
 
 const MESSAGE_PREFIX = 'outbound:message:';
 const idempotencyKey = (accountId, key) => `outbound:idempotency:${accountId}:${key}`;
+const accountMessagesKey = (accountId) => `outbound:account:${accountId}:messages`;
+
+const messageTtlSeconds = () => Math.max(1, Math.ceil(config.outbound.messageRetentionDays * 86400));
 
 const createMessage = async ({ id, accountId, domain, recipient, reference }) => {
   const createdAt = Date.now();
@@ -25,8 +29,10 @@ const createMessage = async ({ id, accountId, domain, recipient, reference }) =>
     lastEventAt: null,
     lastResponse: null,
   };
-  const ttlSeconds = Math.max(1, Math.ceil(config.outbound.messageRetentionDays * 86400));
+  const ttlSeconds = messageTtlSeconds();
   await redisService.client.setex(`${MESSAGE_PREFIX}${id}`, ttlSeconds, JSON.stringify(record));
+  await redisService.client.zadd(accountMessagesKey(accountId), createdAt, id);
+  await redisService.client.expire(accountMessagesKey(accountId), ttlSeconds);
 };
 
 const getMessage = async (id) => {
@@ -51,9 +57,21 @@ const updateStatus = async ({ id, status, response }) => {
   if (ttl > 0) {
     await redisService.client.setex(`${MESSAGE_PREFIX}${id}`, ttl, JSON.stringify(updated));
   } else {
-    const ttlSeconds = Math.max(1, Math.ceil(config.outbound.messageRetentionDays * 86400));
-    await redisService.client.setex(`${MESSAGE_PREFIX}${id}`, ttlSeconds, JSON.stringify(updated));
+    await redisService.client.setex(`${MESSAGE_PREFIX}${id}`, messageTtlSeconds(), JSON.stringify(updated));
   }
+};
+
+const listRecentMessages = async ({ accountId, limit = 50 }) => {
+  const capped = Math.min(Math.max(1, Number(limit) || 50), 500);
+  const ids = await redisService.client.zrevrange(accountMessagesKey(accountId), 0, capped - 1);
+  const messages = [];
+  for (const id of ids) {
+    const message = await getMessage(id);
+    if (message) {
+      messages.push(message);
+    }
+  }
+  return messages;
 };
 
 const getReplay = async ({ accountId, idempotencyKey: key }) => {
@@ -74,6 +92,8 @@ module.exports = {
   createMessage,
   getMessage,
   updateStatus,
+  listRecentMessages,
   getReplay,
   storeReplay,
+  accountMessagesKey,
 };

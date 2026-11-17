@@ -200,6 +200,9 @@ const listDomains = async ({ accountId }) => {
         state: meta.state,
         suspended: meta.suspended,
         dailyLimit: meta.dailyLimit,
+        selector: meta.selector,
+        records: meta.records || [],
+        lastCheckedAt: meta.lastCheckedAt ?? null,
       };
     })
   );

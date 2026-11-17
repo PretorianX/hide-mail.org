@@ -242,22 +242,68 @@ const getMessageForAccount = async ({ accountId, id }, overrides = {}) => {
   return message;
 };
 
+const sumBounced = (bounced = {}) =>
+  Object.values(bounced).reduce((sum, value) => sum + (Number(value) || 0), 0);
+
+const emptyWindowCounts = () => ({
+  delivered24h: 0,
+  deferred24h: 0,
+  bounced24h: 0,
+  delivered7d: 0,
+  deferred7d: 0,
+  bounced7d: 0,
+});
+
+const buildWindowCountsByDomain = (messages, now = Date.now()) => {
+  const dayMs = 24 * 60 * 60 * 1000;
+  const byDomain = new Map();
+  for (const message of messages) {
+    const domain = message.domain;
+    if (!byDomain.has(domain)) {
+      byDomain.set(domain, emptyWindowCounts());
+    }
+    const status = message.status;
+    if (status !== 'delivered' && status !== 'deferred' && status !== 'bounced') {
+      continue;
+    }
+    const at = message.lastEventAt || message.createdAt || 0;
+    const counts = byDomain.get(domain);
+    if (now - at <= dayMs) {
+      counts[`${status}24h`] += 1;
+    }
+    if (now - at <= 7 * dayMs) {
+      counts[`${status}7d`] += 1;
+    }
+  }
+  return byDomain;
+};
+
 const getAccountSummary = async ({ accountId }, overrides = {}) => {
   const deps = resolveDeps(overrides);
   const domains = await deps.domainService.listDomains({ accountId });
+  const ratePerMinute = await deps.accountRateLimiter.getLimit(accountId);
+  const recent = await deps.messageStore.listRecentMessages({ accountId, limit: 500 });
+  const windowByDomain = buildWindowCountsByDomain(recent);
+
   const enriched = await Promise.all(
     domains.map(async (d) => {
       const sentToday = await deps.capService.peekCounter(d.domain);
+      const counters = await deps.metricsStore.readCounters(d.domain);
+      const windows = windowByDomain.get(d.domain) || emptyWindowCounts();
       return {
         domain: d.domain,
         state: d.state,
         suspended: d.suspended,
         dailyLimit: d.dailyLimit,
         sentToday,
+        delivered: counters.delivered,
+        deferred: counters.deferred,
+        bounced: sumBounced(counters.bounced),
+        ...windows,
       };
     })
   );
-  return { domains: enriched };
+  return { ratePerMinute, domains: enriched };
 };
 
 module.exports = {

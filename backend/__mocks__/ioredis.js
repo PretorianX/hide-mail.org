@@ -213,6 +213,44 @@ class RedisMock {
   async xpending(_stream, _group) {
     return [0, null, null, []];
   }
+
+  // Sorted-set helpers used by outbound message activity index.
+  // Stored as Map(member -> score) under this.data[key].
+  _ensureZset(key) {
+    if (!(this.data[key] instanceof Map)) {
+      this.data[key] = new Map();
+    }
+    return this.data[key];
+  }
+
+  async zadd(key, ...args) {
+    const zset = this._ensureZset(key);
+    let added = 0;
+    for (let i = 0; i + 1 < args.length; i += 2) {
+      const score = Number(args[i]);
+      const member = String(args[i + 1]);
+      if (!zset.has(member)) {
+        added += 1;
+      }
+      zset.set(member, score);
+    }
+    return added;
+  }
+
+  async zrevrange(key, start, stop) {
+    const zset = this.data[key];
+    if (!(zset instanceof Map)) {
+      return [];
+    }
+    const sorted = [...zset.entries()].sort((a, b) => b[1] - a[1]);
+    const end = stop < 0 ? sorted.length : stop + 1;
+    return sorted.slice(start, end).map(([member]) => member);
+  }
+
+  async zcard(key) {
+    const zset = this.data[key];
+    return zset instanceof Map ? zset.size : 0;
+  }
 }
 
 module.exports = RedisMock; 

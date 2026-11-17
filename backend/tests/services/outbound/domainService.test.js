@@ -269,8 +269,16 @@ describe('outbound domainService', () => {
       expect(domains).toHaveLength(2);
       expect(domains.map((d) => d.domain).sort()).toEqual(['a.example.com', 'b.example.com']);
       expect(domains[0]).toEqual(
-        expect.objectContaining({ state: 'pending', suspended: false, dailyLimit: 1000 })
+        expect.objectContaining({
+          state: 'pending',
+          suspended: false,
+          dailyLimit: 1000,
+          selector: expect.stringMatching(/^hm-/),
+          records: expect.any(Array),
+          lastCheckedAt: null,
+        })
       );
+      expect(domains[0].records.length).toBeGreaterThan(0);
     });
 
     it('returns an empty array for an account with no domains', async () => {

@@ -7,6 +7,7 @@ const account = require('./account');
 const suppressions = require('./suppressions');
 const metricsToken = require('./metricsToken');
 const metrics = require('./metrics');
+const activity = require('./activity');
 
 const router = express.Router();
 
@@ -18,5 +19,6 @@ router.use('/send-keys', sendKeys);
 router.use('/messages', messages);
 router.use('/account', account);
 router.use('/suppressions', suppressions);
+router.use('/activity', activity);
 
 module.exports = router;

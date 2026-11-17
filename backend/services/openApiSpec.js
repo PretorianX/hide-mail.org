@@ -193,6 +193,9 @@ const buildOpenApiSpec = (options = {}) => {
                   state: { type: 'string', enum: ['pending', 'verified', 'broken'] },
                   suspended: { type: 'boolean' },
                   dailyLimit: { type: 'integer', nullable: true },
+                  selector: { type: 'string', example: 'hm-4f2a9c3d' },
+                  records: { type: 'array', items: { $ref: '#/components/schemas/DomainRecord' } },
+                  lastCheckedAt: { type: 'integer', nullable: true },
                 },
               },
             },
@@ -294,6 +297,11 @@ const buildOpenApiSpec = (options = {}) => {
           type: 'object',
           properties: {
             success: { type: 'boolean', example: true },
+            ratePerMinute: {
+              type: 'integer',
+              description: 'Per-account send rate limit (messages per UTC minute). Not a daily cap.',
+              example: 600,
+            },
             domains: {
               type: 'array',
               items: {
@@ -304,6 +312,38 @@ const buildOpenApiSpec = (options = {}) => {
                   suspended: { type: 'boolean' },
                   dailyLimit: { type: 'integer', nullable: true },
                   sentToday: { type: 'integer' },
+                  delivered: { type: 'integer' },
+                  deferred: { type: 'integer' },
+                  bounced: { type: 'integer' },
+                  delivered24h: { type: 'integer' },
+                  deferred24h: { type: 'integer' },
+                  bounced24h: { type: 'integer' },
+                  delivered7d: { type: 'integer' },
+                  deferred7d: { type: 'integer' },
+                  bounced7d: { type: 'integer' },
+                },
+              },
+            },
+          },
+        },
+        OutboundActivityResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            messages: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string' },
+                  accountId: { type: 'string' },
+                  domain: { type: 'string' },
+                  recipient: { type: 'string' },
+                  reference: { type: 'string', nullable: true },
+                  status: { type: 'string' },
+                  createdAt: { type: 'integer' },
+                  lastEventAt: { type: 'integer', nullable: true },
+                  lastResponse: { type: 'string', nullable: true },
                 },
               },
             },
@@ -1318,13 +1358,46 @@ const buildOpenApiSpec = (options = {}) => {
         get: {
           tags: ['Outbound Sending'],
           operationId: 'getOutboundAccountSummary',
-          summary: 'Account domain summary with sent-today counters',
-          description: 'Requires an `outbound` licence (`X-License-Key` header).',
+          summary: 'Account domain summary with sent-today, rate limit, and delivery windows',
+          description:
+            'Requires an `outbound` licence (`X-License-Key` header). Includes `ratePerMinute` (not a daily cap) and per-domain 24h/7d counts derived from recent message activity.',
           security: [{ LicenseKeyHeader: [] }],
           responses: {
             200: {
-              description: 'Per-domain state, caps, and sent-today',
+              description: 'Per-domain state, caps, rate, lifetime counters, and window counts',
               content: { 'application/json': { schema: { $ref: '#/components/schemas/OutboundAccountSummaryResponse' } } },
+            },
+            401: {
+              description: 'Missing or invalid licence key',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+            403: {
+              description: 'Licence is not of type `outbound`',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+          },
+        },
+      },
+      '/api/outbound/activity': {
+        get: {
+          tags: ['Outbound Sending'],
+          operationId: 'listOutboundActivity',
+          summary: 'List recent outbound messages for the portal Activity page',
+          description:
+            'Requires an `outbound` licence (`X-License-Key` header). Returns newest-first message records (no body/subject), including late-bounce status transitions.',
+          security: [{ LicenseKeyHeader: [] }],
+          parameters: [
+            {
+              name: 'limit',
+              in: 'query',
+              required: false,
+              schema: { type: 'integer', minimum: 1, maximum: 200, default: 50 },
+            },
+          ],
+          responses: {
+            200: {
+              description: 'Recent messages',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/OutboundActivityResponse' } } },
             },
             401: {
               description: 'Missing or invalid licence key',

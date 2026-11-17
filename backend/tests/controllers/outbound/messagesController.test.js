@@ -101,6 +101,8 @@ describe('Outbound Messages / Account HTTP', () => {
         .set('X-License-Key', account.key)
         .expect(200);
 
+      expect(typeof res.body.ratePerMinute).toBe('number');
+      expect(res.body.ratePerMinute).toBeGreaterThan(0);
       expect(res.body.domains).toEqual([
         expect.objectContaining({
           domain: 'mail.example.com',
@@ -108,6 +110,11 @@ describe('Outbound Messages / Account HTTP', () => {
           suspended: false,
           dailyLimit: 1000,
           sentToday: 0,
+          delivered: 0,
+          deferred: 0,
+          bounced: 0,
+          delivered24h: 0,
+          bounced7d: 0,
         }),
       ]);
       expect(JSON.stringify(res.body)).not.toMatch(/subject|html|text/);

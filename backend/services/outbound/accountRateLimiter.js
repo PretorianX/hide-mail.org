@@ -62,4 +62,5 @@ const checkAndIncrement = async (accountId) => {
 module.exports = {
   checkAndIncrement,
   setOverride,
+  getLimit,
 };
