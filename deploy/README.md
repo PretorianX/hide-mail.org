@@ -57,6 +57,22 @@ change them without touching the script:
 | `HEALTH_ATTEMPTS` | `30` | Health attempts before the unit fails |
 | `HEALTH_INTERVAL` | `2` | Seconds between attempts |
 
+## Required Send env on the host
+
+Before enabling outbound Send (or after merging a release that loads `config.outbound`), set a
+non-empty `OUTBOUND_KEY_ENCRYPTION_SECRET` in the compose `.env` **and** ensure
+`docker-compose.yml` passes it into `backend` (and `zonemta` when that service is running):
+
+```bash
+# Generate once; do not print or commit the value
+openssl rand -base64 48
+# Append to $COMPOSE_DIR/.env as OUTBOUND_KEY_ENCRYPTION_SECRET=<value>
+docker compose up -d backend
+```
+
+Autodeploy only pulls images and recreates listed services; it does not sync compose or `.env`
+from git. A new required env that compose does not wire will crash-loop the backend image.
+
 ## Send portal host notes
 
 - Publish DNS A/AAAA for `send.hide-mail.org` and obtain a Let's Encrypt cert (see nginx `send.hide-mail.org` server block).
