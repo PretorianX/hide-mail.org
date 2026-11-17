@@ -92,9 +92,11 @@ const config = {
     idempotencyTtlSeconds: parsePositiveNumber(process.env.OUTBOUND_IDEMPOTENCY_TTL_SECONDS, 86400, 'OUTBOUND_IDEMPOTENCY_TTL_SECONDS'),
     maxMessageBytes: parsePositiveNumber(process.env.OUTBOUND_MAX_MESSAGE_BYTES, 10485760, 'OUTBOUND_MAX_MESSAGE_BYTES'),
     ratePerMinuteDefault: parsePositiveNumber(process.env.OUTBOUND_RATE_PER_MINUTE, 600, 'OUTBOUND_RATE_PER_MINUTE'),
-    zoneMta: {
-      host: process.env.ZONEMTA_SMTP_HOST || 'zonemta',
-      port: parseInt(process.env.ZONEMTA_SMTP_PORT || '2526', 10),
+    // Outbound Send submits through the same Postfix relay as Forward & Forget (no ZoneMTA/Mongo).
+    relay: {
+      host: process.env.SMTP_HOST || 'postfix',
+      port: parseInt(process.env.SMTP_OUTGOING_PORT || '587', 10),
+      secure: process.env.SMTP_SECURE === 'true',
     },
   },
 
@@ -187,6 +189,17 @@ const config = {
       process.env.BILLING_METRICS_INTERVAL_SECONDS || 60,
       10
     ),
+  },
+
+  // Operator admin UI (/admin/portal/ops) — email/password from env; empty disables login.
+  admin: {
+    email: process.env.ADMIN_EMAIL || '',
+    password: process.env.ADMIN_PASSWORD || '',
+    sessionSecret:
+      process.env.ADMIN_SESSION_SECRET ||
+      process.env.OUTBOUND_KEY_ENCRYPTION_SECRET ||
+      '',
+    sessionTtlSeconds: parseInt(process.env.ADMIN_SESSION_TTL_SECONDS || String(7 * 24 * 60 * 60), 10),
   },
 };
 

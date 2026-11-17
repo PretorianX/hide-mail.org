@@ -570,10 +570,112 @@ export const REST_ENDPOINTS = [
       },
     },
   },
+  {
+    id: 'outbound-send',
+    title: 'Outbound Send API',
+    shortTitle: 'Outbound Send',
+    category: 'Outbound Send',
+    method: 'POST',
+    path: '/api/outbound/messages',
+    browserPath: null,
+    toolPagePath: null,
+    mcpToolName: null,
+    authPlans: ['outbound'],
+    authScheme: 'sendKey',
+    rateLimit: '600 req / min (account)',
+    browserRateLimit: null,
+    maxPayload: '10 MB MIME',
+    summary:
+      'Send authenticated mail from a verified customer domain. The backend signs DKIM, sets Return-Path to b-<id>@hm-bounce.<domain>, and submits through Postfix. Management routes use an outbound licence (X-License-Key); the Send API uses a send key (Authorization: Bearer hm_send_...).',
+    subRoutes: [
+      { method: 'POST', path: '/api/outbound/domains', description: 'Register a sending domain; returns DKIM / Return-Path / DMARC DNS records.' },
+      { method: 'GET', path: '/api/outbound/domains', description: 'List domains for the licence account.' },
+      { method: 'POST', path: '/api/outbound/domains/{domain}/check', description: 'Re-check DNS and mark verified / pending / broken.' },
+      { method: 'DELETE', path: '/api/outbound/domains/{domain}', description: 'Remove a domain from the account.' },
+      { method: 'POST', path: '/api/outbound/send-keys', description: 'Create a send key (hm_send_…); plaintext shown once.' },
+      { method: 'GET', path: '/api/outbound/send-keys', description: 'List send keys (masked; secrets never returned).' },
+      { method: 'DELETE', path: '/api/outbound/send-keys/{name}', description: 'Revoke a send key.' },
+      { method: 'POST', path: '/api/outbound/messages', description: 'Enqueue a message (Bearer hm_send_…).' },
+      { method: 'GET', path: '/api/outbound/messages/{id}', description: 'Fetch message status metadata (no body).' },
+      { method: 'GET', path: '/api/outbound/account/summary', description: 'Account rate + per-domain send / delivery counters.' },
+      { method: 'GET', path: '/api/outbound/activity', description: 'Recent message activity for the account.' },
+      { method: 'GET', path: '/api/outbound/suppressions', description: 'List suppressed recipients.' },
+      { method: 'POST', path: '/api/outbound/suppressions', description: 'Add a suppression.' },
+      { method: 'DELETE', path: '/api/outbound/suppressions/{email}', description: 'Remove a suppression.' },
+      { method: 'POST', path: '/api/outbound/metrics-token', description: 'Issue hm_metrics_… scrape token (once).' },
+      { method: 'GET', path: '/api/outbound/metrics', description: 'Prometheus text for the account (Bearer hm_metrics_…).' },
+    ],
+    requestFields: [
+      {
+        name: 'from.email',
+        type: 'string',
+        required: true,
+        description: 'Verified From address on a domain owned by the send-key account.',
+      },
+      {
+        name: 'from.name',
+        type: 'string',
+        required: false,
+        description: 'Optional display name.',
+      },
+      {
+        name: 'to',
+        type: 'string',
+        required: true,
+        description: 'Recipient email address.',
+      },
+      {
+        name: 'subject',
+        type: 'string',
+        required: false,
+        description: 'Message subject.',
+      },
+      {
+        name: 'text',
+        type: 'string',
+        required: false,
+        description: 'Plain-text body.',
+      },
+      {
+        name: 'html',
+        type: 'string',
+        required: false,
+        description: 'HTML body.',
+      },
+      {
+        name: 'reference',
+        type: 'string',
+        required: false,
+        description: 'Optional client correlation id stored on the message record.',
+      },
+    ],
+    responseFields: [
+      { name: 'id', type: 'string', description: 'Message id (UUID).' },
+      { name: 'status', type: 'string', description: 'queued on accept (delivery events update the stored record).' },
+    ],
+    sampleRequest: {
+      from: { email: 'billing@mail.example.com', name: 'Example Billing' },
+      to: 'customer@example.org',
+      subject: 'Invoice #9812',
+      text: 'Your invoice is ready.',
+      html: '<p>Your invoice is ready.</p>',
+      reference: 'inv-9812',
+    },
+    sampleResponse: {
+      id: '550e8400-e29b-41d4-a716-446655440000',
+      status: 'queued',
+    },
+  },
 ];
 
-export const generateCodeSnippet = (endpoint, language, apiKey = 'hm_live_...', requestBodyString = '') => {
-  const effectiveKey = (apiKey && apiKey.trim()) || 'hm_live_...';
+export const generateCodeSnippet = (endpoint, language, apiKey = 'hm_api_...', requestBodyString = '') => {
+  const defaultPlaceholder =
+    endpoint.authScheme === 'sendKey'
+      ? 'hm_send_...'
+      : endpoint.authScheme === 'license'
+        ? 'HM-XXXX-XXXX-XXXX-XXXX'
+        : 'hm_api_...';
+  const effectiveKey = (apiKey && apiKey.trim()) || defaultPlaceholder;
   const url = `https://hide-mail.org${endpoint.path}`;
   let parsedBody = endpoint.sampleRequest;
   if (requestBodyString) {
@@ -585,13 +687,17 @@ export const generateCodeSnippet = (endpoint, language, apiKey = 'hm_live_...', 
   }
   const compactJson = JSON.stringify(parsedBody);
   const prettyJson = JSON.stringify(parsedBody, null, 2);
+  const authHeaderName =
+    endpoint.authScheme === 'license' ? 'X-License-Key' : 'Authorization';
+  const authHeaderValue =
+    endpoint.authScheme === 'license' ? effectiveKey : `Bearer ${effectiveKey}`;
 
   if (language === 'javascript') {
     return [
       `const response = await fetch('${url}', {`,
       `  method: '${endpoint.method}',`,
       `  headers: {`,
-      `    'Authorization': 'Bearer ${effectiveKey}',`,
+      `    '${authHeaderName}': '${authHeaderValue}',`,
       `    'Content-Type': 'application/json',`,
       `  },`,
       `  body: JSON.stringify(${prettyJson.replace(/\n/g, '\n  ')}),`,
@@ -639,7 +745,7 @@ export const generateCodeSnippet = (endpoint, language, apiKey = 'hm_live_...', 
       `response = requests.post(`,
       `    "${url}",`,
       `    headers={`,
-      `        "Authorization": "Bearer ${effectiveKey}",`,
+      `        "${authHeaderName}": "${authHeaderValue}",`,
       `        "Content-Type": "application/json",`,
       `    },`,
       `    json=${pythonDict},`,
@@ -652,7 +758,7 @@ export const generateCodeSnippet = (endpoint, language, apiKey = 'hm_live_...', 
   // Default: curl
   return [
     `curl -X ${endpoint.method} ${url} \\`,
-    `  -H "Authorization: Bearer ${effectiveKey}" \\`,
+    `  -H "${authHeaderName}: ${authHeaderValue}" \\`,
     `  -H "Content-Type: application/json" \\`,
     `  -d '${compactJson.replace(/'/g, "'\\''")}'`,
   ].join('\n');
@@ -670,7 +776,7 @@ export const MCP_CLIENT_CONFIGS = [
             'hide-mail': {
               url: 'https://hide-mail.org/api/mcp',
               headers: {
-                'X-API-Key': (apiKey && apiKey.trim()) || 'hm_live_...',
+                'X-API-Key': (apiKey && apiKey.trim()) || 'hm_api_...',
               },
             },
           },
@@ -690,7 +796,7 @@ export const MCP_CLIENT_CONFIGS = [
             'hide-mail': {
               url: 'https://hide-mail.org/api/mcp',
               headers: {
-                'X-API-Key': (apiKey && apiKey.trim()) || 'hm_live_...',
+                'X-API-Key': (apiKey && apiKey.trim()) || 'hm_api_...',
               },
             },
           },
@@ -710,7 +816,7 @@ export const MCP_CLIENT_CONFIGS = [
             'hide-mail': {
               serverUrl: 'https://hide-mail.org/api/mcp',
               headers: {
-                'X-API-Key': (apiKey && apiKey.trim()) || 'hm_live_...',
+                'X-API-Key': (apiKey && apiKey.trim()) || 'hm_api_...',
               },
             },
           },
@@ -730,7 +836,7 @@ export const MCP_CLIENT_CONFIGS = [
             'hide-mail': {
               serverUrl: 'https://hide-mail.org/api/mcp',
               headers: {
-                'X-API-Key': (apiKey && apiKey.trim()) || 'hm_live_...',
+                'X-API-Key': (apiKey && apiKey.trim()) || 'hm_api_...',
               },
             },
           },
@@ -751,7 +857,7 @@ export const MCP_CLIENT_CONFIGS = [
               command: 'node',
               args: ['./mcp/hide-mail-mcp.js'],
               env: {
-                HIDE_MAIL_API_KEY: (apiKey && apiKey.trim()) || 'hm_live_...',
+                HIDE_MAIL_API_KEY: (apiKey && apiKey.trim()) || 'hm_api_...',
                 HIDE_MAIL_BASE_URL: 'https://hide-mail.org',
               },
             },
@@ -1287,28 +1393,43 @@ export const buildClientOpenApiSpec = (baseUrl = 'https://hide-mail.org') => {
     get: {
       tags: ['Model Context Protocol (MCP)'],
       summary: 'Discover MCP protocol version, capabilities, and SSE stream',
-      responses: { 200: { description: 'MCP discovery metadata' } },
+      description:
+        'Requires an active hm_api_… key (suite / tool / QA). Pass X-API-Key or Authorization: Bearer.',
+      security: [{ BearerAuth: [] }, { ApiKeyHeader: [] }],
+      responses: {
+        200: { description: 'MCP discovery metadata' },
+        401: { description: 'Missing or invalid API key' },
+      },
     },
     post: {
       tags: ['Model Context Protocol (MCP)'],
-      summary: 'Execute an MCP JSON-RPC 2.0 request (initialize, tools/list, tools/call, resources/*, prompts/*)',
-      responses: { 200: { description: 'JSON-RPC 2.0 response envelope' } },
+      summary:
+        'Execute an MCP JSON-RPC 2.0 request (initialize, tools/list, tools/call, resources/*, prompts/*)',
+      description:
+        'Requires an active hm_api_… key. Tool entitlements follow the licence type on the key.',
+      security: [{ BearerAuth: [] }, { ApiKeyHeader: [] }],
+      responses: {
+        200: { description: 'JSON-RPC 2.0 response envelope' },
+        401: { description: 'Missing or invalid API key' },
+      },
     },
   };
 
   return {
     openapi: '3.1.0',
     info: {
-      title: 'Hide Mail Deliverability Suite, QA Mailbox & MCP API',
-      version: '2.0.0',
+      title: 'Hide Mail Deliverability Suite, QA Mailbox, Outbound Send & MCP API',
+      version: '2.1.0',
       summary:
-        'Stateless email deliverability diagnostics, disposable QA mailboxes, and Model Context Protocol (MCP) JSON-RPC 2.0 server.',
+        'Integration contracts for deliverability diagnostics, QA mailboxes, Outbound Send, and the Model Context Protocol (MCP) JSON-RPC 2.0 server (API-key auth).',
     },
     servers: [{ url: baseUrl, description: 'Hide Mail Production API' }],
     components: {
       securitySchemes: {
         BearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'hm_api_...' },
         ApiKeyHeader: { type: 'apiKey', in: 'header', name: 'X-API-Key' },
+        SendKeyAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'hm_send_...' },
+        LicenseKeyHeader: { type: 'apiKey', in: 'header', name: 'X-License-Key' },
       },
     },
     security: [{ BearerAuth: [] }, { ApiKeyHeader: [] }],

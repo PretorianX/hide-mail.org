@@ -1,11 +1,14 @@
 /**
  * Outbound send path — ordered checks per Global Constraints / spec 5.4.
+ * Delivery relay is Postfix (compose service). DKIM is signed here with the
+ * domain's stored key (ZoneMTA/Mongo removed — host has no AVX for Mongo 5+).
  */
 
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 
 const config = require('../../config/config');
+const keyCrypto = require('./keyCrypto');
 const defaultDomainService = require('./domainService');
 const defaultCapService = require('./capService');
 const defaultAccountRateLimiter = require('./accountRateLimiter');
@@ -64,10 +67,10 @@ const isValidRecipient = (to) => {
 
 const createDefaultTransport = () =>
   nodemailer.createTransport({
-    host: config.outbound.zoneMta.host,
-    port: config.outbound.zoneMta.port,
-    secure: false,
-    ignoreTLS: true,
+    host: config.outbound.relay.host,
+    port: config.outbound.relay.port,
+    secure: config.outbound.relay.secure,
+    ignoreTLS: !config.outbound.relay.secure,
   });
 
 const resolveDeps = (overrides = {}) => ({
@@ -105,6 +108,18 @@ const estimateMessageBytes = ({ text, html, attachments }) => {
   return total;
 };
 
+const buildDkimOption = (meta) => {
+  if (!meta?.privateKeyEnc || !meta?.selector) {
+    throw new SendError('DOMAIN_NOT_VERIFIED', 'Domain signing key is missing');
+  }
+  const privateKey = keyCrypto.decrypt(meta.privateKeyEnc, config.outbound.keyEncryptionSecret);
+  return {
+    domainName: meta.domain || extractDomain(meta.fromEmail) || undefined,
+    keySelector: meta.selector,
+    privateKey,
+  };
+};
+
 const sendMessage = async (payload, overrides = {}) => {
   const deps = resolveDeps(overrides);
   const {
@@ -127,10 +142,8 @@ const sendMessage = async (payload, overrides = {}) => {
     }
   }
 
-  // Domain label for metrics (may be _unknown when From is unusable).
   const domainHint = extractDomain(from?.email) || '_unknown';
 
-  // (1) per-account rate limit
   const rate = await deps.accountRateLimiter.checkAndIncrement(accountId);
   if (!rate.allowed) {
     await rejectAndThrow(
@@ -143,7 +156,6 @@ const sendMessage = async (payload, overrides = {}) => {
     );
   }
 
-  // (3) From domain verified and not suspended (auth already done by middleware)
   const domain = extractDomain(from?.email);
   if (!domain) {
     await rejectAndThrow(
@@ -169,7 +181,6 @@ const sendMessage = async (payload, overrides = {}) => {
     );
   }
 
-  // (4) recipient syntax
   if (!isValidRecipient(to)) {
     await rejectAndThrow(
       deps.metricsStore,
@@ -178,7 +189,6 @@ const sendMessage = async (payload, overrides = {}) => {
     );
   }
 
-  // (5) suppression
   if (await deps.suppressionService.isSuppressed({ accountId, email: to })) {
     await rejectAndThrow(
       deps.metricsStore,
@@ -187,7 +197,6 @@ const sendMessage = async (payload, overrides = {}) => {
     );
   }
 
-  // (6) daily cap
   const cap = await deps.capService.checkAndIncrement(domain);
   if (!cap.allowed) {
     await rejectAndThrow(
@@ -200,7 +209,6 @@ const sendMessage = async (payload, overrides = {}) => {
     );
   }
 
-  // (7) size — after cap reservation; release on refusal (not a §5.8 rejected reason)
   const sizeBytes = estimateMessageBytes({ text, html, attachments });
   if (sizeBytes > config.outbound.maxMessageBytes) {
     await deps.capService.releaseIncrement(domain);
@@ -209,6 +217,19 @@ const sendMessage = async (payload, overrides = {}) => {
 
   const messageId = crypto.randomUUID();
   const envelopeFrom = `b-${messageId}@hm-bounce.${domain}`;
+
+  let dkim;
+  try {
+    dkim = buildDkimOption({ ...meta, domain });
+  } catch (error) {
+    await deps.capService.releaseIncrement(domain);
+    if (error instanceof SendError) {
+      throw error;
+    }
+    throw new SendError('DOMAIN_NOT_VERIFIED', 'Domain signing key could not be loaded', {
+      cause: error,
+    });
+  }
 
   try {
     await deps.mimeTransport.sendMail({
@@ -230,10 +251,11 @@ const sendMessage = async (payload, overrides = {}) => {
         from: envelopeFrom,
         to: [to],
       },
+      dkim,
     });
   } catch (error) {
     await deps.capService.releaseIncrement(domain);
-    throw new SendError('ZONEMTA_UNAVAILABLE', 'ZoneMTA refused or could not accept the message', {
+    throw new SendError('RELAY_UNAVAILABLE', 'Postfix refused or could not accept the message', {
       cause: error,
     });
   }
@@ -247,6 +269,14 @@ const sendMessage = async (payload, overrides = {}) => {
   });
 
   await deps.metricsStore.incrAccepted(domain);
+  // No ZoneMTA delivery hooks: Postfix accept is the terminal "delivered" signal.
+  // Late DSN bounces still supersede via bounceMailback → eventConsumer.
+  await deps.messageStore.updateStatus({
+    id: messageId,
+    status: 'delivered',
+    response: 'accepted by postfix',
+  });
+  await deps.metricsStore.incrDelivered(domain, messageId);
 
   const body = { id: messageId, status: 'queued' };
 

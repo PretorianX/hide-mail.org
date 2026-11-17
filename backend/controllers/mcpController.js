@@ -30,7 +30,7 @@ const resolveCallerLicense = async (req) => {
       ok: false,
       status: 401,
       code: 'API_KEY_REQUIRED',
-      message: 'API key required (provide X-API-Key or Authorization: Bearer hm_live_...)',
+      message: 'API key required (provide X-API-Key or Authorization: Bearer hm_api_...)',
     };
   }
   if (!resolved || !resolved.license) {

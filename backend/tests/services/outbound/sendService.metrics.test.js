@@ -1,15 +1,23 @@
 process.env.VALID_DOMAINS = 'hide-mail.org';
 process.env.OUTBOUND_KEY_ENCRYPTION_SECRET = 'test-secret-for-outbound-domain-keys';
 
+const crypto = require('crypto');
 const redisService = require('../../../services/redisService');
 const sendService = require('../../../services/outbound/sendService');
 const store = require('../../../services/outbound/outboundMetricsStore');
+const keyCrypto = require('../../../services/outbound/keyCrypto');
 
+const { privateKey } = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
 const verifiedMeta = {
   accountId: 'acct-1',
   state: 'verified',
   suspended: false,
   dailyLimit: 1000,
+  selector: 'hmtest',
+  privateKeyEnc: keyCrypto.encrypt(
+    privateKey.export({ type: 'pkcs8', format: 'pem' }),
+    process.env.OUTBOUND_KEY_ENCRYPTION_SECRET
+  ),
 };
 
 const basePayload = () => ({
@@ -50,11 +58,22 @@ describe('outbound sendService metrics instrumentation', () => {
     redisService.client.data = {};
   });
 
-  it('increments accepted and queued on successful send', async () => {
-    await sendService.sendMessage(basePayload(), okDeps());
+  it('increments accepted and delivered on successful send (Postfix accept)', async () => {
+    await sendService.sendMessage(
+      basePayload(),
+      okDeps({
+        messageStore: {
+          createMessage: jest.fn().mockResolvedValue(undefined),
+          updateStatus: jest.fn().mockResolvedValue(undefined),
+          getReplay: jest.fn().mockResolvedValue(null),
+          storeReplay: jest.fn(),
+        },
+      })
+    );
     const counters = await store.readCounters('mail.example.com');
     expect(counters.accepted).toBe(1);
-    expect(counters.queued).toBe(1);
+    expect(counters.delivered).toBe(1);
+    expect(counters.queued).toBe(0);
   });
 
   it('maps rejection codes to rejected reasons', async () => {
@@ -154,7 +173,7 @@ describe('outbound sendService metrics instrumentation', () => {
     expect(counters.rejected.rate_limit).toBe(1);
   });
 
-  it('does not increment accepted or rejected on ZoneMTA 503', async () => {
+  it('does not increment accepted or rejected on relay 503', async () => {
     await expect(
       sendService.sendMessage(
         basePayload(),
@@ -164,7 +183,7 @@ describe('outbound sendService metrics instrumentation', () => {
           },
         })
       )
-    ).rejects.toMatchObject({ code: 'ZONEMTA_UNAVAILABLE' });
+    ).rejects.toMatchObject({ code: 'RELAY_UNAVAILABLE' });
 
     const counters = await store.readCounters('mail.example.com');
     expect(counters.accepted).toBe(0);

@@ -1,6 +1,7 @@
 /**
- * Outbound sending domains: add/list/check/remove, DNS-record generation,
- * and the "gate record" that ZoneMTA's plugin (mta/) reads before sending.
+ * Outbound sending domains: add/list/check/remove and DNS-record generation.
+ * Meta holds the encrypted DKIM private key; the backend signs before Postfix.
+ * Gate records remain written for licence TTL bookkeeping (no ZoneMTA consumer).
  *
  * Redis keys (no TTL on the meta/account-index keys — domains don't expire
  * on their own):
@@ -13,6 +14,7 @@ const crypto = require('crypto');
 
 const config = require('../../config/config');
 const redisService = require('../redisService');
+const { getAccountDailyLimitDefault } = require('../adminLicenseService');
 const licenseService = require('../licenseService');
 const accountService = require('./accountService');
 const keyCrypto = require('./keyCrypto');
@@ -46,7 +48,7 @@ const writeMeta = async (domain, meta) => {
   await redisService.client.set(`${META_PREFIX}${domain}`, JSON.stringify(meta));
 };
 
-// The gate record is what ZoneMTA's plugin reads on every send; it must never
+// The gate record carries maySend + encrypted key material; it must never
 // outlive the account's own licence, so its TTL always tracks the licence's
 // remaining seconds. If the licence is missing/inactive, delete the gate key
 // outright rather than writing maySend: false — the plugin treats a missing
@@ -125,6 +127,12 @@ const addDomain = async ({ accountId, domain: rawDomain }) => {
     const privateKeyEnc = keyCrypto.encrypt(privateKeyPem, config.outbound.keyEncryptionSecret);
     const records = buildExpectedRecords({ domain, selector, publicKeyPem });
 
+    const accountDailyDefault = await getAccountDailyLimitDefault(accountId);
+    const dailyLimit =
+      accountDailyDefault === undefined
+        ? config.outbound.dailyLimitDefault
+        : accountDailyDefault;
+
     const meta = {
       accountId,
       selector,
@@ -132,7 +140,7 @@ const addDomain = async ({ accountId, domain: rawDomain }) => {
       privateKeyEnc,
       state: 'pending',
       suspended: false,
-      dailyLimit: config.outbound.dailyLimitDefault,
+      dailyLimit,
       createdAt: Date.now(),
       lastCheckedAt: null,
       records,

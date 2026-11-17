@@ -918,9 +918,20 @@ const buildOpenApiSpec = (options = {}) => {
           tags: ['Model Context Protocol (MCP)'],
           operationId: 'discoverMcpServer',
           summary: 'Discover MCP protocol version, capabilities, and SSE stream',
+          description:
+            'Requires an active `hm_api_...` key via `Authorization: Bearer` or `X-API-Key`.',
+          security: [{ BearerAuth: [] }, { ApiKeyHeader: [] }],
           responses: {
             200: {
               description: 'MCP server capabilities and protocol metadata',
+            },
+            401: {
+              description: 'Missing or invalid API key',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                },
+              },
             },
           },
         },
@@ -928,6 +939,9 @@ const buildOpenApiSpec = (options = {}) => {
           tags: ['Model Context Protocol (MCP)'],
           operationId: 'callMcpJsonRpc',
           summary: 'Execute an MCP JSON-RPC 2.0 request (initialize, tools/list, tools/call, resources/*, prompts/*)',
+          description:
+            'Requires an active `hm_api_...` key. Tool access follows the licence type on that key.',
+          security: [{ BearerAuth: [] }, { ApiKeyHeader: [] }],
           requestBody: {
             required: true,
             content: {
@@ -942,6 +956,14 @@ const buildOpenApiSpec = (options = {}) => {
               content: {
                 'application/json': {
                   schema: { $ref: '#/components/schemas/McpJsonRpcResponse' },
+                },
+              },
+            },
+            401: {
+              description: 'Missing or invalid API key',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
                 },
               },
             },
@@ -1050,7 +1072,7 @@ const buildOpenApiSpec = (options = {}) => {
           operationId: 'checkOutboundDomain',
           summary: 'Re-verify a sending domain\'s DNS records',
           description:
-            'Requires an `outbound` licence (`X-License-Key` header). Queries the domain\'s authoritative nameservers for the DKIM/Return-Path/DMARC records and updates `pending`/`verified`/`broken` state accordingly. Once `verified`, the domain\'s gate record allows ZoneMTA to send on its behalf.',
+            'Requires an `outbound` licence (`X-License-Key` header). Queries the domain\'s authoritative nameservers for the DKIM/Return-Path/DMARC records and updates `pending`/`verified`/`broken` state accordingly. Once `verified`, the backend may sign and submit mail for the domain through Postfix.',
           security: [{ LicenseKeyHeader: [] }],
           parameters: [
             {
@@ -1087,7 +1109,7 @@ const buildOpenApiSpec = (options = {}) => {
           operationId: 'removeOutboundDomain',
           summary: 'Remove a sending domain',
           description:
-            'Requires an `outbound` licence (`X-License-Key` header). Frees the domain name for any account to register again; already-queued mail for this domain is unaffected (ZoneMTA treats a missing gate record the same as `maySend: false`).',
+            'Requires an `outbound` licence (`X-License-Key` header). Frees the domain name for any account to register again; already-accepted mail for this domain is unaffected.',
           security: [{ LicenseKeyHeader: [] }],
           parameters: [
             {
@@ -1320,7 +1342,7 @@ const buildOpenApiSpec = (options = {}) => {
               content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
             },
             503: {
-              description: 'ZoneMTA unavailable (daily cap not consumed)',
+              description: 'Postfix relay unavailable (daily cap not consumed)',
               content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
             },
           },

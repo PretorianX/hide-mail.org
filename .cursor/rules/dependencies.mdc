@@ -5,12 +5,10 @@ alwaysApply: true
 
 # Dependencies & security
 
-- Fix transitive vulns with npm `overrides` in root and/or `backend/package.json` (and `portal/` / `mta/` when the vuln is in those trees).
+- Fix transitive vulns with npm `overrides` in root and/or `backend/package.json` (and `portal/` when the vuln is in that tree).
 - Root: keep separate pins for `js-yaml@3` and `js-yaml@4`.
 - Backend `uuid` stays on 11.x (CommonJS). Reject uuid 12+ / 14 major bumps.
 - After dependency fixes on `main`, CI publishes GHCR images and `hidemail-autodeploy.timer` on the host pulls them within ~5 minutes. Nothing to trigger; check with `journalctl -u hidemail-autodeploy`.
-- When checking security, use the **security-maintainer** skill and verify with `gh` Dependabot alerts + `npm audit` in all four trees (root, `backend/`, `mta/`, `portal/`).
-- `mta/` is a third dependency tree; CI runs `npm audit --audit-level=high` there automatically (weekly security-audit workflow + `ci.yml` mta job). Manual `(cd mta && npm audit --audit-level=high)` is optional for local checks.
-- `portal/` is a fourth dependency tree (Vite Send portal); CI runs portal tests/build and weekly `npm audit --audit-level=high` in `portal/`.
-- Tolerated while ZoneMTA is used: open Dependabot alerts for `request` and for `zone-mta` solely because it depends on `request`, dismissed with reason "no patched version; ZoneMTA reaches `request` only for HTTP-upload delivery, which is not configured". Any other open alert fails the gate.
+- When checking security, use the **security-maintainer** skill and verify with `gh` Dependabot alerts + `npm audit` in root, `backend/`, and `portal/`.
+- `portal/` is a third dependency tree (Vite Send portal); CI runs portal tests/build and weekly `npm audit --audit-level=high` in `portal/`.
 - Do not edit `changelog.md`.

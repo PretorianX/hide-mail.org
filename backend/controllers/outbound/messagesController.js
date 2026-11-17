@@ -13,7 +13,8 @@ const SEND_ERROR_STATUS = {
   RECIPIENT_SUPPRESSED: 422,
   DAILY_LIMIT_REACHED: 429,
   MESSAGE_TOO_LARGE: 413,
-  ZONEMTA_UNAVAILABLE: 503,
+  RELAY_UNAVAILABLE: 503,
+  ZONEMTA_UNAVAILABLE: 503, // legacy alias
 };
 
 const handleSendError = (error, res, next) => {
