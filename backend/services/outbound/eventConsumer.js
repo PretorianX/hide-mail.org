@@ -1,5 +1,6 @@
 /**
- * Idempotent consumer of ZoneMTA delivery events from Redis Stream outbound:events.
+ * Idempotent consumer of outbound delivery events from Redis Stream outbound:events
+ * (bounce mailback and any future relay hooks).
  *
  * Idempotency reasoning (no extra de-dup layer for message/suppression):
  * - messageStore.updateStatus is an unconditional overwrite (Task 8).

@@ -224,7 +224,7 @@ const revokeLicense = async (key) => {
     await redisService.client.del(`${RECTOKEN_PREFIX}${license.recToken}`);
   }
   metrics.licensesRevokedTotal.inc({ type: license.type });
-  logger.info(`License revoked key=${maskKey(key)}`);
+  logger.info(`License revoked type=${license.type}`);
   return true;
 };
 

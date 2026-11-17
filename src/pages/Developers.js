@@ -212,8 +212,14 @@ function Developers() {
       Accept: 'application/json',
     };
     if (!useBrowserPreview && apiKey.trim()) {
-      headers.Authorization = `Bearer ${apiKey.trim()}`;
-      headers['X-API-Key'] = apiKey.trim();
+      if (currentEndpoint.authScheme === 'license') {
+        headers['X-License-Key'] = apiKey.trim();
+      } else if (currentEndpoint.authScheme === 'sendKey') {
+        headers.Authorization = `Bearer ${apiKey.trim()}`;
+      } else {
+        headers.Authorization = `Bearer ${apiKey.trim()}`;
+        headers['X-API-Key'] = apiKey.trim();
+      }
     }
 
     try {
@@ -395,9 +401,9 @@ function Developers() {
         <p className="developers-eyebrow">Developer Platform · REST API, OpenAPI 3.1 &amp; Model Context Protocol</p>
         <h1>API Explorer &amp; MCP Hub</h1>
         <p className="developers-lede">
-          Every Hide Mail deliverability tool and QA mailbox endpoint in one place. Inspect request and
-          response contracts, copy multi-language snippets, execute live API calls, open Swagger UI, or
-          connect AI coding agents over the official Model Context Protocol (MCP) server.
+          Integration contracts for every Hide Mail REST product — deliverability suite, QA mailboxes,
+          and Outbound Send — plus OpenAPI 3.1 and the Model Context Protocol (MCP) server. MCP requires
+          an <code>hm_api_…</code> key via <code>X-API-Key</code> or <code>Authorization: Bearer</code>.
         </p>
         <div className="developers-openapi-bar" data-testid="developers-openapi-bar">
           <a
@@ -472,11 +478,22 @@ function Developers() {
         </div>
 
         <div className="developers-key-bar">
-          <label htmlFor="developers-api-key">API Key (hm_api_...)</label>
+          <label htmlFor="developers-api-key">
+            {activeTab === 'mcp'
+              ? 'API Key for MCP (hm_api_…)'
+              : currentEndpoint?.authScheme === 'sendKey'
+                ? 'Send key (hm_send_…)'
+                : 'API Key (hm_api_…)'}
+          </label>
           <input
             id="developers-api-key"
-            type="text"
-            placeholder="hm_live_... (optional for preview)"
+            type="password"
+            autoComplete="off"
+            placeholder={
+              activeTab === 'mcp' || currentEndpoint?.authScheme !== 'sendKey'
+                ? 'hm_api_... (required for live calls & MCP)'
+                : 'hm_send_... (required for Send API live calls)'
+            }
             value={apiKey}
             onChange={(e) => setApiKey(e.target.value)}
             data-testid="developers-api-key-input"
@@ -523,6 +540,23 @@ function Developers() {
                 <span className="developers-endpoint-btn-path">{ep.path}</span>
               </button>
             ))}
+
+            <p className="developers-nav-heading">Outbound Send</p>
+            {REST_ENDPOINTS.filter((ep) => ep.category === 'Outbound Send').map((ep) => (
+              <button
+                key={ep.id}
+                type="button"
+                className={`developers-endpoint-btn${currentEndpoint.id === ep.id ? ' is-selected' : ''}`}
+                onClick={() => handleSelectEndpoint(ep.id)}
+                data-testid={`endpoint-nav-${ep.id}`}
+              >
+                <div className="developers-endpoint-btn-top">
+                  <span className="developers-method-badge">{ep.method}</span>
+                  <span className="developers-endpoint-btn-title">{ep.shortTitle}</span>
+                </div>
+                <span className="developers-endpoint-btn-path">{ep.path}</span>
+              </button>
+            ))}
           </aside>
 
           <div className="developers-detail-panel">
@@ -550,7 +584,11 @@ function Developers() {
 
               {currentEndpoint.subRoutes && (
                 <div data-testid="api-subroutes">
-                  <h3>All QA Mailbox &amp; Webhook Routes</h3>
+                  <h3>
+                    {currentEndpoint.category === 'Outbound Send'
+                      ? 'Outbound Send routes'
+                      : 'All QA Mailbox & Webhook Routes'}
+                  </h3>
                   <div className="developers-table-wrap">
                     <table className="developers-table">
                       <thead>
@@ -582,25 +620,34 @@ function Developers() {
                 </div>
               )}
 
-              <div className="developers-cross-links">
-                <Link to={currentEndpoint.toolPagePath}>
-                  Open interactive {currentEndpoint.shortTitle} tool →
-                </Link>
-                <button
-                  type="button"
-                  className="developers-link-btn"
-                  onClick={() => {
-                    const tool = MCP_TOOLS.find((t) => t.name === currentEndpoint.mcpToolName);
-                    setActiveTab('mcp');
-                    if (tool) {
-                      handleLoadMcpSample(tool.sampleCall, tool.name);
-                    }
-                  }}
-                  data-testid="api-jump-to-mcp"
-                >
-                  View MCP tool ({currentEndpoint.mcpToolName}) →
-                </button>
-              </div>
+              {(currentEndpoint.toolPagePath || currentEndpoint.mcpToolName) && (
+                <div className="developers-cross-links">
+                  {currentEndpoint.toolPagePath ? (
+                    <Link to={currentEndpoint.toolPagePath}>
+                      Open interactive {currentEndpoint.shortTitle} tool →
+                    </Link>
+                  ) : null}
+                  {currentEndpoint.mcpToolName ? (
+                    <button
+                      type="button"
+                      className="developers-link-btn"
+                      onClick={() => {
+                        const tool = MCP_TOOLS.find((t) => t.name === currentEndpoint.mcpToolName);
+                        setActiveTab('mcp');
+                        if (tool) {
+                          handleLoadMcpSample(tool.sampleCall, tool.name);
+                        }
+                      }}
+                      data-testid="api-jump-to-mcp"
+                    >
+                      View MCP tool ({currentEndpoint.mcpToolName}) →
+                    </button>
+                  ) : null}
+                  {!currentEndpoint.mcpToolName && currentEndpoint.category === 'Outbound Send' ? (
+                    <a href="/admin/portal/">Open Send portal →</a>
+                  ) : null}
+                </div>
+              )}
             </article>
 
             {/* Request & Response Schema Tables */}
@@ -936,7 +983,7 @@ function Developers() {
           {/* MCP Tools Catalog */}
           <section className="developers-card" data-testid="mcp-tools-catalog">
             <div className="developers-card-header">
-              <h2>MCP Tools Catalog ({MCP_TOOLS.length})</h2>
+              <h2>MCP Tools Catalog ({MCP_TOOLS.length}) — API key required</h2>
               <div className="developers-lang-tabs">
                 {[
                   { id: 'all', label: `All (${MCP_TOOLS.length})` },

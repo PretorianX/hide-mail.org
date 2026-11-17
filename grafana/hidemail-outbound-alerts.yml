@@ -12,8 +12,8 @@
 #   cap_usage: 0.90
 #   event_consumer_lag: 100
 #
-# ZoneMTA / MongoDB down and sending-IP blacklist alerts stay with the zonemta_*
-# scrape (not duplicated here).
+# Sending-IP blacklist alerts stay with the Postfix/host scrape when wired
+# (not duplicated here).
 
 groups:
   - name: hidemail-outbound

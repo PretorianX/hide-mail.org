@@ -1,10 +1,12 @@
 process.env.VALID_DOMAINS = 'hide-mail.org';
 process.env.OUTBOUND_KEY_ENCRYPTION_SECRET = 'test-secret-for-outbound-domain-keys';
 
+const crypto = require('crypto');
 const redisService = require('../../../services/redisService');
 const sendService = require('../../../services/outbound/sendService');
 const capService = require('../../../services/outbound/capService');
 const messageStore = require('../../../services/outbound/messageStore');
+const keyCrypto = require('../../../services/outbound/keyCrypto');
 
 const basePayload = () => ({
   accountId: 'acct-1',
@@ -17,11 +19,19 @@ const basePayload = () => ({
   idempotencyKey: null,
 });
 
+const { privateKey } = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
+const testPrivateKeyPem = privateKey.export({ type: 'pkcs8', format: 'pem' });
+
 const verifiedMeta = {
   accountId: 'acct-1',
   state: 'verified',
   suspended: false,
   dailyLimit: 1000,
+  selector: 'hmtest',
+  privateKeyEnc: keyCrypto.encrypt(
+    testPrivateKeyPem,
+    process.env.OUTBOUND_KEY_ENCRYPTION_SECRET
+  ),
 };
 
 describe('outbound sendService.sendMessage', () => {
@@ -189,7 +199,7 @@ describe('outbound sendService.sendMessage', () => {
     expect(mimeTransport.sendMail).not.toHaveBeenCalled();
   });
 
-  it('413 over OUTBOUND_MAX_MESSAGE_BYTES, before ZoneMTA is ever contacted', async () => {
+  it('413 over OUTBOUND_MAX_MESSAGE_BYTES, before the relay is contacted', async () => {
     const domainService = { getDomainMeta: jest.fn().mockResolvedValue(verifiedMeta) };
     const accountRateLimiter = {
       checkAndIncrement: jest.fn().mockResolvedValue({ allowed: true, limit: 600, retryAfterSeconds: 60 }),
@@ -216,7 +226,7 @@ describe('outbound sendService.sendMessage', () => {
     expect(mimeTransport.sendMail).not.toHaveBeenCalled();
   });
 
-  it('503 and cap NOT consumed when ZoneMTA SMTP submission fails', async () => {
+  it('503 and cap NOT consumed when Postfix SMTP submission fails', async () => {
     await redisService.client.set(
       'outbound:domain:meta:mail.example.com',
       JSON.stringify({ ...verifiedMeta, dailyLimit: 100 })
@@ -241,7 +251,7 @@ describe('outbound sendService.sendMessage', () => {
           sendMail: jest.fn().mockRejectedValue(new Error('connection refused')),
         },
       })
-    ).rejects.toMatchObject({ code: 'ZONEMTA_UNAVAILABLE' });
+    ).rejects.toMatchObject({ code: 'RELAY_UNAVAILABLE' });
 
     expect(await capService.peekCounter('mail.example.com')).toBe(before);
   });
@@ -251,7 +261,7 @@ describe('outbound sendService.sendMessage', () => {
     const accountRateLimiter = {
       checkAndIncrement: jest.fn().mockResolvedValue({ allowed: true, limit: 600, retryAfterSeconds: 60 }),
     };
-    const zoneMtaTransportMock = { sendMail: jest.fn().mockResolvedValue({ messageId: 'smtp-1' }) };
+    const relayTransportMock = { sendMail: jest.fn().mockResolvedValue({ messageId: 'smtp-1' }) };
     const deps = {
       domainService,
       accountRateLimiter,
@@ -261,7 +271,7 @@ describe('outbound sendService.sendMessage', () => {
       },
       messageStore,
       suppressionService: { isSuppressed: jest.fn().mockResolvedValue(false) },
-      mimeTransport: zoneMtaTransportMock,
+      mimeTransport: relayTransportMock,
     };
 
     const first = await sendService.sendMessage(
@@ -275,9 +285,14 @@ describe('outbound sendService.sendMessage', () => {
       deps
     );
     expect(second).toEqual(first);
-    expect(zoneMtaTransportMock.sendMail).toHaveBeenCalledTimes(1);
+    expect(relayTransportMock.sendMail).toHaveBeenCalledTimes(1);
 
-    const mailArgs = zoneMtaTransportMock.sendMail.mock.calls[0][0];
+    const mailArgs = relayTransportMock.sendMail.mock.calls[0][0];
     expect(mailArgs.envelope.from).toBe(`b-${first.id}@hm-bounce.mail.example.com`);
+    expect(mailArgs.dkim).toMatchObject({
+      domainName: 'mail.example.com',
+      keySelector: 'hmtest',
+      privateKey: testPrivateKeyPem,
+    });
   });
 });

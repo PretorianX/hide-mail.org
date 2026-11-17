@@ -60,26 +60,32 @@ change them without touching the script:
 ## Required Send env on the host
 
 Before enabling outbound Send, set a non-empty `OUTBOUND_KEY_ENCRYPTION_SECRET` in the compose
-`.env` **and** ensure `docker-compose.yml` passes it into `backend` and `zonemta`:
+`.env` **and** ensure `docker-compose.yml` passes it into `backend`:
 
 ```bash
 # Generate once; do not print or commit the value
 openssl rand -base64 48
 # Append to $COMPOSE_DIR/.env as OUTBOUND_KEY_ENCRYPTION_SECRET=<value>
-docker compose up -d backend zonemta
+docker compose up -d backend postfix
 ```
 
-Any high-entropy string works; backend and zonemta must match. Inbox/API boot without this
-variable — only Send encrypt/decrypt paths fail closed when it is missing.
+Any high-entropy string works. Inbox/API boot without this variable — only Send
+encrypt/decrypt and DKIM signing fail closed when it is missing.
 
 Autodeploy only pulls images and recreates listed services; it does not sync compose or `.env`
-from git. Wire new env vars in the host compose file when adding them.
+from git. Wire new env vars in the host compose file when adding them. After removing
+ZoneMTA/Mongo from compose, stop and remove those containers once on the host
+(`docker compose stop zonemta mongo && docker compose rm -f zonemta mongo`).
 
 ## Send portal (compose-only path)
 
 - Public URL: `https://hide-mail.org/admin/portal/` (and `/admin/portal/*`).
+- Operator admin: `https://hide-mail.org/admin/portal/ops/login` (set `ADMIN_EMAIL` /
+  `ADMIN_PASSWORD` in `.env`; session cookie against `/api/admin/*`).
 - Frontend container nginx proxies `/admin/portal/` → `portal:80`. Host nginx keeps proxying
-  `/` → `:3001` and `/api/` → `:3002` (including `/api/outbound/`). No `send.hide-mail.org`
-  DNS, cert, or host `server_name` is required.
-- Remaining go-live ops (sending IP/PTR, `rp.hide-mail.org` MX/SPF, Prometheus rules, Mongo/ZoneMTA capacity) are outside this script — see design spec §7.
+  `/` → `:3001` and `/api/` → `:3002` (including `/api/outbound/` and `/api/admin/`). No
+  `send.hide-mail.org` DNS, cert, or host `server_name` is required.
+- Developers hub (REST contracts + MCP with `hm_api_…` auth): `https://hide-mail.org/developers`.
+- Remaining go-live ops (sending IP/PTR, `rp.hide-mail.org` MX/SPF, Prometheus rules) are
+  outside this script — see design spec §7.
 

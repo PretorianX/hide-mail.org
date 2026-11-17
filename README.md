@@ -293,12 +293,21 @@ TLS Reports reads an SMTP TLS report a receiver already sent. It is not a mailbo
 
 The page is free. The paid offer is the TLS Reports API (`TLS_PRICE_MONTHLY_USD`, default $24): `POST /api/tls-reports` with a TLS Reports key. That key cannot open a mailbox, grade a message, or call the other tool APIs. After a TLS Reports payment the browser returns to `/tls`.
 
+## Developers — integration contracts & MCP
+
+Public hub: [https://hide-mail.org/developers](https://hide-mail.org/developers).
+
+- REST contracts for Deliverability Suite, QA mailboxes, and Outbound Send (request/response fields, live try-it, curl/JS/Python).
+- OpenAPI 3.1 at `/api/openapi.json` and Swagger UI at `/api/docs`.
+- MCP (Model Context Protocol) at `POST|GET /api/mcp` — **requires an `hm_api_…` key** via `X-API-Key` or `Authorization: Bearer`. Issue a key from a suite / tool / QA licence (`POST /api/billing/license/api-key`). Local stdio bridge: `mcp/hide-mail-mcp.js` with `HIDE_MAIL_API_KEY`.
+
 ## Outbound Send (`outbound` licence)
 
-Outbound Send is a separate product for sending authenticated mail from customer domains via ZoneMTA (`POST /api/outbound/messages` with a send key `Authorization: Bearer hm_send_...`). Management routes (domains, send keys, suppressions, account summary, activity, metrics token) use an `outbound` licence key in `X-License-Key`.
+Outbound Send is a separate product for sending authenticated mail from customer domains via the shared Postfix relay (`POST /api/outbound/messages` with a send key `Authorization: Bearer hm_send_...`). Verified sending domains (and their DKIM keys) live in Redis and grow as customers register domains — there is no static Postfix sender-domain allowlist. The backend decrypts the domain key, DKIM-signs the MIME, then submits to Postfix on `:587` (mynetworks only). Management routes (domains, send keys, suppressions, account summary, activity, metrics token) use an `outbound` licence key in `X-License-Key`.
 
-The customer portal is a separate Vite app in `portal/`, served at `https://hide-mail.org/admin/portal/` (Vite `base` `/admin/portal/`; compose publishes portal on `127.0.0.1:3003`). The frontend container nginx proxies `/admin/portal/` to the portal service; `/api/outbound/` is same-origin on `hide-mail.org` (host nginx → backend `:3002`). No `send.hide-mail.org` vhost is required.
+The customer portal is a separate Vite app in `portal/`, served at `https://hide-mail.org/admin/portal/` (Vite `base` `/admin/portal/`; compose publishes portal on `127.0.0.1:3013`). The frontend container nginx proxies `/admin/portal/` to the portal service; `/api/outbound/` is same-origin on `hide-mail.org` (host nginx → backend `:3002`). No `send.hide-mail.org` vhost is required.
 
+Operator admin (env login) lives in the same portal at `/admin/portal/ops/login`. Set `ADMIN_EMAIL` and `ADMIN_PASSWORD` (optional `ADMIN_SESSION_SECRET`) in `.env`. Admins can list licence keys (masked only), generate new keys with type/permissions and limits (outbound rate + daily default), and delete keys — plaintext is shown once on create.
 
 Design: `docs/superpowers/specs/2026-11-17-outbound-send-design.md`. Plans: `docs/superpowers/plans/2026-11-17-outbound-send-roadmap.md`. Operator CLI: `docker compose exec backend node scripts/outbound-admin.js …`.
 

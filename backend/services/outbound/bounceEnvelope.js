@@ -1,6 +1,6 @@
 /**
  * VERP envelope helpers for outbound return-path addresses.
- * Mirrors mta/plugins/hidemail-outbound.js parseBounceEnvelopeFrom (do not import across trees).
+ * Parses VERP-style bounce envelope locals (`b-<uuid>@…`).
  */
 
 const BOUNCE_ENVELOPE_RE = /^b-([^@]+)@hm-bounce\.(.+)$/i;
