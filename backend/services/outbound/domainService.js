@@ -21,6 +21,7 @@ const { verifyDomain } = require('./domainVerifier');
 
 const META_PREFIX = 'outbound:domain:meta:';
 const GATE_PREFIX = 'outbound:domain:gate:';
+const GLOBAL_DOMAINS_INDEX = 'outbound:domains:index';
 const accountDomainsKey = (accountId) => `outbound:account:${accountId}:domains`;
 // Single source of truth for this key lives in accountService.js (it's the
 // one that writes it, in createAccount); import rather than duplicate it.
@@ -138,7 +139,6 @@ const addDomain = async ({ accountId, domain: rawDomain }) => {
     };
 
     await writeMeta(domain, meta);
-    await redisService.client.sadd(accountDomainsKey(accountId), domain);
     await writeGateRecord({
       accountId,
       domain,
@@ -147,6 +147,8 @@ const addDomain = async ({ accountId, domain: rawDomain }) => {
       state: meta.state,
       suspended: meta.suspended,
     });
+    await redisService.client.sadd(accountDomainsKey(accountId), domain);
+    await redisService.client.sadd(GLOBAL_DOMAINS_INDEX, domain);
 
     return { domain, selector, records, state: meta.state };
   } catch (error) {
@@ -216,6 +218,7 @@ const removeDomain = async ({ accountId, domain: rawDomain }) => {
   await redisService.client.del(`${META_PREFIX}${domain}`);
   await redisService.client.del(`${GATE_PREFIX}${domain}`);
   await redisService.client.srem(accountDomainsKey(accountId), domain);
+  await redisService.client.srem(GLOBAL_DOMAINS_INDEX, domain);
 
   return true;
 };

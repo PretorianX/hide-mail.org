@@ -281,6 +281,18 @@ describe('outbound domainService', () => {
   });
 
   describe('removeDomain', () => {
+    it('adds the domain to the global index and removes it again', async () => {
+      const { accountId } = await accountService.createAccount({ label: 'Acme', days: 30 });
+
+      await domainService.addDomain({ accountId, domain: 'example.com' });
+
+      expect(await redisService.client.smembers('outbound:domains:index')).toContain('example.com');
+
+      await domainService.removeDomain({ accountId, domain: 'example.com' });
+
+      expect(await redisService.client.smembers('outbound:domains:index')).not.toContain('example.com');
+    });
+
     it('deletes the meta and gate keys and removes the domain from the account index', async () => {
       const { accountId } = await accountService.createAccount({ label: 'Acme', days: 30 });
       await domainService.addDomain({ accountId, domain: 'example.com' });
