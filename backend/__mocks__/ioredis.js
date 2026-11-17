@@ -50,6 +50,13 @@ class RedisMock {
     return next;
   }
 
+  async decr(key) {
+    const current = parseInt(this.data[key], 10) || 0;
+    const next = current - 1;
+    this.data[key] = String(next);
+    return next;
+  }
+
   async del(key) {
     delete this.data[key];
     return 1;

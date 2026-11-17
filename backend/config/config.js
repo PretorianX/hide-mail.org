@@ -83,10 +83,10 @@ const config = {
 
   outbound: {
     keyEncryptionSecret: getOutboundKeyEncryptionSecret(),
-    // Default per-domain daily send cap (Task 8's capService reads this field
-    // off each domain's meta record). Named/defaulted to match Task 8's brief
-    // exactly so that task's later `config.js` edit is a no-op here.
     dailyLimitDefault: parsePositiveNumber(process.env.OUTBOUND_DAILY_LIMIT_DEFAULT, 1000, 'OUTBOUND_DAILY_LIMIT_DEFAULT'),
+    messageRetentionDays: parsePositiveNumber(process.env.OUTBOUND_MESSAGE_RETENTION_DAYS, 30, 'OUTBOUND_MESSAGE_RETENTION_DAYS'),
+    idempotencyTtlSeconds: parsePositiveNumber(process.env.OUTBOUND_IDEMPOTENCY_TTL_SECONDS, 86400, 'OUTBOUND_IDEMPOTENCY_TTL_SECONDS'),
+    maxMessageBytes: parsePositiveNumber(process.env.OUTBOUND_MAX_MESSAGE_BYTES, 10485760, 'OUTBOUND_MAX_MESSAGE_BYTES'),
   },
 
   // SMTP Configuration for Forward & Forget feature
