@@ -39,6 +39,16 @@ const getEmailDomains = () => {
   return process.env.VALID_DOMAINS.split(',').map(domain => domain.trim());
 };
 
+const getOutboundKeyEncryptionSecret = () => {
+  if (!process.env.OUTBOUND_KEY_ENCRYPTION_SECRET && process.env.NODE_ENV !== 'test') {
+    throw new Error(
+      'Outbound key encryption not configured. Set OUTBOUND_KEY_ENCRYPTION_SECRET environment variable.'
+    );
+  }
+
+  return process.env.OUTBOUND_KEY_ENCRYPTION_SECRET;
+};
+
 const parseDomainList = (value) => {
   if (!value || !value.trim()) {
     return [];
@@ -70,6 +80,10 @@ const config = {
   smtpUnknownMailboxCode: parseInt(process.env.SMTP_UNKNOWN_MAILBOX_CODE || 550),
   environment: process.env.NODE_ENV || 'development',
   apiTimeout: parseInt(process.env.API_TIMEOUT || fileConfig.api?.timeout || 5000),
+
+  outbound: {
+    keyEncryptionSecret: getOutboundKeyEncryptionSecret(),
+  },
 
   // SMTP Configuration for Forward & Forget feature
   // Used for sending OTP verification emails and forwarding emails

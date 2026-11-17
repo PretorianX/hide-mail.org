@@ -54,6 +54,7 @@ describe('config', () => {
   describe('config defaults', () => {
     beforeEach(() => {
       process.env.VALID_DOMAINS = 'test.com';
+      process.env.OUTBOUND_KEY_ENCRYPTION_SECRET = 'test-outbound-secret';
     });
 
     it('should use default port 3001', () => {
