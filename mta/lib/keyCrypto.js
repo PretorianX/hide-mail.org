@@ -10,6 +10,14 @@ function deriveKey(secret) {
     return crypto.createHash('sha256').update(secret).digest();
 }
 
+function encrypt(plaintext, secret) {
+    const iv = crypto.randomBytes(IV_BYTES);
+    const cipher = crypto.createCipheriv(ALGORITHM, deriveKey(secret), iv);
+    const encrypted = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
+    const authTag = cipher.getAuthTag();
+    return `gcm:${iv.toString('hex')}:${authTag.toString('hex')}:${encrypted.toString('hex')}`;
+}
+
 function decrypt(encoded, secret) {
     const parts = encoded.split(':');
     if (parts.length !== 4 || parts[0] !== 'gcm') {
@@ -38,5 +46,6 @@ function decrypt(encoded, secret) {
 }
 
 module.exports = {
+    encrypt,
     decrypt
 };

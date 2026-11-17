@@ -32,4 +32,10 @@ docker compose -f docker-compose.yml -f mta/docker-compose.spike.yml \
   --profile spike down -v
 ```
 
-Without `ZONEMTA_SPIKE=1`, `npm test --prefix mta` skips the integration suite (plain `npm test` / unit tests under `tests/plugins/` are unaffected and always run). The spike's ZoneMTA feeder (`127.0.0.1:2526`) and API (`127.0.0.1:12080`) ports are published loopback-only; `mta/docker-compose.spike.yml` also temporarily publishes the root `redis` service on `127.0.0.1:6379` (gated behind the same `spike` profile override) so the test can set/clear the `outbound:spike:domain:*` gate key from the host. See `.superpowers/sdd/2026-11-17-outbound-send-m0-zonemta-spike/task-3-report.md` for the full spike findings.
+Without `ZONEMTA_SPIKE=1`, `npm test --prefix mta` skips the integration suite (plain `npm test` / unit tests under `tests/plugins/` are unaffected and always run). The spike's ZoneMTA feeder (`127.0.0.1:2526`) and API (`127.0.0.1:12080`) ports are published loopback-only; `mta/docker-compose.spike.yml` also temporarily publishes the root `redis` service on `127.0.0.1:6379` (gated behind the same `spike` profile override) so the test can set/clear gate keys from the host. See `.superpowers/sdd/2026-11-17-outbound-send-m0-zonemta-spike/task-3-report.md` for the full spike findings.
+
+**Gate record (M1+):** the plugin reads `outbound:domain:gate:<domain>` as JSON `{ maySend, selector, privateKeyEnc }` (not the M0 `outbound:spike:domain:*` `"1"`/`"0"` string). `maySend !== true` (or a missing key) defers with `451 Domain held`. DKIM signing decrypts `privateKeyEnc` with `OUTBOUND_KEY_ENCRYPTION_SECRET` — that secret must match the backend's. Delivery outcomes are written to Redis Stream `outbound:events`.
+
+## Production deployment
+
+Production `mta/config/zonemta.js` delivers to real recipient MX (no smarthost). Set `OUTBOUND_KEY_ENCRYPTION_SECRET` identically on backend and zonemta, `PLUGIN_REDIS_URL=redis://redis:6379/0` (product Redis db 0), and `OUTBOUND_HELO_HOSTNAME` for the EHLO name (wired via `pools.default[].name`). The root `docker-compose.yml` runs permanent `zonemta` + `mongo` services alongside backend; keep `mta/docker-compose.spike.yml` for local fake-receiver testing only.
