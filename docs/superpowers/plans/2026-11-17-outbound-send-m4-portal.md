@@ -1,8 +1,11 @@
 # Outbound Send M4 — Portal Implementation Plan
 
+> **Superseded URL (post-M4):** portal is served at `https://hide-mail.org/admin/portal/` via frontend nginx (compose-only). Historical text below still says `send.hide-mail.org`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Ship the customer Send portal at `https://send.hide-mail.org`: Vite/React/TS app with a copied mailduck design-system subset, licence-key unlock, and pages for Overview, Domains (DNS check), Activity, Suppressions, API keys, and Metrics (token + scrape_config), plus Docker/compose/nginx/CI so the portal image deploys beside the existing stack.
+**Goal:** Ship the customer Send portal at `https://send.hide-mail.org`:
+ Vite/React/TS app with a copied mailduck design-system subset, licence-key unlock, and pages for Overview, Domains (DNS check), Activity, Suppressions, API keys, and Metrics (token + scrape_config), plus Docker/compose/nginx/CI so the portal image deploys beside the existing stack.
 
 **Architecture:** A new `portal/` app (mailduck `frontend-vite-app` shape) talks same-origin to `/api/outbound/*` with `X-License-Key`. Design tokens/theme and only the components the portal needs are copied from `@mailduck/design-system` **0.1.2** into `portal/src/design-system/` (version recorded; no webmail-only components). Small backend gaps for the portal ship in this milestone: account message index + activity list, domain list includes DNS records, and account summary carries rate + delivery window counts. Host nginx gains a `send.hide-mail.org` server block; `hide-mail.org` refuses `/api/outbound/`. Existing CRA `frontend/` and `mta/` (Node 22 + patch-package) are untouched in behaviour.
 

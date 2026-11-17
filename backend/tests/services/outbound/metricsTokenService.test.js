@@ -15,6 +15,9 @@ describe('metricsTokenService', () => {
     const first = await metricsTokenService.rotateMetricsToken({ accountId: account.accountId });
     expect(first.key).toMatch(/^hm_metrics_[0-9a-f]{48}$/);
     expect(first.scrapeConfig.authorization.credentials).toBe(first.key);
+    expect(first.scrapeConfig.static_configs).toEqual([{ targets: ['hide-mail.org'] }]);
+    expect(first.scrapeConfig.metrics_path).toBe('/api/outbound/metrics');
+
 
     expect(await metricsTokenService.validateMetricsToken(first.key)).toEqual({
       accountId: account.accountId,
