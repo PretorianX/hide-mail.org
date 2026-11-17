@@ -1249,6 +1249,86 @@ const buildOpenApiSpec = (options = {}) => {
           },
         },
       },
+      '/api/outbound/suppressions': {
+        get: {
+          tags: ['Outbound Sending'],
+          operationId: 'listOutboundSuppressions',
+          summary: 'List suppressed recipients for this account',
+          security: [{ LicenseKeyHeader: [] }],
+          responses: {
+            200: { description: 'Suppression entries' },
+            401: {
+              description: 'Missing or invalid licence key',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+          },
+        },
+        post: {
+          tags: ['Outbound Sending'],
+          operationId: 'addOutboundSuppression',
+          summary: 'Manually suppress a recipient',
+          security: [{ LicenseKeyHeader: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['email'],
+                  properties: {
+                    email: { type: 'string', format: 'email' },
+                    reason: { type: 'string', enum: ['manual', 'hard_bounce'] },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            201: { description: 'Suppression added' },
+            400: {
+              description: 'Missing email',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+          },
+        },
+      },
+      '/api/outbound/suppressions/export': {
+        get: {
+          tags: ['Outbound Sending'],
+          operationId: 'exportOutboundSuppressions',
+          summary: 'Export suppressions as CSV',
+          security: [{ LicenseKeyHeader: [] }],
+          responses: {
+            200: {
+              description: 'CSV export',
+              content: { 'text/csv': { schema: { type: 'string' } } },
+            },
+          },
+        },
+      },
+      '/api/outbound/suppressions/{email}': {
+        delete: {
+          tags: ['Outbound Sending'],
+          operationId: 'removeOutboundSuppression',
+          summary: 'Remove a recipient from the suppression list',
+          security: [{ LicenseKeyHeader: [] }],
+          parameters: [
+            {
+              name: 'email',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'email' },
+            },
+          ],
+          responses: {
+            200: { description: 'Suppression removed' },
+            404: {
+              description: 'Entry not found',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+          },
+        },
+      },
     },
   };
 };

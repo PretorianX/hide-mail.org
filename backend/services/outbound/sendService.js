@@ -10,6 +10,7 @@ const defaultDomainService = require('./domainService');
 const defaultCapService = require('./capService');
 const defaultAccountRateLimiter = require('./accountRateLimiter');
 const defaultMessageStore = require('./messageStore');
+const defaultSuppressionService = require('./suppressionService');
 
 class SendError extends Error {
   constructor(code, message, extra = {}) {
@@ -21,12 +22,6 @@ class SendError extends Error {
 }
 
 const RECIPIENT_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-const defaultSuppressionService = {
-  async isSuppressed() {
-    return false;
-  },
-};
 
 const createDefaultTransport = () =>
   nodemailer.createTransport({
