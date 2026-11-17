@@ -10,13 +10,18 @@ describe('outbound messageStore', () => {
   });
 
   describe('createMessage / getMessage', () => {
-    it('round-trips a queued message without body or subject', async () => {
+    it('round-trips a queued message with activity metadata and no body', async () => {
       await messageStore.createMessage({
         id: 'msg-1',
         accountId: 'acct-1',
         domain: 'mail.example.com',
         recipient: 'to@example.com',
         reference: 'ref-1',
+        subject: 'Invoice 42',
+        from: { name: 'Billing', email: 'billing@mail.example.com' },
+        envelopeFrom: 'b-msg-1@hm-bounce.mail.example.com',
+        clientIp: '203.0.113.10',
+        sendKeyName: 'prod',
       });
 
       const stored = await messageStore.getMessage('msg-1');
@@ -26,11 +31,34 @@ describe('outbound messageStore', () => {
         domain: 'mail.example.com',
         recipient: 'to@example.com',
         reference: 'ref-1',
+        subject: 'Invoice 42',
+        from: { name: 'Billing', email: 'billing@mail.example.com' },
+        envelopeFrom: 'b-msg-1@hm-bounce.mail.example.com',
+        clientIp: '203.0.113.10',
+        sendKeyName: 'prod',
         status: 'queued',
       });
       expect(typeof stored.createdAt).toBe('number');
       expect(stored.body).toBeUndefined();
-      expect(stored.subject).toBeUndefined();
+    });
+
+    it('defaults activity metadata to null when omitted', async () => {
+      await messageStore.createMessage({
+        id: 'msg-legacy',
+        accountId: 'acct-1',
+        domain: 'mail.example.com',
+        recipient: 'to@example.com',
+        reference: null,
+      });
+
+      const stored = await messageStore.getMessage('msg-legacy');
+      expect(stored).toMatchObject({
+        subject: null,
+        from: null,
+        envelopeFrom: null,
+        clientIp: null,
+        sendKeyName: null,
+      });
     });
 
     it('returns null for an unknown id', async () => {

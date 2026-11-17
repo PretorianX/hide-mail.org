@@ -60,6 +60,11 @@ export type ActivityMessage = {
   domain: string;
   recipient: string;
   reference: string | null;
+  subject?: string | null;
+  from?: { name: string | null; email: string } | null;
+  envelopeFrom?: string | null;
+  clientIp?: string | null;
+  sendKeyName?: string | null;
   status: string;
   createdAt: number;
   lastEventAt: number | null;
