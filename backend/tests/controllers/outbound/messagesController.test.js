@@ -33,6 +33,7 @@ const createVerifiedSender = async () => {
     records: [
       { id: 'dkim', status: 'pass' },
       { id: 'returnPath', status: 'pass' },
+      { id: 'spf', status: 'pass' },
       { id: 'dmarc', status: 'pass' },
     ],
   });
@@ -108,7 +109,7 @@ describe('Outbound Messages / Account HTTP', () => {
           domain: 'mail.example.com',
           state: 'verified',
           suspended: false,
-          dailyLimit: 1000,
+          dailyLimit: null,
           sentToday: 0,
           delivered: 0,
           deferred: 0,
