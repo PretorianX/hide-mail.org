@@ -5,6 +5,7 @@ services:
       - "3001:80"
     depends_on:
       - backend
+      - portal
     environment:
       - VALID_DOMAINS=${VALID_DOMAINS}
       - EMAIL_EXPIRATION_SECONDS=${EMAIL_EXPIRATION_SECONDS:-1800}
@@ -12,6 +13,7 @@ services:
       - CONFIG_API_URL=${CONFIG_API_URL:-/api}
       - CONFIG_API_TIMEOUT=${CONFIG_API_TIMEOUT:-5000}
       - NODE_ENV=production
+
       - REACT_APP_ADSENSE_CLIENT=${REACT_APP_ADSENSE_CLIENT:-}
       - REACT_APP_ADSENSE_SLOT_TOP_BANNER=${REACT_APP_ADSENSE_SLOT_TOP_BANNER:-}
       - REACT_APP_ADSENSE_SLOT_TOP_PAGE_AD=${REACT_APP_ADSENSE_SLOT_TOP_PAGE_AD:-}
@@ -45,7 +47,8 @@ services:
       - SMTP_UNKNOWN_MAILBOX_CODE=${SMTP_UNKNOWN_MAILBOX_CODE:-550}
       - LOG_LEVEL=${LOG_LEVEL:-info}
       - METRICS_PORT=${METRICS_PORT:-9001}
-      - ALLOWED_ORIGINS=https://hide-mail.org,https://www.hide-mail.org,https://send.hide-mail.org
+      - ALLOWED_ORIGINS=https://hide-mail.org,https://www.hide-mail.org
+
       # Forward & Forget - Outgoing SMTP configuration (connects to Postfix relay)
       - SMTP_HOST=${SMTP_HOST:-postfix}
       - SMTP_OUTGOING_PORT=${SMTP_OUTGOING_PORT:-587}

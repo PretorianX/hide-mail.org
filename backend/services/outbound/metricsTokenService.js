@@ -28,7 +28,8 @@ const buildScrapeConfig = (credentials) => ({
   job_name: 'hidemail-outbound',
   metrics_path: '/api/outbound/metrics',
   scheme: 'https',
-  static_configs: [{ targets: ['send.hide-mail.org'] }],
+  static_configs: [{ targets: ['hide-mail.org'] }],
+
   ...(credentials
     ? { authorization: { type: 'Bearer', credentials } }
     : { bearerTokenHeader: 'Authorization: Bearer <rotate to reveal>' }),

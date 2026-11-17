@@ -168,7 +168,7 @@ EOF
       job_name: 'hidemail-outbound',
       metrics_path: '/api/outbound/metrics',
       scheme: 'https',
-      static_configs: [{ targets: ['send.hide-mail.org'] }],
+      static_configs: [{ targets: ['hide-mail.org'] }],
       authorization: { type: 'Bearer', credentials: '<raw key once>' }
     }
     ```

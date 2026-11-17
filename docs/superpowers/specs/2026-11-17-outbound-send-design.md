@@ -115,7 +115,7 @@ Delivery engine
 ```
 customer backend ──HTTPS──▶ backend /api/outbound ──SMTP (internal)──▶ ZoneMTA ──▶ recipient MX
                               │   ▲                                      │
-portal (send.hide-mail.org) ──┘   │                                      │ plugin appends
+portal (/admin/portal/) ──────────┘   │                                      │ plugin appends
 customer Prometheus ──scrape──────┤                                      ▼
 operator Prometheus ──scrape :9001┘◀── consumes ── Redis stream `outbound:events`
 ```
@@ -126,9 +126,10 @@ operator Prometheus ──scrape :9001┘◀── consumes ── Redis stream 
   with a consumer group, so events survive backend redeploys.
 - ZoneMTA's SMTP port is on the internal Docker network only. Its API port is also published on
   host loopback so the host's metrics agent can scrape it, as the backend's port 9001 is.
-- Customers use one hostname for everything: `https://send.hide-mail.org` serves the portal and
-  proxies `/api/outbound/` to the backend, so the portal is same-origin. `hide-mail.org` does not
-  serve `/api/outbound/` **(call)**.
+- Customers use the main site: `https://hide-mail.org/admin/portal/` serves the portal (frontend
+  nginx → portal container) and `/api/outbound/` on the same origin. No `send.hide-mail.org`
+  host vhost is required **(call)**.
+
 
 ### 5.2 Account, licence, credentials
 
@@ -190,7 +191,7 @@ customer at once.
 
 ### 5.4 Send API
 
-`POST https://send.hide-mail.org/api/outbound/messages`, `Authorization: Bearer hm_send_...`
+`POST https://hide-mail.org/api/outbound/messages`, `Authorization: Bearer hm_send_...`
 
 ```json
 {
@@ -300,7 +301,7 @@ audiences read the same numbers.
 Delivery rate is `delivered / accepted`; invalid addresses are
 `rejected{reason="invalid_recipient"}` plus `bounced{category="unknown_recipient"}`.
 
-- **Customer scrape**: `GET https://send.hide-mail.org/api/outbound/metrics` with
+- **Customer scrape**: `GET https://hide-mail.org/api/outbound/metrics` with
   `Authorization: Bearer hm_metrics_...`
   returns these series for that account's domains only. The portal shows the token and a ready
   `scrape_config`. This is the per-customer exporter; it is an endpoint, not a process per
@@ -327,11 +328,11 @@ Delivery rate is `delivered / accepted`; invalid addresses are
 ### 5.9 Portal
 
 A new `portal/` app: Vite, React 18, TypeScript strict, react-router 6, styled-components 6,
-following mailduck's `frontend-vite-app` template. Served at `https://send.hide-mail.org` from its
-own image **(call)**: a separate origin keeps a key that can send mail away from the ad scripts
-on the public site. The look follows the mailduck design system: its colour, spacing and type
-tokens in light and dark, and the admin layout (260 px side menu, rail on tablets, sheet on
-phones).
+following mailduck's `frontend-vite-app` template. Served at `https://hide-mail.org/admin/portal/`
+from its own image behind the frontend nginx path prefix **(call)**. The look follows the mailduck
+design system: its colour, spacing and type tokens in light and dark, and the admin layout
+(260 px side menu, rail on tablets, sheet on phones).
+
 
 The design-system source is copied into `portal/src/design-system/` from
 `@mailduck/design-system` 0.1.2: tokens, theme, and only the components the portal uses. The
@@ -377,9 +378,10 @@ No operator endpoint is exposed over HTTP in this design.
 
 - CI builds, tests and publishes `mta` and `portal` images next to `frontend` and `backend`; the
   autodeploy health check covers the new containers.
-- Host nginx gains a `send.hide-mail.org` server block and certificate, proxying `/` to the
-  portal container and `/api/outbound/` to the backend. The `hide-mail.org` block refuses
-  `/api/outbound/`.
+- Frontend container nginx proxies `/admin/portal/` to the portal service; host nginx continues
+  to proxy `hide-mail.org` `/` → frontend and `/api/` → backend (including `/api/outbound/`).
+  No new host `server_name` or certificate is required for the portal.
+
 - `mta/` and `portal/` become the third and fourth dependency trees. `security-audit.yml`, the
   `security-maintainer` skill and `.cursor/rules/dependencies.mdc` are extended to cover them.
 - `README.md` and `.env.example` document the product and every new variable.
@@ -409,7 +411,8 @@ customer goes live.
   also carries a disposable-inbox service and its forwarding relay; sending invoices from a
   dedicated address is strongly preferable. A dedicated address needs the source-NAT rule in 5.6;
   the shared one needs nothing.
-- `rp.hide-mail.org` (MX and SPF) and `send.hide-mail.org` (A/AAAA and certificate) published.
+- `rp.hide-mail.org` (MX and SPF) published. Portal is path-based on `hide-mail.org` (no send subdomain).
+
 - Prometheus rules loaded and routed to wherever alerts are read.
 - Host capacity for MongoDB and ZoneMTA.
 

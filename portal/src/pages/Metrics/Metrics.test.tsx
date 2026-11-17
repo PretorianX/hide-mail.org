@@ -10,7 +10,7 @@ describe('Metrics', () => {
     jest.restoreAllMocks();
   });
 
-  it('reveals token once and shows scrape_config for send.hide-mail.org', async () => {
+  it('reveals token once and shows scrape_config for hide-mail.org', async () => {
     const user = userEvent.setup();
     mockJsonFetch((_url, init) => {
       if (init?.method === 'POST') {
@@ -24,7 +24,7 @@ describe('Metrics', () => {
               job_name: 'hidemail-outbound',
               metrics_path: '/api/outbound/metrics',
               scheme: 'https',
-              static_configs: [{ targets: ['send.hide-mail.org'] }],
+              static_configs: [{ targets: ['hide-mail.org'] }],
               authorization: { type: 'Bearer', credentials: 'hm_metrics_secretvalue123' },
             },
           },
@@ -49,8 +49,10 @@ describe('Metrics', () => {
       expect(screen.getByText('hm_metrics_secretvalue123')).toBeInTheDocument();
     });
     const scrape = screen.getByTestId('scrape-config');
-    expect(scrape.textContent).toContain('send.hide-mail.org');
+    expect(scrape.textContent).toContain('hide-mail.org');
+    expect(scrape.textContent).not.toContain('send.hide-mail.org');
     expect(scrape.textContent).toContain('/api/outbound/metrics');
     expect(scrape.textContent).toContain('hm_metrics_secretvalue123');
   });
 });
+
