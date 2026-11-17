@@ -19,7 +19,8 @@ const Code = styled.pre`
 `;
 
 function scrapeConfigYaml(config: ScrapeConfig): string {
-  const target = config.static_configs?.[0]?.targets?.[0] || 'send.hide-mail.org';
+  const target = config.static_configs?.[0]?.targets?.[0] || 'hide-mail.org';
+
   const bearer =
     config.authorization?.credentials ||
     (config.bearerTokenHeader ? '<rotate to reveal>' : '<token>');
@@ -85,7 +86,8 @@ export function Metrics() {
     <div>
       <Title>Metrics</Title>
       <p>
-        Scrape https://send.hide-mail.org/api/outbound/metrics with a Bearer hm_metrics_… token.
+        Scrape https://hide-mail.org/api/outbound/metrics with a Bearer hm_metrics_… token.
+
       </p>
       {meta ? (
         <p>

@@ -53,12 +53,33 @@ change them without touching the script:
 | `COMPOSE_DIR` | `/home/www-data/hide-mail.org` | Directory holding `docker-compose.yml` and `.env` |
 | `BACKEND_HEALTH_URL` | `http://127.0.0.1:3002/health` | Must return `"status":"ok"` after a deploy |
 | `FRONTEND_URL` | `http://127.0.0.1:3001/` | Must answer after a deploy |
-| `PORTAL_URL` | `http://127.0.0.1:3003/` | Send portal must answer after a deploy |
+| `PORTAL_URL` | `http://127.0.0.1:3001/admin/portal/` | Send portal via frontend nginx proxy |
 | `HEALTH_ATTEMPTS` | `30` | Health attempts before the unit fails |
 | `HEALTH_INTERVAL` | `2` | Seconds between attempts |
 
-## Send portal host notes
+## Required Send env on the host
 
-- Publish DNS A/AAAA for `send.hide-mail.org` and obtain a Let's Encrypt cert (see nginx `send.hide-mail.org` server block).
-- Host nginx proxies `/` → portal `:3003` and `/api/outbound/` → backend `:3002`. The main `hide-mail.org` vhost returns 404 for `/api/outbound/`.
+Before enabling outbound Send, set a non-empty `OUTBOUND_KEY_ENCRYPTION_SECRET` in the compose
+`.env` **and** ensure `docker-compose.yml` passes it into `backend` and `zonemta`:
+
+```bash
+# Generate once; do not print or commit the value
+openssl rand -base64 48
+# Append to $COMPOSE_DIR/.env as OUTBOUND_KEY_ENCRYPTION_SECRET=<value>
+docker compose up -d backend zonemta
+```
+
+Any high-entropy string works; backend and zonemta must match. Inbox/API boot without this
+variable — only Send encrypt/decrypt paths fail closed when it is missing.
+
+Autodeploy only pulls images and recreates listed services; it does not sync compose or `.env`
+from git. Wire new env vars in the host compose file when adding them.
+
+## Send portal (compose-only path)
+
+- Public URL: `https://hide-mail.org/admin/portal/` (and `/admin/portal/*`).
+- Frontend container nginx proxies `/admin/portal/` → `portal:80`. Host nginx keeps proxying
+  `/` → `:3001` and `/api/` → `:3002` (including `/api/outbound/`). No `send.hide-mail.org`
+  DNS, cert, or host `server_name` is required.
 - Remaining go-live ops (sending IP/PTR, `rp.hide-mail.org` MX/SPF, Prometheus rules, Mongo/ZoneMTA capacity) are outside this script — see design spec §7.
+

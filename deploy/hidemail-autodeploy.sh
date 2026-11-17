@@ -16,7 +16,8 @@ COMPOSE_DIR=${COMPOSE_DIR:-/home/www-data/hide-mail.org}
 # 3001/health gets the SPA's index.html with a 200 and passes while the backend is down.
 BACKEND_HEALTH_URL=${BACKEND_HEALTH_URL:-http://127.0.0.1:3002/health}
 FRONTEND_URL=${FRONTEND_URL:-http://127.0.0.1:3001/}
-PORTAL_URL=${PORTAL_URL:-http://127.0.0.1:3003/}
+PORTAL_URL=${PORTAL_URL:-http://127.0.0.1:3001/admin/portal/}
+
 HEALTH_ATTEMPTS=${HEALTH_ATTEMPTS:-30}
 HEALTH_INTERVAL=${HEALTH_INTERVAL:-2}
 SERVICES=(backend frontend portal)

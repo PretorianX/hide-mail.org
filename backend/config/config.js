@@ -81,8 +81,12 @@ const config = {
   environment: process.env.NODE_ENV || 'development',
   apiTimeout: parseInt(process.env.API_TIMEOUT || fileConfig.api?.timeout || 5000),
 
+  // keyEncryptionSecret is lazy: requiring this module must not take down inbox/API when
+  // Send is not configured yet. Fail only when outbound code reads the secret.
   outbound: {
-    keyEncryptionSecret: getOutboundKeyEncryptionSecret(),
+    get keyEncryptionSecret() {
+      return getOutboundKeyEncryptionSecret();
+    },
     dailyLimitDefault: parsePositiveNumber(process.env.OUTBOUND_DAILY_LIMIT_DEFAULT, 1000, 'OUTBOUND_DAILY_LIMIT_DEFAULT'),
     messageRetentionDays: parsePositiveNumber(process.env.OUTBOUND_MESSAGE_RETENTION_DAYS, 30, 'OUTBOUND_MESSAGE_RETENTION_DAYS'),
     idempotencyTtlSeconds: parsePositiveNumber(process.env.OUTBOUND_IDEMPOTENCY_TTL_SECONDS, 86400, 'OUTBOUND_IDEMPOTENCY_TTL_SECONDS'),

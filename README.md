@@ -297,7 +297,8 @@ The page is free. The paid offer is the TLS Reports API (`TLS_PRICE_MONTHLY_USD`
 
 Outbound Send is a separate product for sending authenticated mail from customer domains via ZoneMTA (`POST /api/outbound/messages` with a send key `Authorization: Bearer hm_send_...`). Management routes (domains, send keys, suppressions, account summary, activity, metrics token) use an `outbound` licence key in `X-License-Key`.
 
-The customer portal is a separate Vite app in `portal/`, served at `https://send.hide-mail.org` (compose port `127.0.0.1:3003`). Host nginx proxies that hostname to the portal and `/api/outbound/` to the backend; `hide-mail.org` refuses `/api/outbound/`.
+The customer portal is a separate Vite app in `portal/`, served at `https://hide-mail.org/admin/portal/` (Vite `base` `/admin/portal/`; compose publishes portal on `127.0.0.1:3003`). The frontend container nginx proxies `/admin/portal/` to the portal service; `/api/outbound/` is same-origin on `hide-mail.org` (host nginx → backend `:3002`). No `send.hide-mail.org` vhost is required.
+
 
 Design: `docs/superpowers/specs/2026-11-17-outbound-send-design.md`. Plans: `docs/superpowers/plans/2026-11-17-outbound-send-roadmap.md`. Operator CLI: `docker compose exec backend node scripts/outbound-admin.js …`.
 

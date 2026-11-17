@@ -183,5 +183,35 @@ describe('config', () => {
       expect(() => require('../../config/config')).toThrow(/PRO_PRICE_MONTHLY_USD/);
     });
   });
+
+  describe('outbound key encryption secret', () => {
+    it('loads shared config without OUTBOUND_KEY_ENCRYPTION_SECRET in production', () => {
+      process.env.VALID_DOMAINS = 'test.com';
+      process.env.NODE_ENV = 'production';
+      delete process.env.OUTBOUND_KEY_ENCRYPTION_SECRET;
+
+      expect(() => require('../../config/config')).not.toThrow();
+    });
+
+    it('throws when outbound key encryption secret is read while unset outside test', () => {
+      process.env.VALID_DOMAINS = 'test.com';
+      process.env.NODE_ENV = 'production';
+      delete process.env.OUTBOUND_KEY_ENCRYPTION_SECRET;
+
+      const config = require('../../config/config');
+      expect(() => config.outbound.keyEncryptionSecret).toThrow(
+        'Outbound key encryption not configured. Set OUTBOUND_KEY_ENCRYPTION_SECRET environment variable.'
+      );
+    });
+
+    it('returns OUTBOUND_KEY_ENCRYPTION_SECRET when set', () => {
+      process.env.VALID_DOMAINS = 'test.com';
+      process.env.NODE_ENV = 'production';
+      process.env.OUTBOUND_KEY_ENCRYPTION_SECRET = 'prod-outbound-secret';
+
+      const config = require('../../config/config');
+      expect(config.outbound.keyEncryptionSecret).toBe('prod-outbound-secret');
+    });
+  });
 });
 
