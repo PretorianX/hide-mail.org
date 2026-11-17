@@ -27,6 +27,7 @@ const createdPayload = {
     },
     {
       id: 'returnPath',
+      purpose: 'Bounce / Return-Path',
       type: 'CNAME',
       host: 'hm-bounce.mail.example.com',
       value: 'rp.hide-mail.org',
@@ -36,10 +37,11 @@ const createdPayload = {
     },
     {
       id: 'dmarc',
+      purpose: 'DMARC policy',
       type: 'TXT',
       host: '_dmarc.mail.example.com',
-      value: null,
-      expected: null,
+      value: 'v=DMARC1; p=none;',
+      expected: 'v=DMARC1; p=none;',
       status: 'fail',
       reason: 'missing',
     },
@@ -117,7 +119,60 @@ describe('Domains add → DKIM records', () => {
     expect(screen.getByText(DKIM_VALUE)).toBeInTheDocument();
     expect(screen.getByText('CNAME')).toBeInTheDocument();
     expect(screen.getByText('hm-bounce.mail.example.com')).toBeInTheDocument();
+    expect(screen.getAllByText('rp.hide-mail.org').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText('v=DMARC1; p=none;')).toBeInTheDocument();
+    expect(screen.queryByText(/any valid v=DMARC1/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/rp means return-path/i)).toBeInTheDocument();
     expect(screen.getByText('Pending')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Check DNS' })).toBeInTheDocument();
+  });
+
+  it('shows a readable message when Express returns a nested error object', async () => {
+    const user = userEvent.setup();
+
+    mockJsonFetch((url, init) => {
+      const path = new URL(url, 'http://localhost').pathname;
+      const method = (init?.method || 'GET').toUpperCase();
+
+      if (path === '/api/outbound/domains' && method === 'GET') {
+        return { status: 200, body: { success: true, domains: [] } };
+      }
+
+      if (path === '/api/outbound/domains' && method === 'POST') {
+        return {
+          status: 500,
+          body: {
+            error: {
+              message: 'Internal Server Error',
+              correlationId: 'abc-123',
+            },
+          },
+        };
+      }
+
+      return { status: 404, body: { success: false, error: `unhandled ${method} ${path}` } };
+    });
+
+    render(
+      <MailDuckThemeProvider>
+        <MemoryRouter initialEntries={['/domains']}>
+          <Routes>
+            <Route path="/domains" element={<Domains />} />
+          </Routes>
+        </MemoryRouter>
+      </MailDuckThemeProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(/No sending domains/i)).toBeInTheDocument();
+    });
+
+    await user.type(screen.getByLabelText('Domain name'), 'mail.example.com');
+    await user.click(screen.getByRole('button', { name: 'Add domain' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Internal Server Error (abc-123)')).toBeInTheDocument();
+    });
+    expect(screen.queryByText(/\[object Object\]/i)).not.toBeInTheDocument();
   });
 });

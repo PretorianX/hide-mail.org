@@ -64,6 +64,31 @@ describe('Outbound Domains HTTP', () => {
 
       expect(res.body.code).toBe('DOMAIN_REQUIRED');
     });
+
+    it('returns 503 with a string error when encryption secret is not configured', async () => {
+      const domainService = require('../../../services/outbound/domainService');
+      const spy = jest.spyOn(domainService, 'addDomain').mockRejectedValue(
+        new Error(
+          'Outbound key encryption not configured. Set OUTBOUND_KEY_ENCRYPTION_SECRET environment variable.'
+        )
+      );
+      const account = await createOutboundAccount();
+
+      try {
+        const res = await request(app)
+          .post('/api/outbound/domains')
+          .set('X-License-Key', account.key)
+          .send({ domain: 'example.com' })
+          .expect(503);
+
+        expect(res.body.success).toBe(false);
+        expect(res.body.code).toBe('OUTBOUND_NOT_CONFIGURED');
+        expect(typeof res.body.error).toBe('string');
+        expect(res.body.error).toContain('OUTBOUND_KEY_ENCRYPTION_SECRET');
+      } finally {
+        spy.mockRestore();
+      }
+    });
   });
 
   describe('GET /api/outbound/domains', () => {

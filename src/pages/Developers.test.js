@@ -157,12 +157,26 @@ describe('Developers API Explorer & MCP Hub page', () => {
   });
 
   test('exposes Swagger UI (/api/docs) and OpenAPI 3.1 JSON (/api/openapi.json) links and spec viewer tab', async () => {
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        openapi: '3.1.0',
+        info: { title: 'Hide Mail' },
+        paths: { '/api/billing/plans': { get: {} } },
+      }),
+    });
+
     renderDevelopers('/developers?tab=openapi');
 
     expect(screen.getByTestId('open-swagger-ui-link')).toHaveAttribute('href', '/api/docs');
     expect(screen.getByTestId('openapi-json-link')).toHaveAttribute('href', '/api/openapi.json');
     expect(screen.getByTestId('developers-openapi-tab')).toBeInTheDocument();
-    expect(screen.getByTestId('openapi-spec-preview')).toHaveTextContent('"openapi": "3.1.0"');
+    expect(screen.getByTestId('developers-swagger-iframe')).toHaveAttribute('src', '/api/docs');
+
+    await waitFor(() => {
+      expect(screen.getByTestId('openapi-spec-preview')).toHaveTextContent('"openapi": "3.1.0"');
+      expect(screen.getByTestId('openapi-spec-preview')).toHaveTextContent('/api/billing/plans');
+    });
 
     fireEvent.click(screen.getByTestId('openapi-copy-btn'));
     await waitFor(() => {
