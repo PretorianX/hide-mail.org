@@ -12,6 +12,7 @@ import { ApiKeys } from '@/pages/ApiKeys/ApiKeys';
 import { Metrics } from '@/pages/Metrics/Metrics';
 import { OpsLogin } from '@/pages/Ops/OpsLogin';
 import { OpsKeys } from '@/pages/Ops/OpsKeys';
+import { OpsShell } from '@/pages/Ops/OpsShell';
 
 export function AppRouter() {
   return (
@@ -19,8 +20,10 @@ export function AppRouter() {
       <Route path="/unlock" element={<Unlock />} />
       <Route path="/ops/login" element={<OpsLogin />} />
       <Route element={<RequireAdminAuth />}>
-        <Route path="/ops" element={<Navigate to="/ops/keys" replace />} />
-        <Route path="/ops/keys" element={<OpsKeys />} />
+        <Route element={<OpsShell />}>
+          <Route path="/ops" element={<Navigate to="/ops/keys" replace />} />
+          <Route path="/ops/keys" element={<OpsKeys />} />
+        </Route>
       </Route>
       <Route element={<RequireAuth />}>
         <Route element={<AppShell />}>

@@ -13,7 +13,8 @@ describe('OpsLogin', () => {
       </MailDuckThemeProvider>,
     );
 
-    expect(screen.getByRole('heading', { name: /operator admin/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /^ops$/i })).toBeInTheDocument();
+    expect(screen.getByText(/operator admin/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/admin email/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/admin password/i)).toBeInTheDocument();
     expect(document.body.textContent).not.toMatch(/ADMIN_EMAIL|ADMIN_PASSWORD|\.env/i);
