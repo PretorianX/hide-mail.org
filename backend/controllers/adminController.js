@@ -7,7 +7,7 @@ const login = async (req, res) => {
   if (!adminSession.isConfigured()) {
     return res.status(503).json({
       success: false,
-      error: 'Admin portal is not configured (set ADMIN_EMAIL and ADMIN_PASSWORD)',
+      error: 'Admin portal is not configured',
       code: 'ADMIN_NOT_CONFIGURED',
     });
   }

@@ -53,6 +53,22 @@ describe('adminController', () => {
     expect(res.statusCode).toBe(401);
   });
 
+  it('returns a generic 503 when admin is not configured, without env var names', async () => {
+    const spy = jest.spyOn(adminSession, 'isConfigured').mockReturnValue(false);
+    try {
+      const res = createRes();
+      await adminController.login(
+        { body: { email: 'ops@hide-mail.org', password: 's3cret-ops' } },
+        res
+      );
+      expect(res.statusCode).toBe(503);
+      expect(res.body.code).toBe('ADMIN_NOT_CONFIGURED');
+      expect(JSON.stringify(res.body)).not.toMatch(/ADMIN_EMAIL|ADMIN_PASSWORD|\.env/i);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
   it('creates and lists licences without exposing secrets on list', async () => {
     const loginRes = createRes();
     await adminController.login(
