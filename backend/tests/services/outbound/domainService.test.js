@@ -17,7 +17,7 @@ describe('outbound domainService', () => {
   });
 
   describe('addDomain', () => {
-    it('normalizes the domain, generates a selector/keypair, and returns pending with three expected records', async () => {
+    it('normalizes the domain, generates a selector/keypair, and returns pending with four expected records', async () => {
       const { accountId } = await accountService.createAccount({ label: 'Acme', days: 30 });
 
       const result = await domainService.addDomain({ accountId, domain: 'Example.com.' });
@@ -25,8 +25,8 @@ describe('outbound domainService', () => {
       expect(result.domain).toBe('example.com');
       expect(result.state).toBe('pending');
       expect(result.selector).toMatch(/^hm-[0-9a-f]+$/);
-      expect(result.records).toHaveLength(3);
-      expect(result.records.map((r) => r.id).sort()).toEqual(['dkim', 'dmarc', 'returnPath']);
+      expect(result.records).toHaveLength(4);
+      expect(result.records.map((r) => r.id).sort()).toEqual(['dkim', 'dmarc', 'returnPath', 'spf']);
     });
 
     it('persists a meta record with the default daily limit and no suspension', async () => {
@@ -39,7 +39,7 @@ describe('outbound domainService', () => {
       expect(meta.accountId).toBe(accountId);
       expect(meta.state).toBe('pending');
       expect(meta.suspended).toBe(false);
-      expect(meta.dailyLimit).toBe(1000);
+      expect(meta.dailyLimit).toBeNull();
       expect(meta.privateKeyEnc).toMatch(/^gcm:/);
       expect(meta.lastCheckedAt).toBeNull();
     });
@@ -203,6 +203,7 @@ describe('outbound domainService', () => {
         records: [
           { id: 'dkim', status: 'pass', reason: null, nameserverAnswers: [] },
           { id: 'returnPath', status: 'pass', reason: null, nameserverAnswers: [] },
+          { id: 'spf', status: 'pass', reason: null, nameserverAnswers: [] },
           { id: 'dmarc', status: 'pass', reason: null, nameserverAnswers: [] },
         ],
       });
@@ -210,7 +211,7 @@ describe('outbound domainService', () => {
       const result = await domainService.checkDomain({ accountId, domain: 'example.com' });
 
       expect(result.state).toBe('verified');
-      expect(result.records).toHaveLength(3);
+      expect(result.records).toHaveLength(4);
 
       const metaRaw = await redisService.client.get('outbound:domain:meta:example.com');
       const meta = JSON.parse(metaRaw);
@@ -254,6 +255,31 @@ describe('outbound domainService', () => {
         domainService.checkDomain({ accountId: other.accountId, domain: 'example.com' })
       ).rejects.toMatchObject({ code: 'NOT_FOUND' });
     });
+
+    it('replaces a stamped numeric cap with the account unlimited default on check', async () => {
+      const { accountId } = await accountService.createAccount({ label: 'Acme', days: 30 });
+      await redisService.client.set(`outbound:account:${accountId}:dailyLimitDefault`, '1000');
+      await domainService.addDomain({ accountId, domain: 'example.com' });
+      expect(JSON.parse(await redisService.client.get('outbound:domain:meta:example.com')).dailyLimit).toBe(
+        1000
+      );
+      await redisService.client.set(`outbound:account:${accountId}:dailyLimitDefault`, 'null');
+      verifyDomain.mockResolvedValue({
+        state: 'verified',
+        records: [
+          { id: 'dkim', status: 'pass', reason: null, nameserverAnswers: [] },
+          { id: 'returnPath', status: 'pass', reason: null, nameserverAnswers: [] },
+          { id: 'spf', status: 'pass', reason: null, nameserverAnswers: [] },
+          { id: 'dmarc', status: 'pass', reason: null, nameserverAnswers: [] },
+        ],
+      });
+
+      const result = await domainService.checkDomain({ accountId, domain: 'example.com' });
+
+      expect(result.dailyLimit).toBeNull();
+      const meta = JSON.parse(await redisService.client.get('outbound:domain:meta:example.com'));
+      expect(meta.dailyLimit).toBeNull();
+    });
   });
 
   describe('listDomains', () => {
@@ -272,7 +298,7 @@ describe('outbound domainService', () => {
         expect.objectContaining({
           state: 'pending',
           suspended: false,
-          dailyLimit: 1000,
+          dailyLimit: null,
           selector: expect.stringMatching(/^hm-/),
           records: expect.any(Array),
           lastCheckedAt: null,

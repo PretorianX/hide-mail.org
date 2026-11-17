@@ -51,8 +51,8 @@ const looksLikeCnameRedirect = (record) => {
 };
 
 // Whether a single TXT value carries this record type's own signature.
-// Used to ignore unrelated TXT records (e.g. SPF) sitting next to the real
-// DKIM/DMARC record when there is more than one raw TXT value at a host.
+// Used to ignore unrelated TXT records sitting next to the real record when
+// there is more than one raw TXT value at a host.
 const startsWithCaseInsensitive = (value, prefix) => (
   String(value || '').trim().toLowerCase().startsWith(prefix.toLowerCase())
 );
@@ -64,7 +64,19 @@ const isApplicableRecord = (recordDef, value) => {
   if (recordDef.id === 'dmarc') {
     return startsWithCaseInsensitive(value, 'v=DMARC1');
   }
+  if (recordDef.id === 'spf') {
+    return startsWithCaseInsensitive(value, 'v=spf1');
+  }
   return true;
+};
+
+// Apex SPF must authorize Hide Mail via include:<OUTBOUND_SPF_INCLUDE>.
+const spfIncludesHideMail = (record, includeHost) => {
+  const normalized = stripWhitespace(record).toLowerCase();
+  if (!normalized.startsWith('v=spf1')) return false;
+  const host = String(includeHost || '').trim().toLowerCase();
+  if (!host) return false;
+  return normalized.includes(`include:${host}`);
 };
 
 // Classifies one answered nameserver's records against one expected record.
@@ -100,6 +112,12 @@ const classifyAnswer = (recordDef, records) => {
   }
   if (recordDef.id === 'dmarc') {
     return { matched: isValidDmarcRecord(value), reason: 'mismatch' };
+  }
+  if (recordDef.id === 'spf') {
+    return {
+      matched: spfIncludesHideMail(value, recordDef.includeHost),
+      reason: 'mismatch',
+    };
   }
   return { matched: cnameMatches(value, recordDef.expected), reason: 'mismatch' };
 };
@@ -154,7 +172,7 @@ const verifyRecord = async (recordDef) => {
 
 // State transition rule (spec 5.3 point 2, with the controller's sticky-broken
 // ruling superseding the brief's literal transition table):
-// - all three records pass -> verified
+// - all required records pass -> verified
 // - was verified, and at least one record has a real (non no_answer) fail -> broken
 // - was broken, and not all pass -> stays broken (sticky: no_answer or real
 //   fail, it doesn't matter; the ONLY way out of broken is all-pass)

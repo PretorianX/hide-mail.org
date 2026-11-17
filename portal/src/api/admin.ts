@@ -10,7 +10,7 @@ export type AdminLicense = {
   expiresAt: number;
   remainingDays: number;
   ratePerMinute: number | null;
-  dailyLimitDefault: number | null;
+  dailyLimitDefault?: number | null;
   key?: string;
 };
 

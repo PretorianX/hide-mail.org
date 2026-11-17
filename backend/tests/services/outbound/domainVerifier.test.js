@@ -16,6 +16,7 @@ const DOMAIN = 'x.com';
 const SELECTOR = 's';
 const DKIM_HOST = `${SELECTOR}._domainkey.${DOMAIN}`;
 const RETURN_PATH_HOST = `hm-bounce.${DOMAIN}`;
+const SPF_HOST = DOMAIN;
 const DMARC_HOST = `_dmarc.${DOMAIN}`;
 
 const answered = (records) => ({
@@ -26,6 +27,9 @@ const answered = (records) => ({
 const passingResponder = ({ name }) => {
   if (name === DKIM_HOST) return Promise.resolve(answered([`v=DKIM1; k=rsa; p=${DKIM_P}`]));
   if (name === RETURN_PATH_HOST) return Promise.resolve(answered(['rp.hide-mail.org']));
+  if (name === SPF_HOST) {
+    return Promise.resolve(answered(['v=spf1 include:_spf.hide-mail.org ~all']));
+  }
   if (name === DMARC_HOST) return Promise.resolve(answered(['v=DMARC1; p=none']));
   throw new Error(`unexpected host queried: ${name}`);
 };
@@ -33,6 +37,7 @@ const passingResponder = ({ name }) => {
 beforeEach(() => {
   jest.clearAllMocks();
   process.env.OUTBOUND_RETURN_PATH_TARGET = 'rp.hide-mail.org';
+  process.env.OUTBOUND_SPF_INCLUDE = '_spf.hide-mail.org';
   findAuthoritativeNameservers.mockResolvedValue(['ns1.example.com']);
 });
 
@@ -48,9 +53,55 @@ describe('verifyDomain', () => {
     });
 
     expect(result.state).toBe('verified');
-    expect(result.records).toHaveLength(3);
+    expect(result.records).toHaveLength(4);
     expect(result.records.every((r) => r.status === 'pass')).toBe(true);
     expect(result.records.every((r) => r.reason === null)).toBe(true);
+  });
+
+  test('SPF passes when an existing record includes _spf.hide-mail.org among other mechanisms', async () => {
+    queryAuthoritative.mockImplementation(({ name }) => {
+      if (name === SPF_HOST) {
+        return Promise.resolve(
+          answered(['v=spf1 include:_spf.google.com include:_spf.hide-mail.org -all'])
+        );
+      }
+      return passingResponder({ name });
+    });
+
+    const result = await verifyDomain({
+      domain: DOMAIN,
+      selector: SELECTOR,
+      publicKeyPem: PEM,
+      previousState: 'pending',
+    });
+
+    expect(result.state).toBe('verified');
+    expect(result.records.find((r) => r.id === 'spf')).toMatchObject({
+      status: 'pass',
+      reason: null,
+    });
+  });
+
+  test('SPF fails when apex TXT has v=spf1 without the Hide Mail include', async () => {
+    queryAuthoritative.mockImplementation(({ name }) => {
+      if (name === SPF_HOST) {
+        return Promise.resolve(answered(['v=spf1 include:_spf.google.com ~all']));
+      }
+      return passingResponder({ name });
+    });
+
+    const result = await verifyDomain({
+      domain: DOMAIN,
+      selector: SELECTOR,
+      publicKeyPem: PEM,
+      previousState: 'pending',
+    });
+
+    expect(result.state).toBe('pending');
+    expect(result.records.find((r) => r.id === 'spf')).toMatchObject({
+      status: 'fail',
+      reason: 'mismatch',
+    });
   });
 
   test('a verified domain whose DKIM record now answers wrong becomes broken, not pending', async () => {
@@ -86,13 +137,13 @@ describe('verifyDomain', () => {
     });
 
     expect(result.state).toBe('verified');
-    expect(result.records).toHaveLength(3);
+    expect(result.records).toHaveLength(4);
     result.records.forEach((record) => {
       expect(record.reason).toBe('no_answer');
       expect(record.nameserverAnswers).toEqual([]);
     });
-    expect(queryAuthoritative).toHaveBeenCalledTimes(3);
-    expect(findAuthoritativeNameservers).toHaveBeenCalledTimes(3);
+    expect(queryAuthoritative).toHaveBeenCalledTimes(4);
+    expect(findAuthoritativeNameservers).toHaveBeenCalledTimes(4);
   });
 
   test('a brand-new domain with no records yet is pending, not broken', async () => {

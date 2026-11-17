@@ -39,6 +39,28 @@ describe('adminLicenseService', () => {
     await expect(adminLicenseService.listLicenses()).resolves.toEqual([]);
   });
 
+  it('treats omitted outbound daily limit as unlimited and stamps new domains with null', async () => {
+    const created = await adminLicenseService.createLicense({
+      type: 'outbound',
+      days: 30,
+      label: 'uncapped',
+    });
+
+    expect(created.dailyLimitDefault).toBeNull();
+
+    const domainService = require('../../services/outbound/domainService');
+    const added = await domainService.addDomain({
+      accountId: created.accountId,
+      domain: 'uncapped.example.com',
+    });
+    const redisService = require('../../services/redisService');
+    const meta = JSON.parse(
+      await redisService.client.get('outbound:domain:meta:uncapped.example.com')
+    );
+    expect(meta.dailyLimit).toBeNull();
+    expect(added.domain).toBe('uncapped.example.com');
+  });
+
   it('creates a suite licence with a label', async () => {
     const created = await adminLicenseService.createLicense({
       type: 'suite',

@@ -57,12 +57,18 @@ export function DomainDetail() {
       const result = await checkDomain(domainName);
       setDomain((prev) =>
         prev
-          ? { ...prev, state: result.state as Domain['state'], records: result.records }
+          ? {
+              ...prev,
+              state: result.state as Domain['state'],
+              records: result.records,
+              dailyLimit:
+                result.dailyLimit !== undefined ? result.dailyLimit : prev.dailyLimit,
+            }
           : {
               domain: result.domain,
               state: result.state as Domain['state'],
               suspended: false,
-              dailyLimit: null,
+              dailyLimit: result.dailyLimit ?? null,
               records: result.records,
             },
       );
