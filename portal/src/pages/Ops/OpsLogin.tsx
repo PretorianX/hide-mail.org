@@ -53,7 +53,6 @@ export function OpsLogin() {
     <Page>
       <Card onSubmit={onSubmit}>
         <Title>Operator admin</Title>
-        <p>Sign in with the ADMIN_EMAIL / ADMIN_PASSWORD from the host .env.</p>
         {error ? <Alert variant="error">{error}</Alert> : null}
         <Input
           type="email"
