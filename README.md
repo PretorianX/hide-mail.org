@@ -297,10 +297,26 @@ The page is free. The paid offer is the TLS Reports API (`TLS_PRICE_MONTHLY_USD`
 
 Outbound Send is a separate product for sending authenticated mail from customer domains via ZoneMTA (`POST /api/outbound/messages` with a send key `Authorization: Bearer hm_send_...`). Management routes (domains, send keys, suppressions, account summary, activity, metrics token) use an `outbound` licence key in `X-License-Key`.
 
-The customer portal is a separate Vite app in `portal/`, served at `https://hide-mail.org/admin/portal/` (Vite `base` `/admin/portal/`; compose publishes portal on `127.0.0.1:3003`). The frontend container nginx proxies `/admin/portal/` to the portal service; `/api/outbound/` is same-origin on `hide-mail.org` (host nginx → backend `:3002`). No `send.hide-mail.org` vhost is required.
+There is no portal username or password. You issue an `outbound` licence on the host; the customer pastes that key on the Unlock page.
 
+```bash
+docker compose exec backend node scripts/outbound-admin.js account create --name "client-label" --days 365
+```
 
-Design: `docs/superpowers/specs/2026-11-17-outbound-send-design.md`. Plans: `docs/superpowers/plans/2026-11-17-outbound-send-roadmap.md`. Operator CLI: `docker compose exec backend node scripts/outbound-admin.js …`.
+The command prints an `HM-XXXX-XXXX-XXXX-XXXX` key once. Open `https://hide-mail.org/admin/portal/`, paste the key, and unlock. From there the customer adds domains, creates `hm_send_...` keys, and rotates the metrics token. Other operator commands:
+
+```bash
+docker compose exec backend node scripts/outbound-admin.js account list
+docker compose exec backend node scripts/outbound-admin.js account extend --key HM-XXXX-XXXX-XXXX-XXXX --days 365
+docker compose exec backend node scripts/outbound-admin.js domain limit --domain mail.example.com --unlimited
+docker compose exec backend node scripts/outbound-admin.js domain suspend --domain mail.example.com
+```
+
+Set `OUTBOUND_KEY_ENCRYPTION_SECRET` in `.env` (same value for backend and ZoneMTA) before domains can be verified and mail can be signed. Generate with `openssl rand -base64 48`. Without it the disposable inbox still works; Send encrypt/decrypt fails closed. See [.env.example](./.env.example).
+
+The customer portal is a Vite app in `portal/`, served at `https://hide-mail.org/admin/portal/` (compose publishes portal on `127.0.0.1:3003`; the frontend container nginx proxies `/admin/portal/` to it). `/api/outbound/` is same-origin on `hide-mail.org`.
+
+Design: `docs/superpowers/specs/2026-11-17-outbound-send-design.md`. Plans: `docs/superpowers/plans/2026-11-17-outbound-send-roadmap.md`.
 
 ## Attachments
 
