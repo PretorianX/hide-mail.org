@@ -33,6 +33,15 @@ const cnameMatches = (record, expected) => {
   return normalize(record) === normalize(expected);
 };
 
+// This heuristic rarely fires on real DNS: a true CNAME-only answer to a TXT
+// query is normalized away by Task 3's queryAuthoritative before it ever
+// reaches here (ENODATA/ENOTFOUND collapse to an empty records array, which
+// classifyAnswer already reports as 'missing'). It exists only to label the
+// narrow case where that normalization doesn't apply and a bare hostname-
+// shaped value still comes through as the sole TXT answer. A real
+// CNAME-at-TXT-host misconfiguration will typically surface as 'missing'
+// instead, which is still a correct fail either way.
+//
 // A TXT query that only turns up a single bare hostname (no key=value tags)
 // indicates the zone delegated this name via CNAME instead of publishing TXT.
 const looksLikeCnameRedirect = (record) => {
@@ -41,17 +50,46 @@ const looksLikeCnameRedirect = (record) => {
   return /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+\.?$/i.test(value);
 };
 
+// Whether a single TXT value carries this record type's own signature.
+// Used to ignore unrelated TXT records (e.g. SPF) sitting next to the real
+// DKIM/DMARC record when there is more than one raw TXT value at a host.
+const startsWithCaseInsensitive = (value, prefix) => (
+  String(value || '').trim().toLowerCase().startsWith(prefix.toLowerCase())
+);
+
+const isApplicableRecord = (recordDef, value) => {
+  if (recordDef.id === 'dkim') {
+    return startsWithCaseInsensitive(value, 'v=DKIM1') || /(?:^|;)\s*p\s*=/i.test(value);
+  }
+  if (recordDef.id === 'dmarc') {
+    return startsWithCaseInsensitive(value, 'v=DMARC1');
+  }
+  return true;
+};
+
 // Classifies one answered nameserver's records against one expected record.
 // Returns whether it matched and, if not, the most specific failure reason.
 const classifyAnswer = (recordDef, records) => {
   if (records.length === 0) {
     return { matched: false, reason: 'missing' };
   }
+
+  // Only scope down to "applicable" records when there is more than one raw
+  // TXT value at this host: an unrelated TXT record should not count towards
+  // multiple_records. A single raw value is always evaluated as-is below
+  // (including by looksLikeCnameRedirect), so it is never filtered away here.
+  let candidates = records;
   if (recordDef.type === 'TXT' && records.length > 1) {
-    return { matched: false, reason: 'multiple_records' };
+    candidates = records.filter((value) => isApplicableRecord(recordDef, value));
+    if (candidates.length === 0) {
+      return { matched: false, reason: 'missing' };
+    }
+    if (candidates.length > 1) {
+      return { matched: false, reason: 'multiple_records' };
+    }
   }
 
-  const [value] = records;
+  const [value] = candidates;
 
   if (recordDef.type === 'TXT' && looksLikeCnameRedirect(value)) {
     return { matched: false, reason: 'cname_where_txt_expected' };
@@ -97,7 +135,7 @@ const verifyRecord = async (recordDef) => {
     if (!matched) failReasons.push(reason);
     return {
       nameserver: entry.nameserver,
-      value: entry.records.length === 1 ? entry.records[0] : entry.records,
+      value: entry.records,
       matched,
     };
   });
@@ -114,14 +152,20 @@ const verifyRecord = async (recordDef) => {
   };
 };
 
-// State transition rule (spec 5.3 point 2):
+// State transition rule (spec 5.3 point 2, with the controller's sticky-broken
+// ruling superseding the brief's literal transition table):
 // - all three records pass -> verified
 // - was verified, and at least one record has a real (non no_answer) fail -> broken
+// - was broken, and not all pass -> stays broken (sticky: no_answer or real
+//   fail, it doesn't matter; the ONLY way out of broken is all-pass)
 // - was verified, and remaining fails are all no_answer -> stays verified
-// - otherwise -> pending
+// - otherwise (previousState is pending or anything else) -> pending
 const determineState = (records, previousState) => {
   if (records.every((record) => record.status === 'pass')) {
     return 'verified';
+  }
+  if (previousState === 'broken') {
+    return 'broken';
   }
   if (previousState === 'verified') {
     const hasRealFail = records.some((record) => (

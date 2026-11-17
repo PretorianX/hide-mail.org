@@ -145,6 +145,26 @@ describe('verifyDomain', () => {
     });
   });
 
+  test('an unrelated TXT record next to the real DKIM record does not falsely trigger multiple_records', async () => {
+    queryAuthoritative.mockImplementation(({ name }) => {
+      if (name === DKIM_HOST) {
+        return Promise.resolve(answered(['v=spf1 -all', `v=DKIM1; k=rsa; p=${DKIM_P}`]));
+      }
+      return passingResponder({ name });
+    });
+
+    const result = await verifyDomain({
+      domain: DOMAIN,
+      selector: SELECTOR,
+      publicKeyPem: PEM,
+      previousState: 'pending',
+    });
+
+    const dkim = result.records.find((r) => r.id === 'dkim');
+    expect(dkim.reason).not.toBe('multiple_records');
+    expect(dkim.status).toBe('pass');
+  });
+
   test('a CNAME found where a TXT record was expected fails with reason cname_where_txt_expected', async () => {
     queryAuthoritative.mockImplementation(({ name }) => {
       if (name === DMARC_HOST) return Promise.resolve(answered(['some-vendor-target.example.net']));
@@ -188,8 +208,8 @@ describe('verifyDomain', () => {
     expect(returnPath.status).toBe('fail');
     expect(returnPath.reason).toBe('mismatch');
     expect(returnPath.nameserverAnswers).toEqual([
-      { nameserver: 'ns1.example.com', value: 'rp.hide-mail.org', matched: true },
-      { nameserver: 'ns2.example.com', value: 'stale-target.example.com', matched: false },
+      { nameserver: 'ns1.example.com', value: ['rp.hide-mail.org'], matched: true },
+      { nameserver: 'ns2.example.com', value: ['stale-target.example.com'], matched: false },
     ]);
   });
 
@@ -226,5 +246,53 @@ describe('verifyDomain', () => {
       status: 'fail',
       reason: 'mismatch',
     });
+  });
+
+  test('a broken domain with no nameserver answering at all stays broken, not pending', async () => {
+    queryAuthoritative.mockResolvedValue({ answered: [] });
+
+    const result = await verifyDomain({
+      domain: DOMAIN,
+      selector: SELECTOR,
+      publicKeyPem: PEM,
+      previousState: 'broken',
+    });
+
+    expect(result.state).toBe('broken');
+    expect(result.records.every((r) => r.reason === 'no_answer')).toBe(true);
+  });
+
+  test('a broken domain with a persistent real fail (DKIM mismatch) stays broken, not pending', async () => {
+    queryAuthoritative.mockImplementation(({ name }) => {
+      if (name === DKIM_HOST) return Promise.resolve(answered(['v=DKIM1; k=rsa; p=WRONGKEYDATA']));
+      return passingResponder({ name });
+    });
+
+    const result = await verifyDomain({
+      domain: DOMAIN,
+      selector: SELECTOR,
+      publicKeyPem: PEM,
+      previousState: 'broken',
+    });
+
+    expect(result.state).toBe('broken');
+    expect(result.records.find((r) => r.id === 'dkim')).toMatchObject({
+      status: 'fail',
+      reason: 'mismatch',
+    });
+  });
+
+  test('a broken domain becomes verified again once every record passes', async () => {
+    queryAuthoritative.mockImplementation(passingResponder);
+
+    const result = await verifyDomain({
+      domain: DOMAIN,
+      selector: SELECTOR,
+      publicKeyPem: PEM,
+      previousState: 'broken',
+    });
+
+    expect(result.state).toBe('verified');
+    expect(result.records.every((r) => r.status === 'pass')).toBe(true);
   });
 });
