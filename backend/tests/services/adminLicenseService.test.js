@@ -72,4 +72,58 @@ describe('adminLicenseService', () => {
     expect(created.label).toBe('partner');
     expect(created.key).toMatch(/^HM-/);
   });
+
+  it('issues a usable hm_api_ key when creating a QA (api) licence', async () => {
+    const created = await adminLicenseService.createLicense({
+      type: 'api',
+      days: 30,
+      label: 'qa-ci',
+    });
+
+    expect(created.key).toMatch(/^HM-/);
+    expect(created.apiKey).toMatch(/^hm_api_/);
+    const resolved = await licenseService.validateApiKey(created.apiKey);
+    expect(resolved).toMatchObject({ type: 'api' });
+    expect(resolved.license.key).toBe(created.key);
+
+    const listed = await adminLicenseService.listLicenses();
+    expect(JSON.stringify(listed)).not.toContain(created.apiKey);
+    expect(listed[0].apiKey).toBeUndefined();
+  });
+
+  it('issues an hm_api_ key for each tool/suite type that can use the API', async () => {
+    for (const type of ['grade', 'sender', 'reports', 'bounce', 'complaint', 'tls', 'suite']) {
+      const created = await adminLicenseService.createLicense({ type, days: 7 });
+      expect(created.apiKey).toMatch(/^hm_api_/);
+      const resolved = await licenseService.validateApiKey(created.apiKey);
+      expect(resolved.type).toBe(type);
+    }
+  });
+
+  it('issues a send key with outbound by default, and skips it when issueSendKey is false', async () => {
+    const withSend = await adminLicenseService.createLicense({
+      type: 'outbound',
+      days: 30,
+      label: 'with-send',
+    });
+    expect(withSend.sendKey).toMatch(/^hm_send_/);
+    expect(withSend.sendKeyName).toBe('default');
+
+    const withoutSend = await adminLicenseService.createLicense({
+      type: 'outbound',
+      days: 30,
+      label: 'no-send',
+      issueSendKey: false,
+    });
+    expect(withoutSend.sendKey).toBeUndefined();
+  });
+
+  it('does not issue apiKey for pro licences', async () => {
+    const created = await adminLicenseService.createLicense({
+      type: 'pro',
+      days: 30,
+    });
+    expect(created.key).toMatch(/^HM-/);
+    expect(created.apiKey).toBeUndefined();
+  });
 });

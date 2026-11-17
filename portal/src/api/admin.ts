@@ -12,6 +12,9 @@ export type AdminLicense = {
   ratePerMinute: number | null;
   dailyLimitDefault?: number | null;
   key?: string;
+  apiKey?: string;
+  sendKey?: string;
+  sendKeyName?: string;
 };
 
 const json = async <T>(res: Response): Promise<T> => {
@@ -70,6 +73,7 @@ export async function createAdminLicense(input: {
   plan?: string;
   ratePerMinute?: number | '';
   dailyLimitDefault?: number | 'unlimited' | '';
+  issueSendKey?: boolean;
 }): Promise<AdminLicense> {
   const body = await json<{ success: boolean; license: AdminLicense }>(
     await fetch('/api/admin/licenses', {

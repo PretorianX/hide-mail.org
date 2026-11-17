@@ -61,6 +61,7 @@ const createLicense = async (req, res, next) => {
       plan: req.body?.plan,
       ratePerMinute: req.body?.ratePerMinute,
       dailyLimitDefault: req.body?.dailyLimitDefault,
+      issueSendKey: req.body?.issueSendKey,
     });
     return res.status(201).json({
       success: true,
