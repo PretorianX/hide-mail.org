@@ -1,0 +1,143 @@
+# Hide Mail outbound Send — Prometheus alert rules
+#
+# Thresholds (edit here only):
+#   bounce_rate: 0.05
+#   bounce_volume_floor: 20
+#   deferral_rate: 0.20
+#   volume_spike_factor: 3
+#   volume_spike_floor: 50
+#   suppression_per_hour: 10
+#   queue_depth: 500
+#   queue_age_seconds: 3600  # age series not emitted in M2; depth alert covers backlog
+#   cap_usage: 0.90
+#   event_consumer_lag: 100
+#
+# ZoneMTA / MongoDB down and sending-IP blacklist alerts stay with the zonemta_*
+# scrape (not duplicated here).
+
+groups:
+  - name: hidemail-outbound
+    rules:
+      - alert: OutboundBounceRateHigh
+        expr: |
+          (
+            sum by (domain, account) (rate(hidemail_outbound_bounced_total[1h]))
+            /
+            clamp_min(sum by (domain, account) (rate(hidemail_outbound_accepted_total[1h])), 1e-9)
+          ) > 0.05
+          and
+          sum by (domain, account) (increase(hidemail_outbound_accepted_total[1h])) >= 20
+        for: 15m
+        labels:
+          severity: warning
+          service: hidemail-outbound
+        annotations:
+          summary: "High bounce rate for {{ $labels.domain }}"
+          description: "Bounce/accepted rate > 5% over 1h with at least 20 accepted messages (account={{ $labels.account }})."
+
+      - alert: OutboundDeferralRateHigh
+        expr: |
+          (
+            sum by (domain, account) (rate(hidemail_outbound_deferred_total[30m]))
+            /
+            clamp_min(sum by (domain, account) (rate(hidemail_outbound_accepted_total[30m])), 1e-9)
+          ) > 0.20
+        for: 15m
+        labels:
+          severity: warning
+          service: hidemail-outbound
+        annotations:
+          summary: "High deferral rate for {{ $labels.domain }}"
+          description: "Deferred/accepted rate > 20% over 30m (account={{ $labels.account }})."
+
+      - alert: OutboundVolumeSpike
+        expr: |
+          sum by (domain, account) (rate(hidemail_outbound_accepted_total[1h]))
+            >
+            3 * clamp_min(
+              avg_over_time(sum by (domain, account) (rate(hidemail_outbound_accepted_total[1h]))[7d:1h]),
+              1e-9
+            )
+          and
+          sum by (domain, account) (increase(hidemail_outbound_accepted_total[1h])) >= 50
+        for: 10m
+        labels:
+          severity: warning
+          service: hidemail-outbound
+        annotations:
+          summary: "Accepted volume spike for {{ $labels.domain }}"
+          description: "Last-hour accepted rate > 3× the 7-day hourly average with floor 50 (account={{ $labels.account }})."
+
+      - alert: OutboundSuppressionSpike
+        expr: |
+          sum by (domain, account) (increase(hidemail_outbound_bounced_total{category="unknown_recipient"}[1h])) > 10
+        for: 5m
+        labels:
+          severity: warning
+          service: hidemail-outbound
+        annotations:
+          summary: "Suppression growth proxy high for {{ $labels.domain }}"
+          description: "More than 10 unknown_recipient bounces in 1h (feeds hard_bounce suppressions)."
+
+      - alert: OutboundDomainBroken
+        expr: |
+          hidemail_outbound_domain_verified == 0
+          and
+          hidemail_outbound_accepted_total > 0
+        for: 10m
+        labels:
+          severity: critical
+          service: hidemail-outbound
+        annotations:
+          summary: "Domain {{ $labels.domain }} is not verified"
+          description: "domain_verified=0 for a domain that has previously accepted mail (account={{ $labels.account }})."
+
+      - alert: OutboundOperatorDnsFailing
+        expr: hidemail_outbound_operator_dns_ok == 0
+        for: 5m
+        labels:
+          severity: critical
+          service: hidemail-outbound
+        annotations:
+          summary: "Operator DNS check {{ $labels.check }} failing"
+          description: "Return-path or HELO DNS for the Send platform is failing."
+
+      - alert: OutboundQueueDepthHigh
+        expr: hidemail_outbound_queued > 500
+        for: 15m
+        labels:
+          severity: warning
+          service: hidemail-outbound
+        annotations:
+          summary: "Outbound queue depth high for {{ $labels.domain }}"
+          description: "queued > 500 for domain={{ $labels.domain }} account={{ $labels.account }}."
+
+      - alert: OutboundEventConsumerLag
+        expr: |
+          hidemail_outbound_event_consumer_lag > 100
+          and
+          sum(hidemail_outbound_queued) > 0
+        for: 10m
+        labels:
+          severity: critical
+          service: hidemail-outbound
+        annotations:
+          summary: "Outbound event consumer lagging"
+          description: "XPENDING lag > 100 while messages remain queued."
+
+      - alert: OutboundCapNearLimit
+        expr: |
+          hidemail_outbound_daily_limit < 1e12
+          and
+          (
+            hidemail_outbound_daily_sent
+            /
+            clamp_min(hidemail_outbound_daily_limit, 1)
+          ) > 0.90
+        for: 5m
+        labels:
+          severity: warning
+          service: hidemail-outbound
+        annotations:
+          summary: "Domain {{ $labels.domain }} near daily cap"
+          description: "daily_sent / daily_limit > 90% (capped domains only)."
