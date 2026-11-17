@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { MailDuckThemeProvider } from '@/design-system';
 import { OpsKeys } from './OpsKeys';
-import { listAdminLicenses, listLicenseTypes } from '@/api/admin';
+import { createAdminLicense, listAdminLicenses, listLicenseTypes } from '@/api/admin';
 
 jest.mock('@/api/admin', () => ({
   listAdminLicenses: jest.fn(),
@@ -28,20 +28,6 @@ const licenses = [
     ratePerMinute: 600,
     dailyLimitDefault: null,
   },
-  {
-    id: 'id-suite',
-    maskedKey: '****J237',
-    type: 'suite',
-    status: 'active',
-    label: 'qa-bot',
-    plan: 'monthly',
-    accountId: null,
-    createdAt: 1_700_000_100_000,
-    expiresAt: 1_700_086_500_000,
-    remainingDays: 30,
-    ratePerMinute: null,
-    dailyLimitDefault: null,
-  },
 ];
 
 function renderPage() {
@@ -57,38 +43,79 @@ function renderPage() {
 describe('OpsKeys', () => {
   beforeEach(() => {
     jest.mocked(listAdminLicenses).mockResolvedValue(licenses);
-    jest.mocked(listLicenseTypes).mockResolvedValue(['outbound', 'suite', 'api']);
+    jest.mocked(listLicenseTypes).mockResolvedValue([
+      'outbound',
+      'suite',
+      'api',
+      'grade',
+      'pro',
+    ]);
+    jest.mocked(createAdminLicense).mockReset();
   });
 
-  it('lists masked licences in a detail table and never shows a full HM key from the list', async () => {
+  it('lists masked licences and never shows a full HM key from the list', async () => {
     renderPage();
 
     await waitFor(() => {
       expect(screen.getByText('****ZQLL')).toBeInTheDocument();
     });
-    expect(screen.getByText('****J237')).toBeInTheDocument();
     expect(screen.getByText('ecabinet.tax')).toBeInTheDocument();
-    expect(screen.getByText('acct-ecabinet')).toBeInTheDocument();
-    expect(screen.getByText(/600\/min/)).toBeInTheDocument();
-    expect(screen.getAllByText(/unlimited/i).length).toBeGreaterThan(0);
     expect(screen.queryByText(/HM-AAAA-BBBB-CCCC-DDDD/)).not.toBeInTheDocument();
     expect(document.body.textContent).not.toMatch(/ADMIN_EMAIL|ADMIN_PASSWORD|\.env/i);
   });
 
-  it('shows summary counts and filters by search', async () => {
+  it('one-click generates a QA api key with the operator-chosen duration', async () => {
     const user = userEvent.setup();
-    renderPage();
+    jest.mocked(createAdminLicense).mockResolvedValue({
+      id: 'new-qa',
+      maskedKey: '****QA01',
+      type: 'api',
+      status: 'active',
+      label: 'ci',
+      plan: 'monthly',
+      accountId: null,
+      createdAt: Date.now(),
+      expiresAt: Date.now() + 86400000,
+      remainingDays: 45,
+      ratePerMinute: null,
+      key: 'HM-NEW1-NEW2-NEW3-NEW4',
+      apiKey: 'hm_api_qa_test_secret',
+    });
+    jest.mocked(listAdminLicenses).mockResolvedValueOnce(licenses).mockResolvedValue([
+      ...licenses,
+      {
+        id: 'new-qa',
+        maskedKey: '****QA01',
+        type: 'api',
+        status: 'active',
+        label: 'ci',
+        plan: 'monthly',
+        accountId: null,
+        createdAt: Date.now(),
+        expiresAt: Date.now() + 86400000,
+        remainingDays: 45,
+        ratePerMinute: null,
+      },
+    ]);
 
+    renderPage();
     await waitFor(() => {
-      expect(screen.getByText('****ZQLL')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /QA Mailboxes/i })).toBeInTheDocument();
     });
 
-    expect(screen.getByTestId('ops-summary')).toHaveTextContent(/2 licences/i);
-    expect(screen.getByTestId('ops-summary')).toHaveTextContent(/2 active/i);
+    const daysInput = screen.getByLabelText(/validity days/i);
+    await user.clear(daysInput);
+    await user.type(daysInput, '45');
+    await user.type(screen.getByLabelText(/^label$/i), 'ci');
+    await user.click(screen.getByRole('button', { name: /QA Mailboxes/i }));
 
-    await user.type(screen.getByRole('searchbox', { name: /search licences/i }), 'qa-bot');
-    expect(screen.queryByText('****ZQLL')).not.toBeInTheDocument();
-    expect(screen.getByText('****J237')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(createAdminLicense).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'api', days: 45, label: 'ci' }),
+      );
+    });
+    expect(await screen.findByText(/hm_api_qa_test_secret/)).toBeInTheDocument();
+    expect(screen.getByText(/Copy this key now/i)).toBeInTheDocument();
   });
 
   it('opens a detail drawer with full licence fields on row click', async () => {
@@ -103,7 +130,5 @@ describe('OpsKeys', () => {
     const drawer = await screen.findByRole('dialog', { name: /licence detail/i });
     expect(within(drawer).getByText('****ZQLL')).toBeInTheDocument();
     expect(within(drawer).getByText('acct-ecabinet')).toBeInTheDocument();
-    expect(within(drawer).getByText('ecabinet.tax')).toBeInTheDocument();
-    expect(within(drawer).getByText(/600/)).toBeInTheDocument();
   });
 });

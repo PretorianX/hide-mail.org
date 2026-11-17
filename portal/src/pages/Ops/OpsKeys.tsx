@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import styled from 'styled-components';
 import {
   Alert,
@@ -16,6 +16,7 @@ import {
   listAdminLicenses,
   listLicenseTypes,
 } from '@/api/admin';
+import { FEATURE_CATALOG, type FeatureDef } from './featureCatalog';
 import { OpsLicenseDetailDrawer } from './OpsLicenseDetailDrawer';
 import { filterOpsLicenses, summarizeOpsLicenses } from './filterOpsLicenses';
 
@@ -51,11 +52,11 @@ const PanelTitle = styled.h2`
   font-size: ${({ theme }) => theme.typography.fontSize.lg};
 `;
 
-const FormGrid = styled.form`
+const Controls = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  grid-template-columns: 140px minmax(180px, 1fr);
   gap: ${({ theme }) => theme.spacing.md};
-  align-items: start;
+  margin-bottom: ${({ theme }) => theme.spacing.md};
 `;
 
 const Field = styled.label`
@@ -63,6 +64,41 @@ const Field = styled.label`
   flex-direction: column;
   gap: 6px;
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  color: ${({ theme }) => theme.colors.text.secondary};
+`;
+
+const FeatureGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: ${({ theme }) => theme.spacing.sm};
+`;
+
+const FeatureButton = styled.button`
+  text-align: left;
+  padding: ${({ theme }) => theme.spacing.md};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.borderRadius.md};
+  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.text.primary};
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    border-color: ${({ theme }) => theme.colors.text.secondary};
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: wait;
+  }
+`;
+
+const FeatureLabel = styled.div`
+  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+  margin-bottom: 4px;
+`;
+
+const FeatureDesc = styled.div`
+  font-size: ${({ theme }) => theme.typography.fontSize.xs};
   color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
@@ -112,7 +148,17 @@ const Revealed = styled.pre`
   border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: ${({ theme }) => theme.borderRadius.md};
   overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
 `;
+
+type RevealedSecrets = {
+  featureLabel: string;
+  licenseKey?: string;
+  apiKey?: string;
+  sendKey?: string;
+  sendKeyName?: string;
+};
 
 function statusBadge(status: string) {
   if (status === 'active') return <Badge variant="success">{status}</Badge>;
@@ -126,24 +172,30 @@ function dailyLabel(value: number | null | undefined): string {
 }
 
 function formatExpiry(license: AdminLicense): string {
-  return `${license.remainingDays}d · ${new Date(license.expiresAt)
-    .toISOString()
-    .slice(0, 10)}`;
+  return `${license.remainingDays}d · ${new Date(license.expiresAt).toISOString().slice(0, 10)}`;
+}
+
+function formatReveal(secrets: RevealedSecrets): string {
+  const lines: string[] = [`Feature: ${secrets.featureLabel}`];
+  if (secrets.apiKey) lines.push(`API key: ${secrets.apiKey}`);
+  if (secrets.sendKey) {
+    lines.push(`Send key (${secrets.sendKeyName || 'default'}): ${secrets.sendKey}`);
+  }
+  if (secrets.licenseKey) lines.push(`Licence: ${secrets.licenseKey}`);
+  return lines.join('\n');
 }
 
 export function OpsKeys() {
   const [licenses, setLicenses] = useState<AdminLicense[] | null>(null);
   const [types, setTypes] = useState<string[]>([]);
-  const [type, setType] = useState('outbound');
   const [days, setDays] = useState('30');
   const [label, setLabel] = useState('');
-  const [ratePerMinute, setRatePerMinute] = useState('');
-  const [dailyLimitDefault, setDailyLimitDefault] = useState('');
+  const [busyType, setBusyType] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selected, setSelected] = useState<AdminLicense | null>(null);
-  const [revealed, setRevealed] = useState<string | null>(null);
+  const [revealed, setRevealed] = useState<RevealedSecrets | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -151,20 +203,13 @@ export function OpsKeys() {
     const [list, typeList] = await Promise.all([listAdminLicenses(), listLicenseTypes()]);
     setLicenses(list);
     setTypes(typeList);
-    if (typeList.length && !typeList.includes(type)) {
-      setType(typeList[0]);
-    }
   };
 
   useEffect(() => {
     void refresh().catch((err) => setError(err instanceof Error ? err.message : 'Failed to load'));
   }, []);
 
-  const summary = useMemo(
-    () => summarizeOpsLicenses(licenses || []),
-    [licenses],
-  );
-
+  const summary = useMemo(() => summarizeOpsLicenses(licenses || []), [licenses]);
   const filtered = useMemo(
     () =>
       filterOpsLicenses(licenses || [], {
@@ -175,25 +220,38 @@ export function OpsKeys() {
     [licenses, query, typeFilter, statusFilter],
   );
 
-  const onCreate = async (event: FormEvent) => {
-    event.preventDefault();
+  const features = useMemo(
+    () => FEATURE_CATALOG.filter((feature) => types.includes(feature.type)),
+    [types],
+  );
+
+  const onGenerate = async (feature: FeatureDef) => {
     setError(null);
+    const parsedDays = Number(days);
+    if (!Number.isInteger(parsedDays) || parsedDays <= 0) {
+      setError('Validity days must be a positive integer.');
+      return;
+    }
+    setBusyType(feature.type);
     try {
       const created = await createAdminLicense({
-        type,
-        days: Number(days),
+        type: feature.type,
+        days: parsedDays,
         label: label.trim() || undefined,
-        ratePerMinute: ratePerMinute === '' ? undefined : Number(ratePerMinute),
-        dailyLimitDefault:
-          dailyLimitDefault.trim() === '' || dailyLimitDefault.trim() === 'unlimited'
-            ? 'unlimited'
-            : Number(dailyLimitDefault),
+        issueSendKey: feature.issuesSendKey,
       });
-      setRevealed(created.key || null);
-      setLabel('');
+      setRevealed({
+        featureLabel: feature.label,
+        licenseKey: created.key,
+        apiKey: created.apiKey,
+        sendKey: created.sendKey,
+        sendKeyName: created.sendKeyName,
+      });
       await refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not create key');
+    } finally {
+      setBusyType(null);
     }
   };
 
@@ -214,7 +272,10 @@ export function OpsKeys() {
   return (
     <div>
       <Title>Licences</Title>
-      <Lead>Masks only in the list. Plaintext is shown once when a key is generated.</Lead>
+      <Lead>
+        One click per product. Set duration first (default 30 days). Usable API/send keys are shown
+        once; the list stays masked.
+      </Lead>
 
       {error ? <Alert variant="error">{error}</Alert> : null}
 
@@ -229,22 +290,8 @@ export function OpsKeys() {
       </Summary>
 
       <Panel>
-        <PanelTitle>Generate key</PanelTitle>
-        <FormGrid onSubmit={onCreate}>
-          <Field>
-            Permission type
-            <Select
-              aria-label="Permission type"
-              value={type}
-              onChange={(e) => setType(e.target.value)}
-            >
-              {types.map((item) => (
-                <option key={item} value={item}>
-                  {item}
-                </option>
-              ))}
-            </Select>
-          </Field>
+        <PanelTitle>Generate</PanelTitle>
+        <Controls>
           <Field>
             Validity (days)
             <Input
@@ -260,46 +307,34 @@ export function OpsKeys() {
             Label
             <Input
               aria-label="Label"
-              placeholder="customer or project"
+              placeholder="optional customer or project"
               value={label}
               onChange={(e) => setLabel(e.target.value)}
             />
           </Field>
-          {type === 'outbound' ? (
-            <>
-              <Field>
-                Rate / min
-                <Input
-                  aria-label="Rate per minute"
-                  type="number"
-                  min={1}
-                  placeholder="default"
-                  value={ratePerMinute}
-                  onChange={(e) => setRatePerMinute(e.target.value)}
-                />
-              </Field>
-              <Field>
-                Daily default
-                <Input
-                  aria-label="Daily limit default"
-                  placeholder="blank = unlimited"
-                  value={dailyLimitDefault}
-                  onChange={(e) => setDailyLimitDefault(e.target.value)}
-                  helperText="Blank means no daily cap for new domains."
-                />
-              </Field>
-            </>
-          ) : null}
-          <div style={{ alignSelf: 'end' }}>
-            <Button type="submit">Generate key</Button>
-          </div>
-        </FormGrid>
+        </Controls>
+        <FeatureGrid>
+          {features.map((feature) => (
+            <FeatureButton
+              key={feature.type}
+              type="button"
+              disabled={busyType !== null}
+              onClick={() => void onGenerate(feature)}
+              aria-label={feature.label}
+            >
+              <FeatureLabel>
+                {busyType === feature.type ? 'Generating…' : feature.label}
+              </FeatureLabel>
+              <FeatureDesc>{feature.description}</FeatureDesc>
+            </FeatureButton>
+          ))}
+        </FeatureGrid>
       </Panel>
 
       {revealed ? (
         <Alert variant="warning">
           Copy this key now — it will not be shown again.
-          <Revealed>{revealed}</Revealed>
+          <Revealed>{formatReveal(revealed)}</Revealed>
         </Alert>
       ) : null}
 

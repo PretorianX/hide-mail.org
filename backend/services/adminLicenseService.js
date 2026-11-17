@@ -9,6 +9,7 @@ const licenseService = require('./licenseService');
 const redisService = require('./redisService');
 const accountService = require('./outbound/accountService');
 const accountRateLimiter = require('./outbound/accountRateLimiter');
+const sendKeyService = require('./outbound/sendKeyService');
 
 const INDEX_KEY = 'licenses:admin-index';
 const ADMIN_ID_PREFIX = 'licenses:admin-id:';
@@ -109,6 +110,7 @@ const createLicense = async ({
   plan = 'monthly',
   ratePerMinute,
   dailyLimitDefault,
+  issueSendKey = true,
 }) => {
   if (!LICENSE_TYPES.includes(type)) {
     const error = new Error(`Unknown license type: ${type}`);
@@ -122,6 +124,8 @@ const createLicense = async ({
   }
 
   let license;
+  let sendKey;
+  let sendKeyName;
   if (type === 'outbound') {
     const created = await accountService.createAccount({
       label: label || 'outbound',
@@ -153,6 +157,15 @@ const createLicense = async ({
       throw error;
     }
     await redisService.client.set(accountDailyDefaultKey(created.accountId), value);
+
+    if (issueSendKey !== false) {
+      const issued = await sendKeyService.createSendKey({
+        accountId: created.accountId,
+        name: 'default',
+      });
+      sendKey = issued.key;
+      sendKeyName = issued.name;
+    }
   } else {
     const ttlSeconds = days * 24 * 60 * 60;
     license = await licenseService.createLicense({
@@ -180,10 +193,21 @@ const createLicense = async ({
   await redisService.client.set(adminIdKey(license.adminId), license.key);
   await rememberKey(license.key);
   const publicRecord = await toPublicRecord(license);
-  return {
+
+  const result = {
     ...publicRecord,
     key: license.key,
   };
+
+  if (licenseService.canIssueApiKey(type)) {
+    result.apiKey = await licenseService.createApiKey(license.key);
+  }
+  if (sendKey) {
+    result.sendKey = sendKey;
+    result.sendKeyName = sendKeyName;
+  }
+
+  return result;
 };
 
 const resolveKeyFromAdminId = async (adminIdOrKey) => {
