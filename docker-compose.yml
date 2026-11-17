@@ -45,7 +45,7 @@ services:
       - SMTP_UNKNOWN_MAILBOX_CODE=${SMTP_UNKNOWN_MAILBOX_CODE:-550}
       - LOG_LEVEL=${LOG_LEVEL:-info}
       - METRICS_PORT=${METRICS_PORT:-9001}
-      - ALLOWED_ORIGINS=https://hide-mail.org,https://www.hide-mail.org
+      - ALLOWED_ORIGINS=https://hide-mail.org,https://www.hide-mail.org,https://send.hide-mail.org
       # Forward & Forget - Outgoing SMTP configuration (connects to Postfix relay)
       - SMTP_HOST=${SMTP_HOST:-postfix}
       - SMTP_OUTGOING_PORT=${SMTP_OUTGOING_PORT:-587}
@@ -102,6 +102,19 @@ services:
       - ./backend/logs:/app/logs
     networks:
       - internal
+      - default
+
+  portal:
+    image: ghcr.io/pretorianx/hide-mail.org/portal:latest
+    build:
+      context: ./portal
+      dockerfile: Dockerfile
+    ports:
+      - "127.0.0.1:3003:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
       - default
 
   mongo:

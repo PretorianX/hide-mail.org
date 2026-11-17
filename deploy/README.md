@@ -53,5 +53,12 @@ change them without touching the script:
 | `COMPOSE_DIR` | `/home/www-data/hide-mail.org` | Directory holding `docker-compose.yml` and `.env` |
 | `BACKEND_HEALTH_URL` | `http://127.0.0.1:3002/health` | Must return `"status":"ok"` after a deploy |
 | `FRONTEND_URL` | `http://127.0.0.1:3001/` | Must answer after a deploy |
+| `PORTAL_URL` | `http://127.0.0.1:3003/` | Send portal must answer after a deploy |
 | `HEALTH_ATTEMPTS` | `30` | Health attempts before the unit fails |
 | `HEALTH_INTERVAL` | `2` | Seconds between attempts |
+
+## Send portal host notes
+
+- Publish DNS A/AAAA for `send.hide-mail.org` and obtain a Let's Encrypt cert (see nginx `send.hide-mail.org` server block).
+- Host nginx proxies `/` → portal `:3003` and `/api/outbound/` → backend `:3002`. The main `hide-mail.org` vhost returns 404 for `/api/outbound/`.
+- Remaining go-live ops (sending IP/PTR, `rp.hide-mail.org` MX/SPF, Prometheus rules, Mongo/ZoneMTA capacity) are outside this script — see design spec §7.
