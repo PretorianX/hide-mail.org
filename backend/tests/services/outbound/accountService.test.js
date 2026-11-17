@@ -45,4 +45,14 @@ describe('outbound accountService', () => {
       expect(extended.expiresAt).toBeGreaterThan(created.expiresAt);
     });
   });
+
+  describe('accountId -> licenseKey index', () => {
+    it('writes outbound:account:<accountId>:licenseKey so domain code can resolve the license by accountId', async () => {
+      const created = await accountService.createAccount({ label: 'Acme', days: 30 });
+
+      const indexed = await redisService.client.get(`outbound:account:${created.accountId}:licenseKey`);
+
+      expect(indexed).toBe(created.key);
+    });
+  });
 });

@@ -68,6 +68,11 @@ const buildOpenApiSpec = (options = {}) => {
         name: 'Billing & Licenses',
         description: 'Plan catalog, license validation, and `hm_api_...` bearer key issuance.',
       },
+      {
+        name: 'Outbound Sending',
+        description:
+          'Operator accounts (`outbound` licence) that register sending domains, publish DKIM/Return-Path/DMARC DNS records, and watch domain verification state.',
+      },
     ],
     components: {
       securitySchemes: {
@@ -82,6 +87,12 @@ const buildOpenApiSpec = (options = {}) => {
           in: 'header',
           name: 'X-API-Key',
           description: 'API key passed via `X-API-Key: hm_api_...` header.',
+        },
+        LicenseKeyHeader: {
+          type: 'apiKey',
+          in: 'header',
+          name: 'X-License-Key',
+          description: 'Outbound operator licence key (`HM-XXXX-XXXX-XXXX-XXXX`), passed via `X-License-Key` header (or `Authorization: Bearer ...`). Management-only — never used to authenticate a send.',
         },
       },
       schemas: {
@@ -132,6 +143,56 @@ const buildOpenApiSpec = (options = {}) => {
                       detail: { type: 'string' },
                     },
                   },
+                },
+              },
+            },
+          },
+        },
+        DomainAddRequest: {
+          type: 'object',
+          required: ['domain'],
+          properties: {
+            domain: {
+              type: 'string',
+              description: 'Sending domain to register (lowercased, trailing dot stripped).',
+              example: 'example.com',
+            },
+          },
+        },
+        DomainRecord: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', enum: ['dkim', 'returnPath', 'dmarc'] },
+            type: { type: 'string', enum: ['TXT', 'CNAME'] },
+            host: { type: 'string', example: 'hm-4f2a9c3d._domainkey.example.com' },
+            expected: { type: 'string', nullable: true },
+            status: { type: 'string', enum: ['pass', 'fail'] },
+            reason: { type: 'string', nullable: true },
+          },
+        },
+        DomainResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            domain: { type: 'string', example: 'example.com' },
+            selector: { type: 'string', example: 'hm-4f2a9c3d' },
+            state: { type: 'string', enum: ['pending', 'verified', 'broken'], example: 'pending' },
+            records: { type: 'array', items: { $ref: '#/components/schemas/DomainRecord' } },
+          },
+        },
+        DomainListResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            domains: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  domain: { type: 'string', example: 'example.com' },
+                  state: { type: 'string', enum: ['pending', 'verified', 'broken'] },
+                  suspended: { type: 'boolean' },
+                  dailyLimit: { type: 'integer', nullable: true },
                 },
               },
             },
@@ -772,6 +833,134 @@ const buildOpenApiSpec = (options = {}) => {
           },
           responses: {
             200: { description: 'Issued API key and remaining days' },
+          },
+        },
+      },
+      '/api/outbound/domains': {
+        post: {
+          tags: ['Outbound Sending'],
+          operationId: 'addOutboundDomain',
+          summary: 'Register a sending domain and generate its DKIM key pair',
+          description:
+            'Requires an `outbound` licence (`X-License-Key` header). Generates a 2048-bit RSA key pair and a unique DKIM selector, returns the three DNS records (DKIM, Return-Path CNAME, DMARC) to publish. Starts `pending` until `POST /api/outbound/domains/{domain}/check` confirms all three.',
+          security: [{ LicenseKeyHeader: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/DomainAddRequest' },
+              },
+            },
+          },
+          responses: {
+            201: {
+              description: 'Domain registered, pending DNS verification',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/DomainResponse' } } },
+            },
+            401: {
+              description: 'Missing or invalid licence key',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+            403: {
+              description: 'Licence is not of type `outbound`',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+            409: {
+              description: 'Domain already registered to a different account',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+          },
+        },
+        get: {
+          tags: ['Outbound Sending'],
+          operationId: 'listOutboundDomains',
+          summary: 'List this account\'s sending domains',
+          description: 'Requires an `outbound` licence (`X-License-Key` header). Returns each domain\'s verification state, suspension flag, and daily send cap.',
+          security: [{ LicenseKeyHeader: [] }],
+          responses: {
+            200: {
+              description: 'Domains owned by this account',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/DomainListResponse' } } },
+            },
+            401: {
+              description: 'Missing or invalid licence key',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+            403: {
+              description: 'Licence is not of type `outbound`',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+          },
+        },
+      },
+      '/api/outbound/domains/{domain}/check': {
+        post: {
+          tags: ['Outbound Sending'],
+          operationId: 'checkOutboundDomain',
+          summary: 'Re-verify a sending domain\'s DNS records',
+          description:
+            'Requires an `outbound` licence (`X-License-Key` header). Queries the domain\'s authoritative nameservers for the DKIM/Return-Path/DMARC records and updates `pending`/`verified`/`broken` state accordingly. Once `verified`, the domain\'s gate record allows ZoneMTA to send on its behalf.',
+          security: [{ LicenseKeyHeader: [] }],
+          parameters: [
+            {
+              name: 'domain',
+              in: 'path',
+              required: true,
+              schema: { type: 'string' },
+              description: 'Domain to re-verify.',
+            },
+          ],
+          responses: {
+            200: {
+              description: 'Updated verification state and per-record results',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/DomainResponse' } } },
+            },
+            401: {
+              description: 'Missing or invalid licence key',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+            403: {
+              description: 'Licence is not of type `outbound`',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+            404: {
+              description: 'Domain not found, or not owned by this account',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+          },
+        },
+      },
+      '/api/outbound/domains/{domain}': {
+        delete: {
+          tags: ['Outbound Sending'],
+          operationId: 'removeOutboundDomain',
+          summary: 'Remove a sending domain',
+          description:
+            'Requires an `outbound` licence (`X-License-Key` header). Frees the domain name for any account to register again; already-queued mail for this domain is unaffected (ZoneMTA treats a missing gate record the same as `maySend: false`).',
+          security: [{ LicenseKeyHeader: [] }],
+          parameters: [
+            {
+              name: 'domain',
+              in: 'path',
+              required: true,
+              schema: { type: 'string' },
+              description: 'Domain to remove.',
+            },
+          ],
+          responses: {
+            200: { description: 'Domain removed' },
+            401: {
+              description: 'Missing or invalid licence key',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+            403: {
+              description: 'Licence is not of type `outbound`',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+            404: {
+              description: 'Domain not found, or not owned by this account',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
           },
         },
       },

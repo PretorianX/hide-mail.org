@@ -9,9 +9,15 @@ const redisService = require('../redisService');
 
 const ACCOUNTS_INDEX_KEY = 'outbound:accounts:index';
 
+// Domain code (Task 5+) only has an accountId, not a license key, so it needs
+// this reverse index (accountId -> licenseKey) to look up the owning account's
+// license when deciding whether a domain's gate record may say maySend: true.
+const accountLicenseKeyIndexKey = (accountId) => `outbound:account:${accountId}:licenseKey`;
+
 const createAccount = async ({ label, days }) => {
   const license = await licenseService.createOperatorLicense({ type: 'outbound', days, label });
   await redisService.client.sadd(ACCOUNTS_INDEX_KEY, license.key);
+  await redisService.client.set(accountLicenseKeyIndexKey(license.accountId), license.key);
   return { accountId: license.accountId, key: license.key, expiresAt: license.expiresAt };
 };
 
