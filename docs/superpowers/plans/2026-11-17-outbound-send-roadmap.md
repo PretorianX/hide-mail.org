@@ -9,11 +9,12 @@
 | Plan | File | Milestone | Status | Produces |
 |------|------|-----------|--------|----------|
 | M0 | `2026-11-17-outbound-send-m0-zonemta-spike.md` | Spike | **Done** (PASS — `.superpowers/sdd/m0-controller-summary.md`) | `mta/` tree that audits clean at high, delivers and holds mail locally |
-| M1 | `2026-11-17-outbound-send-m1-sending-core.md` | Sending core | In progress — see `.superpowers/sdd/m1-controller-summary.md` | Accounts, DNS verify, send API, plugin, events, suppressions, operator script |
+| M1 | `2026-11-17-outbound-send-m1-sending-core.md` | Sending core | Done — see `.superpowers/sdd/m1-controller-summary.md` | Accounts, DNS verify, send API, plugin, events, suppressions, operator script |
 | M2 | `2026-11-17-outbound-send-m2-metrics.md` | Metrics | Not started | Customer scrape, operator series, Grafana dashboard + alerts |
 | M3 | `2026-11-17-outbound-send-m3-bounce-mailback.md` | Bounce mail-back | Not started | Late DSN → Bounce Read → same event path |
 | M4 | `2026-11-17-outbound-send-m4-portal.md` | Portal | Not started | `portal/` at `send.hide-mail.org`, design-system copy, pages |
 
-M1's plan was written per spec section 6 after M0's PASS gate. M2–M4 plan
-files are written after M1 is complete (see `.superpowers/sdd/m1-controller-summary.md`
-for M1's done criteria and any carried-forward concerns for M2).
+M1 is complete (controller summary: `.superpowers/sdd/m1-controller-summary.md`).
+M2–M4 plan files are written next; M2 is still
+`2026-11-17-outbound-send-m2-metrics.md` (not yet authored — link the metrics
+section of the design spec until that plan exists).

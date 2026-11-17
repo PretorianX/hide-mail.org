@@ -293,6 +293,10 @@ TLS Reports reads an SMTP TLS report a receiver already sent. It is not a mailbo
 
 The page is free. The paid offer is the TLS Reports API (`TLS_PRICE_MONTHLY_USD`, default $24): `POST /api/tls-reports` with a TLS Reports key. That key cannot open a mailbox, grade a message, or call the other tool APIs. After a TLS Reports payment the browser returns to `/tls`.
 
+## Outbound Send (`outbound` licence)
+
+Outbound Send is a separate product for sending authenticated mail from customer domains via ZoneMTA (`POST /api/outbound/messages` with a send key `Authorization: Bearer hm_send_...`). Management routes (domains, send keys, suppressions, account summary) use an `outbound` licence key in `X-License-Key`. Design: `docs/superpowers/specs/2026-11-17-outbound-send-design.md`. M1 sending-core plan: `docs/superpowers/plans/2026-11-17-outbound-send-m1-sending-core.md`. Operator CLI: `docker compose exec backend node scripts/outbound-admin.js …`.
+
 ## Attachments
 
 Inbound mail is parsed by the SMTP listener and every part is stored base64-encoded inside the
