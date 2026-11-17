@@ -122,15 +122,18 @@ services:
       - default
 
   # Postfix - Outgoing SMTP relay for Forward & Forget and Outbound Send.
-  # Send signs DKIM in the backend; OpenDKIM here is optional for product domains.
+  # Outbound Send DKIM-signs in the backend (per-domain keys in Redis) before submit;
+  # Postfix only relays from mynetworks — no static ALLOWED_SENDER_DOMAINS list.
+  # OpenDKIM here remains optional for product/Forward domains only.
   # Image: https://github.com/bokysan/docker-postfix
   postfix:
     image: boky/postfix:v4.4.0
     environment:
       # Hostname for HELO/EHLO - should match your domain's PTR record
       - HOSTNAME=${POSTFIX_HOSTNAME:-mail.hide-mail.org}
-      # Empty = no sender-domain allowlist (required for customer Send domains).
-      # Set ALLOWED_SENDER_DOMAINS only if you intentionally restrict Forward & Forget.
+      # Leave empty: customer Send From-domains are not known at compose time.
+      # Trust boundary is mynetworks + backend (verified domain + DKIM). Optional
+      # seed for Forward & Forget only: ALLOWED_SENDER_DOMAINS=hide-mail.org,...
       - ALLOWED_SENDER_DOMAINS=${ALLOWED_SENDER_DOMAINS:-}
       # No relay host - send directly to destination mail servers
       - RELAYHOST=

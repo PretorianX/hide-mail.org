@@ -303,7 +303,7 @@ Public hub: [https://hide-mail.org/developers](https://hide-mail.org/developers)
 
 ## Outbound Send (`outbound` licence)
 
-Outbound Send is a separate product for sending authenticated mail from customer domains via the shared Postfix relay (`POST /api/outbound/messages` with a send key `Authorization: Bearer hm_send_...`). The backend signs DKIM with the domain's stored key, then submits to Postfix on `:587`. Management routes (domains, send keys, suppressions, account summary, activity, metrics token) use an `outbound` licence key in `X-License-Key`.
+Outbound Send is a separate product for sending authenticated mail from customer domains via the shared Postfix relay (`POST /api/outbound/messages` with a send key `Authorization: Bearer hm_send_...`). Verified sending domains (and their DKIM keys) live in Redis and grow as customers register domains — there is no static Postfix sender-domain allowlist. The backend decrypts the domain key, DKIM-signs the MIME, then submits to Postfix on `:587` (mynetworks only). Management routes (domains, send keys, suppressions, account summary, activity, metrics token) use an `outbound` licence key in `X-License-Key`.
 
 The customer portal is a separate Vite app in `portal/`, served at `https://hide-mail.org/admin/portal/` (Vite `base` `/admin/portal/`; compose publishes portal on `127.0.0.1:3013`). The frontend container nginx proxies `/admin/portal/` to the portal service; `/api/outbound/` is same-origin on `hide-mail.org` (host nginx → backend `:3002`). No `send.hide-mail.org` vhost is required.
 
