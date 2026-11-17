@@ -10,8 +10,10 @@ const findAuthoritativeNameservers = async (name, resolver = dns.promises) => {
       if (Array.isArray(nameservers) && nameservers.length > 0) {
         return nameservers;
       }
-    } catch {
-      // Continue toward the TLD when this candidate has no usable answer.
+    } catch (error) {
+      if (!error || !['ENODATA', 'ENOTFOUND'].includes(error.code)) {
+        return [];
+      }
     }
   }
 
@@ -41,7 +43,7 @@ const withTimeout = async (lookup, timeoutMs) => {
 
 const normalizeRecords = (type, records) => {
   if (!Array.isArray(records)) {
-    return [];
+    throw new TypeError('DNS resolver returned a non-array record set');
   }
   if (type === 'TXT') {
     return records.map((record) => (
@@ -89,14 +91,14 @@ const queryAuthoritative = async ({
         error: null,
       };
     } catch (error) {
-      if (error && ['ETIMEOUT', 'ENOTFOUND', 'ENODATA'].includes(error.code)) {
-        return null;
+      if (error && ['ENODATA', 'ENOTFOUND'].includes(error.code)) {
+        return {
+          nameserver,
+          records: [],
+          error: null,
+        };
       }
-      return {
-        nameserver,
-        records: null,
-        error: (error && (error.code || error.message)) || 'dns_error',
-      };
+      return null;
     }
   }));
 

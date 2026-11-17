@@ -25,6 +25,14 @@ describe('findAuthoritativeNameservers', () => {
     expect(resolver.resolveNs).toHaveBeenCalledTimes(3);
     expect(resolver.resolveNs).toHaveBeenLastCalledWith('com');
   });
+
+  test('stops walking when a nameserver lookup has a transient failure', async () => {
+    const resolver = { resolveNs: jest.fn().mockRejectedValue({ code: 'ESERVFAIL' }) };
+
+    expect(await findAuthoritativeNameservers('mail.example.com', resolver)).toEqual([]);
+    expect(resolver.resolveNs).toHaveBeenCalledTimes(1);
+    expect(resolver.resolveNs).toHaveBeenCalledWith('mail.example.com');
+  });
 });
 
 describe('queryAuthoritative', () => {
@@ -119,6 +127,33 @@ describe('queryAuthoritative', () => {
   });
 
   test.each(['ENOTFOUND', 'ENODATA'])(
+    'includes an authoritative empty response reported as %s',
+    async (code) => {
+      const resolver = {
+        resolve4: jest.fn().mockResolvedValue(['192.0.2.1']),
+      };
+      const MockResolver = jest.fn().mockImplementation(() => ({
+        setServers: jest.fn(),
+        resolveTxt: jest.fn().mockRejectedValue({ code }),
+      }));
+
+      const result = await queryAuthoritative({
+        name: 'x',
+        type: 'TXT',
+        nameservers: ['ns1'],
+        resolver,
+        ResolverCtor: MockResolver,
+      });
+
+      expect(result.answered).toEqual([{
+        nameserver: 'ns1',
+        records: [],
+        error: null,
+      }]);
+    }
+  );
+
+  test.each(['ECONNREFUSED', 'ESERVFAIL'])(
     'excludes a nameserver when its authoritative query fails with %s',
     async (code) => {
       const resolver = {
@@ -140,4 +175,53 @@ describe('queryAuthoritative', () => {
       expect(result.answered).toHaveLength(0);
     }
   );
+
+  test('includes only the responder when another nameserver refuses the query', async () => {
+    const resolver = {
+      resolve4: jest.fn().mockImplementation((nameserver) => (
+        Promise.resolve([nameserver === 'ns1' ? '192.0.2.1' : '192.0.2.2'])
+      )),
+    };
+    const resolveTxt = jest.fn()
+      .mockResolvedValueOnce([['v=DKIM1; p=abc']])
+      .mockRejectedValueOnce({ code: 'ECONNREFUSED' });
+    const MockResolver = jest.fn().mockImplementation(() => ({
+      setServers: jest.fn(),
+      resolveTxt,
+    }));
+
+    const result = await queryAuthoritative({
+      name: 'x',
+      type: 'TXT',
+      nameservers: ['ns1', 'ns2'],
+      resolver,
+      ResolverCtor: MockResolver,
+    });
+
+    expect(result.answered).toEqual([{
+      nameserver: 'ns1',
+      records: ['v=DKIM1; p=abc'],
+      error: null,
+    }]);
+  });
+
+  test('excludes a malformed non-array resolver result from answered', async () => {
+    const resolver = {
+      resolve4: jest.fn().mockResolvedValue(['192.0.2.1']),
+    };
+    const MockResolver = jest.fn().mockImplementation(() => ({
+      setServers: jest.fn(),
+      resolveTxt: jest.fn().mockResolvedValue('malformed'),
+    }));
+
+    const result = await queryAuthoritative({
+      name: 'x',
+      type: 'TXT',
+      nameservers: ['ns1'],
+      resolver,
+      ResolverCtor: MockResolver,
+    });
+
+    expect(result.answered).toHaveLength(0);
+  });
 });
