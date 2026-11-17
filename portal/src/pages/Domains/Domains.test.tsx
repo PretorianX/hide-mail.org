@@ -14,7 +14,8 @@ describe('DomainDetail DNS check', () => {
   it('shows fail status and reason, then updates after Check DNS', async () => {
     const user = userEvent.setup();
     mockJsonFetch((url) => {
-      if (url.includes('/check') && url.includes('mail.example.com')) {
+      const path = new URL(url, 'http://localhost').pathname;
+      if (path === `/api/outbound/domains/${encodeURIComponent('mail.example.com')}/check`) {
         return {
           status: 200,
           body: {

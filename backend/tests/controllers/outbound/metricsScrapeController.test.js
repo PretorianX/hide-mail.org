@@ -58,10 +58,10 @@ describe('GET /api/outbound/metrics', () => {
       .set('Authorization', `Bearer ${key}`)
       .expect(200);
 
-    expect(res.headers['content-type']).toMatch(/text\/plain/);
-    expect(res.text).toMatch(/hidemail_outbound_accepted_total\{domain="a\.example\.com"\} 1/);
-    expect(res.text).not.toMatch(/b\.example\.com/);
-    expect(res.text).not.toMatch(/account=/);
+    expect(res.headers['content-type']).toContain('text/plain');
+    expect(res.text).toContain('hidemail_outbound_accepted_total{domain="a.example.com"} 1');
+    expect(res.text).not.toContain('b.example.com');
+    expect(res.text).not.toContain('account=');
   });
 
   it('rejects a send key (Review Focus)', async () => {

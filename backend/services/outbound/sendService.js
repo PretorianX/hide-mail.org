@@ -31,7 +31,36 @@ class SendError extends Error {
   }
 }
 
-const RECIPIENT_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+/** Reject whitespace without a regex (avoids ReDoS on attacker-controlled `to`). */
+const hasAsciiWhitespace = (value) => {
+  for (let i = 0; i < value.length; i += 1) {
+    const code = value.charCodeAt(i);
+    if (code === 9 || code === 10 || code === 13 || code === 32) {
+      return true;
+    }
+  }
+  return false;
+};
+
+/**
+ * Minimal recipient syntax check without backtracking regexes.
+ * Requires a single `@`, non-empty local part, and a domain with a non-edge `.`.
+ */
+const isValidRecipient = (to) => {
+  if (typeof to !== 'string' || to.length < 3 || to.length > 320) {
+    return false;
+  }
+  if (hasAsciiWhitespace(to)) {
+    return false;
+  }
+  const at = to.indexOf('@');
+  if (at <= 0 || at !== to.lastIndexOf('@') || at === to.length - 1) {
+    return false;
+  }
+  const domain = to.slice(at + 1);
+  const dot = domain.indexOf('.');
+  return dot > 0 && dot < domain.length - 1;
+};
 
 const createDefaultTransport = () =>
   nodemailer.createTransport({
@@ -141,7 +170,7 @@ const sendMessage = async (payload, overrides = {}) => {
   }
 
   // (4) recipient syntax
-  if (!to || typeof to !== 'string' || !RECIPIENT_RE.test(to)) {
+  if (!isValidRecipient(to)) {
     await rejectAndThrow(
       deps.metricsStore,
       domain,

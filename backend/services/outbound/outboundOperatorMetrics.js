@@ -213,13 +213,23 @@ const refresh = async () => {
 
 /**
  * Review Focus helper: customer text for one account vs operator gauge values.
+ * Uses exact label substring match (no RegExp) so hostnames/backslashes stay literal.
  */
 const customerAcceptedLine = async (accountId, domain) => {
   const text = await renderer.renderAccount({ accountId });
-  const match = text.match(
-    new RegExp(`hidemail_outbound_accepted_total\\{domain="${domain.replace(/\./g, '\\.')}"\\} (\\d+)`)
-  );
-  return match ? Number(match[1]) : null;
+  const needle = `hidemail_outbound_accepted_total{domain="${renderer.escapeLabel(domain)}"} `;
+  const start = text.indexOf(needle);
+  if (start === -1) {
+    return null;
+  }
+  let end = start + needle.length;
+  while (end < text.length && text.charCodeAt(end) >= 48 && text.charCodeAt(end) <= 57) {
+    end += 1;
+  }
+  if (end === start + needle.length) {
+    return null;
+  }
+  return Number(text.slice(start + needle.length, end));
 };
 
 const register = () => {

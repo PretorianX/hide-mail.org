@@ -27,6 +27,27 @@ describe('outboundOperatorMetrics', () => {
     jest.restoreAllMocks();
   });
 
+  it('customerAcceptedLine reads literal domain labels (no hostname regex)', async () => {
+    const accountId = 'acct-op-literal';
+    const domain = 'mail.example.com';
+    await redisService.client.set(
+      `${META_PREFIX}${domain}`,
+      JSON.stringify({
+        accountId,
+        domain,
+        state: 'verified',
+        suspended: false,
+        dailyLimit: 100,
+      })
+    );
+    await redisService.client.sadd('outbound:domains:index', domain);
+    await redisService.client.sadd(`outbound:account:${accountId}:domains`, domain);
+    await store.incrAccepted(domain);
+
+    expect(await operatorMetrics.customerAcceptedLine(accountId, domain)).toBe(1);
+    expect(await operatorMetrics.customerAcceptedLine(accountId, 'other.example.com')).toBeNull();
+  });
+
   it('customer scrape accepted matches Redis value operator refresh reads (Review Focus)', async () => {
     const accountId = 'acct-op-1';
     const domain = 'mail.example.com';

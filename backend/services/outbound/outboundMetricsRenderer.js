@@ -93,4 +93,5 @@ const renderAccount = async ({ accountId, accountLabel = false }) => {
 
 module.exports = {
   renderAccount,
+  escapeLabel,
 };

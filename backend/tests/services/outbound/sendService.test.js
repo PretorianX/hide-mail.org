@@ -119,6 +119,30 @@ describe('outbound sendService.sendMessage', () => {
     expect(suppressionService.isSuppressed).not.toHaveBeenCalled();
   });
 
+  it('422 INVALID_RECIPIENT for ReDoS-shaped input without hanging', async () => {
+    const domainService = { getDomainMeta: jest.fn().mockResolvedValue(verifiedMeta) };
+    const accountRateLimiter = {
+      checkAndIncrement: jest.fn().mockResolvedValue({ allowed: true, limit: 600, retryAfterSeconds: 60 }),
+    };
+    const suppressionService = { isSuppressed: jest.fn() };
+    const evil = `!@!${'!.'.repeat(20000)}`;
+
+    const started = Date.now();
+    await expect(
+      sendService.sendMessage(
+        { ...basePayload(), to: evil },
+        {
+          domainService,
+          accountRateLimiter,
+          suppressionService,
+          mimeTransport: { sendMail: jest.fn() },
+        }
+      )
+    ).rejects.toMatchObject({ code: 'INVALID_RECIPIENT' });
+    expect(Date.now() - started).toBeLessThan(500);
+    expect(suppressionService.isSuppressed).not.toHaveBeenCalled();
+  });
+
   it('422 RECIPIENT_SUPPRESSED', async () => {
     const domainService = { getDomainMeta: jest.fn().mockResolvedValue(verifiedMeta) };
     const accountRateLimiter = {
