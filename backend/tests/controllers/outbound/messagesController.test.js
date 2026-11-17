@@ -141,5 +141,31 @@ describe('Outbound Messages / Account HTTP', () => {
       expect(res.body.status).toBe('queued');
       expect(res.body.id).toMatch(/^[0-9a-f-]{36}$/);
     });
+
+    it('stores request IP and send-key name on the accepted message', async () => {
+      const { sendKey } = await createVerifiedSender();
+
+      const res = await request(app)
+        .post('/api/outbound/messages')
+        .set('Authorization', `Bearer ${sendKey.key}`)
+        .set('X-Forwarded-For', '203.0.113.55, 10.0.0.1')
+        .set('Idempotency-Key', `idem-${crypto.randomUUID()}`)
+        .send({
+          from: { email: 'billing@mail.example.com', name: 'Acme' },
+          to: 'client@example.org',
+          subject: 'Welcome',
+          text: 'hello',
+        })
+        .expect(202);
+
+      const stored = await messageStore.getMessage(res.body.id);
+      expect(stored).toMatchObject({
+        subject: 'Welcome',
+        from: { name: 'Acme', email: 'billing@mail.example.com' },
+        envelopeFrom: `b-${res.body.id}@hm-bounce.mail.example.com`,
+        clientIp: '203.0.113.55',
+        sendKeyName: 'prod',
+      });
+    });
   });
 });

@@ -133,6 +133,8 @@ const sendMessage = async (payload, overrides = {}) => {
     attachments,
     reference,
     idempotencyKey,
+    clientIp = null,
+    sendKeyName = null,
   } = payload;
 
   if (idempotencyKey) {
@@ -266,6 +268,13 @@ const sendMessage = async (payload, overrides = {}) => {
     domain,
     recipient: to,
     reference: reference ?? null,
+    subject: subject || null,
+    from: from?.email
+      ? { name: from.name || null, email: from.email }
+      : null,
+    envelopeFrom,
+    clientIp: clientIp || null,
+    sendKeyName: sendKeyName || null,
   });
 
   await deps.metricsStore.incrAccepted(domain);

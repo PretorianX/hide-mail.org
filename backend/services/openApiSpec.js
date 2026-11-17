@@ -340,6 +340,18 @@ const buildOpenApiSpec = (options = {}) => {
                   domain: { type: 'string' },
                   recipient: { type: 'string' },
                   reference: { type: 'string', nullable: true },
+                  subject: { type: 'string', nullable: true },
+                  from: {
+                    type: 'object',
+                    nullable: true,
+                    properties: {
+                      name: { type: 'string', nullable: true },
+                      email: { type: 'string' },
+                    },
+                  },
+                  envelopeFrom: { type: 'string', nullable: true },
+                  clientIp: { type: 'string', nullable: true },
+                  sendKeyName: { type: 'string', nullable: true },
                   status: { type: 'string' },
                   createdAt: { type: 'integer' },
                   lastEventAt: { type: 'integer', nullable: true },

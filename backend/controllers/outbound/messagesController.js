@@ -5,6 +5,14 @@
 const sendService = require('../../services/outbound/sendService');
 const logger = require('../../utils/logger');
 
+const getClientIp = (req) => {
+  const forwarded = req.headers['x-forwarded-for'];
+  if (typeof forwarded === 'string' && forwarded.trim()) {
+    return forwarded.split(',')[0].trim();
+  }
+  return req.ip || req.socket?.remoteAddress || null;
+};
+
 const SEND_ERROR_STATUS = {
   RATE_LIMITED: 429,
   DOMAIN_NOT_VERIFIED: 403,
@@ -47,6 +55,8 @@ const createMessage = async (req, res, next) => {
       attachments: req.body?.attachments,
       reference: req.body?.reference,
       idempotencyKey: req.get('Idempotency-Key') || null,
+      clientIp: getClientIp(req),
+      sendKeyName: req.sendKeyName || null,
     });
     return res.status(202).json({ success: true, ...result });
   } catch (error) {

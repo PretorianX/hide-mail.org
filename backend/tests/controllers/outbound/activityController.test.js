@@ -29,6 +29,11 @@ describe('Outbound Activity HTTP', () => {
       domain: 'mail.example.com',
       recipient: 'a@example.org',
       reference: null,
+      subject: 'Reset password',
+      from: { name: 'Auth', email: 'noreply@mail.example.com' },
+      envelopeFrom: 'b-m1@hm-bounce.mail.example.com',
+      clientIp: '192.0.2.10',
+      sendKeyName: 'prod',
     });
     await messageStore.updateStatus({
       id: 'm1',
@@ -47,6 +52,11 @@ describe('Outbound Activity HTTP', () => {
       id: 'm1',
       status: 'bounced',
       lastResponse: '550 5.1.1 user unknown',
+      subject: 'Reset password',
+      from: { name: 'Auth', email: 'noreply@mail.example.com' },
+      envelopeFrom: 'b-m1@hm-bounce.mail.example.com',
+      clientIp: '192.0.2.10',
+      sendKeyName: 'prod',
     });
   });
 });
