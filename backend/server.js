@@ -8,6 +8,7 @@ const inboundMailService = require('./services/inboundMailService');
 const { resolveKnownRecipient } = require('./services/recipientResolver');
 const forwardingService = require('./services/forwardingService');
 const dnsRecheckJob = require('./services/outbound/dnsRecheckJob');
+const eventConsumer = require('./services/outbound/eventConsumer');
 const metrics = require('./services/metricsService');
 const billingMetricsCollector = require('./services/billingMetricsCollector');
 const httpMetricsMiddleware = require('./middleware/httpMetrics');
@@ -38,6 +39,7 @@ const SMTP_PORT = process.env.SMTP_PORT || 2525;
     // Initialize Forward & Forget service
     forwardingService.initialize();
     dnsRecheckJob.start();
+    eventConsumer.start();
   } catch (error) {
     logger.error('Failed to initialize services:', error);
   }
