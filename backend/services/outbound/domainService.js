@@ -127,11 +127,7 @@ const addDomain = async ({ accountId, domain: rawDomain }) => {
     const privateKeyEnc = keyCrypto.encrypt(privateKeyPem, config.outbound.keyEncryptionSecret);
     const records = buildExpectedRecords({ domain, selector, publicKeyPem });
 
-    const accountDailyDefault = await getAccountDailyLimitDefault(accountId);
-    const dailyLimit =
-      accountDailyDefault === undefined
-        ? config.outbound.dailyLimitDefault
-        : accountDailyDefault;
+    const dailyLimit = await getAccountDailyLimitDefault(accountId);
 
     const meta = {
       accountId,
@@ -175,6 +171,11 @@ const checkDomain = async ({ accountId, domain: rawDomain }) => {
     throw new DomainError('NOT_FOUND', `Domain ${domain} not found`);
   }
 
+  // Unlimited accounts clear a mistaken 1000/day stamp; numeric account defaults
+  // leave any per-domain override (CLI) alone.
+  const accountDailyDefault = await getAccountDailyLimitDefault(accountId);
+  const dailyLimit = accountDailyDefault === null ? null : meta.dailyLimit;
+
   const expected = buildExpectedRecords({
     domain,
     selector: meta.selector,
@@ -196,7 +197,7 @@ const checkDomain = async ({ accountId, domain: rawDomain }) => {
     };
   });
 
-  const updatedMeta = { ...meta, state, records, lastCheckedAt: Date.now() };
+  const updatedMeta = { ...meta, dailyLimit, state, records, lastCheckedAt: Date.now() };
   await writeMeta(domain, updatedMeta);
   await writeGateRecord({
     accountId,
@@ -207,7 +208,7 @@ const checkDomain = async ({ accountId, domain: rawDomain }) => {
     suspended: meta.suspended,
   });
 
-  return { domain, state, records };
+  return { domain, state, records, dailyLimit };
 };
 
 const listDomains = async ({ accountId }) => {

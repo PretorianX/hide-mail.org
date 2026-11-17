@@ -80,6 +80,7 @@ export {
   WarningIcon,
   ErrorIcon,
   SuccessIcon,
+  CopyIcon,
   iconRegistry,
 } from './components/Icons';
 export type { IconProps, IconName, IconSize } from './components/Icons';

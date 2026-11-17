@@ -162,7 +162,7 @@ const buildOpenApiSpec = (options = {}) => {
         DomainRecord: {
           type: 'object',
           properties: {
-            id: { type: 'string', enum: ['dkim', 'returnPath', 'dmarc'] },
+            id: { type: 'string', enum: ['dkim', 'returnPath', 'spf', 'dmarc'] },
             type: { type: 'string', enum: ['TXT', 'CNAME'] },
             host: { type: 'string', example: 'hm-4f2a9c3d._domainkey.example.com' },
             expected: { type: 'string', nullable: true },

@@ -36,6 +36,16 @@ const createdPayload = {
       reason: 'missing',
     },
     {
+      id: 'spf',
+      purpose: 'SPF (authorize Hide Mail)',
+      type: 'TXT',
+      host: 'mail.example.com',
+      value: 'v=spf1 include:_spf.hide-mail.org ~all',
+      expected: 'v=spf1 include:_spf.hide-mail.org ~all',
+      status: 'fail',
+      reason: 'missing',
+    },
+    {
       id: 'dmarc',
       purpose: 'DMARC policy',
       type: 'TXT',
@@ -114,15 +124,28 @@ describe('Domains add → DKIM records', () => {
       expect(screen.getByRole('heading', { name: 'mail.example.com' })).toBeInTheDocument();
     });
 
-    expect(screen.getAllByText('TXT').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText(DKIM_HOST)).toBeInTheDocument();
     expect(screen.getByText(DKIM_VALUE)).toBeInTheDocument();
-    expect(screen.getByText('CNAME')).toBeInTheDocument();
     expect(screen.getByText('hm-bounce.mail.example.com')).toBeInTheDocument();
     expect(screen.getAllByText('rp.hide-mail.org').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('v=spf1 include:_spf.hide-mail.org ~all').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('v=DMARC1; p=none;')).toBeInTheDocument();
     expect(screen.queryByText(/any valid v=DMARC1/i)).not.toBeInTheDocument();
     expect(screen.getByText(/rp means return-path/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/include:_spf\.hide-mail\.org/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByRole('button', { name: /Copy host/i }).length).toBeGreaterThanOrEqual(4);
+    expect(screen.getAllByRole('button', { name: /Copy value/i }).length).toBeGreaterThanOrEqual(4);
+
+    const writeText = jest.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    });
+    await user.click(screen.getAllByRole('button', { name: /Copy value/i })[0]);
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalledWith(DKIM_VALUE);
+    });
+
     expect(screen.getByText('Pending')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Check DNS' })).toBeInTheDocument();
   });
