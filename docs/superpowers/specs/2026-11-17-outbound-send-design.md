@@ -1,6 +1,7 @@
 # Hide Mail Send: outbound sending with verified domains
 
-Status: draft, awaiting approval. Branch `feat/send-service`, cut from `origin/main` at `e02842c`.
+Status: approved. Branch `feat/send-service`, cut from `origin/main` at `e02842c`.
+Execution: subagent-driven (multi-agent), one plan per milestone.
 
 Items marked **(call)** were decided by the author, not by the product owner, and are open to
 correction.
