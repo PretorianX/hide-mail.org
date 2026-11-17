@@ -239,6 +239,29 @@ const buildOpenApiSpec = (options = {}) => {
             },
           },
         },
+        MetricsTokenRotateResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            key: {
+              type: 'string',
+              description: 'Raw metrics token, returned once. Use as `Authorization: Bearer <key>` on GET /api/outbound/metrics.',
+              example: 'hm_metrics_1a2b3c...',
+            },
+            createdAt: { type: 'integer', example: 1732000000000 },
+            scrapeConfig: { type: 'object' },
+          },
+        },
+        MetricsTokenMetaResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            createdAt: { type: 'integer', example: 1732000000000 },
+            maskedKey: { type: 'string', example: '****9f3a' },
+            tokenPresent: { type: 'boolean', example: true },
+            scrapeConfig: { type: 'object' },
+          },
+        },
         OutboundMessageCreateRequest: {
           type: 'object',
           required: ['from', 'to'],
@@ -1104,6 +1127,71 @@ const buildOpenApiSpec = (options = {}) => {
             },
             403: {
               description: 'Licence is not of type `outbound`',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+          },
+        },
+      },
+      '/api/outbound/metrics-token': {
+        post: {
+          tags: ['Outbound Sending'],
+          operationId: 'rotateOutboundMetricsToken',
+          summary: 'Issue or rotate the account metrics token',
+          description:
+            'Requires an `outbound` licence (`X-License-Key` header). One token per account; rotating invalidates the previous token. Returns the raw `hm_metrics_...` key once.',
+          security: [{ LicenseKeyHeader: [] }],
+          responses: {
+            201: {
+              description: 'Metrics token issued',
+              content: {
+                'application/json': { schema: { $ref: '#/components/schemas/MetricsTokenRotateResponse' } },
+              },
+            },
+            401: {
+              description: 'Missing or invalid licence key',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+            403: {
+              description: 'Licence is not of type `outbound`',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+          },
+        },
+        get: {
+          tags: ['Outbound Sending'],
+          operationId: 'getOutboundMetricsTokenMeta',
+          summary: 'Get metrics token metadata (no raw key)',
+          description: 'Requires an `outbound` licence. Returns masked key and a scrape_config template without the secret.',
+          security: [{ LicenseKeyHeader: [] }],
+          responses: {
+            200: {
+              description: 'Token metadata',
+              content: {
+                'application/json': { schema: { $ref: '#/components/schemas/MetricsTokenMetaResponse' } },
+              },
+            },
+            404: {
+              description: 'No token issued yet',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+          },
+        },
+      },
+      '/api/outbound/metrics': {
+        get: {
+          tags: ['Outbound Sending'],
+          operationId: 'scrapeOutboundMetrics',
+          summary: 'Customer Prometheus scrape for this account\'s domains',
+          description:
+            'Authenticated with `Authorization: Bearer hm_metrics_...` only. Returns Prometheus text exposition for this account\'s domains (no `account` label).',
+          security: [{ BearerAuth: [] }],
+          responses: {
+            200: {
+              description: 'Prometheus text',
+              content: { 'text/plain': { schema: { type: 'string' } } },
+            },
+            401: {
+              description: 'Missing or invalid metrics token',
               content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
             },
           },

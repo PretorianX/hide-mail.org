@@ -16,6 +16,7 @@ const redisService = require('../services/redisService');
 const licenseService = require('../services/licenseService');
 const accountService = require('../services/outbound/accountService');
 const sendKeyService = require('../services/outbound/sendKeyService');
+const metricsTokenService = require('../services/outbound/metricsTokenService');
 
 const extractLicenseKey = (req) => {
   const header = req.get('X-License-Key');
@@ -111,7 +112,57 @@ const requireSendKey = async (req, res, next) => {
   }
 };
 
+// `Authorization: Bearer hm_metrics_...` only — never licence or send keys.
+const extractBearer = (req) => {
+  const auth = req.get('Authorization') || '';
+  if (auth.startsWith('Bearer ')) {
+    return auth.slice('Bearer '.length).trim();
+  }
+  return '';
+};
+
+const requireMetricsToken = async (req, res, next) => {
+  try {
+    const rawKey = extractBearer(req);
+    if (!rawKey) {
+      return res.status(401).json({
+        success: false,
+        error: 'Metrics token required',
+        code: 'METRICS_TOKEN_REQUIRED',
+      });
+    }
+
+    const validated = await metricsTokenService.validateMetricsToken(rawKey);
+    if (!validated) {
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid or expired metrics token',
+        code: 'METRICS_TOKEN_INVALID',
+      });
+    }
+
+    const licenseKey = await redisService.client.get(
+      accountService.accountLicenseKeyIndexKey(validated.accountId)
+    );
+    const license = licenseKey ? await accountService.getAccountByKey(licenseKey) : null;
+
+    if (!license || !licenseService.isActive(license)) {
+      return res.status(403).json({
+        success: false,
+        error: 'Account licence is no longer active',
+        code: 'OUTBOUND_LICENSE_INACTIVE',
+      });
+    }
+
+    req.accountId = validated.accountId;
+    return next();
+  } catch (error) {
+    return next(error);
+  }
+};
+
 module.exports = {
   requireOutboundLicense,
   requireSendKey,
+  requireMetricsToken,
 };
