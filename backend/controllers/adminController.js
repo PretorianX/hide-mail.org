@@ -47,7 +47,7 @@ const listLicenses = async (_req, res, next) => {
     const licenses = await adminLicenseService.listLicenses();
     return res.status(200).json({ success: true, licenses });
   } catch (error) {
-    logger.error(`admin listLicenses: ${sanitizeForLog(error.message)}`);
+    logger.error('admin listLicenses failed');
     return next(error);
   }
 };
@@ -75,7 +75,7 @@ const createLicense = async (req, res, next) => {
         code: error.code,
       });
     }
-    logger.error(`admin createLicense: ${sanitizeForLog(error.message)}`);
+    logger.error(`admin createLicense failed code=${sanitizeForLog(error.code || 'UNKNOWN')}`);
     return next(error);
   }
 };
@@ -92,7 +92,7 @@ const deleteLicense = async (req, res, next) => {
     }
     return res.status(200).json({ success: true });
   } catch (error) {
-    logger.error(`admin deleteLicense: ${sanitizeForLog(error.message)}`);
+    logger.error('admin deleteLicense failed');
     return next(error);
   }
 };

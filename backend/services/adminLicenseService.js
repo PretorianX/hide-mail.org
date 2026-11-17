@@ -157,7 +157,7 @@ const createLicense = async ({
     license = await licenseService.createLicense({
       type,
       plan: plan === 'yearly' ? 'yearly' : 'monthly',
-      orderReference: `admin-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      orderReference: `admin-${Date.now()}-${crypto.randomBytes(6).toString('hex')}`,
       ttlSeconds,
     });
     if (label) {

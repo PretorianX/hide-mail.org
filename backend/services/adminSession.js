@@ -74,10 +74,10 @@ const createSessionToken = (email) => {
   });
 };
 
-const parseCookies = (header) => {
-  const out = {};
-  if (!header || typeof header !== 'string') {
-    return out;
+/** Read a single named cookie without building a dynamic object (avoids prototype pollution). */
+const readCookieValue = (header, wantedName) => {
+  if (!header || typeof header !== 'string' || !wantedName) {
+    return null;
   }
   for (const part of header.split(';')) {
     const idx = part.indexOf('=');
@@ -85,19 +85,22 @@ const parseCookies = (header) => {
       continue;
     }
     const name = part.slice(0, idx).trim();
+    if (name !== wantedName) {
+      continue;
+    }
     const value = part.slice(idx + 1).trim();
     try {
-      out[name] = decodeURIComponent(value);
+      return decodeURIComponent(value);
     } catch {
-      out[name] = value;
+      return value;
     }
   }
-  return out;
+  return null;
 };
 
 const readSessionFromRequest = (req) => {
-  const cookies = parseCookies(req.headers.cookie);
-  return verifyToken(cookies[COOKIE_NAME]);
+  const token = readCookieValue(req.headers.cookie, COOKIE_NAME);
+  return verifyToken(token);
 };
 
 const setSessionCookie = (res, token) => {
