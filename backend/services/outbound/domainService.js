@@ -225,6 +225,24 @@ const removeDomain = async ({ accountId, domain: rawDomain }) => {
 
 const getDomainMeta = async (domain) => readMeta(domain);
 
+const setSuspended = async ({ domain: rawDomain, suspended }) => {
+  const domain = normalizeDomain(rawDomain);
+  const meta = await readMeta(domain);
+  if (!meta) {
+    throw new DomainError('NOT_FOUND', `Domain ${domain} not found`);
+  }
+  meta.suspended = Boolean(suspended);
+  await writeMeta(domain, meta);
+  await writeGateRecord({
+    accountId: meta.accountId,
+    domain,
+    selector: meta.selector,
+    privateKeyEnc: meta.privateKeyEnc,
+    state: meta.state,
+    suspended: meta.suspended,
+  });
+};
+
 module.exports = {
   DomainError,
   addDomain,
@@ -232,4 +250,5 @@ module.exports = {
   listDomains,
   removeDomain,
   getDomainMeta,
+  setSuspended,
 };
