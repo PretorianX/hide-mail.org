@@ -147,6 +147,34 @@ describe('licenseService', () => {
     });
   });
 
+  describe('createOperatorLicense / extendOperatorLicense', () => {
+    it('creates an outbound license with an accountId and no orderReference', async () => {
+      const license = await licenseService.createOperatorLicense({ type: 'outbound', days: 30, label: 'Acme Accounting' });
+      expect(license.type).toBe('outbound');
+      expect(license.accountId).toMatch(/^[0-9a-f-]{36}$/);
+      expect(license.label).toBe('Acme Accounting');
+      expect(license.orderReference).toBeUndefined();
+      const stored = await licenseService.getLicense(license.key);
+      expect(stored.accountId).toBe(license.accountId);
+    });
+
+    it('rejects an unknown type', async () => {
+      await expect(licenseService.createOperatorLicense({ type: 'pro', days: 30, label: 'x' }))
+        .rejects.toThrow(/Unknown license type/);
+    });
+
+    it('extends an outbound license by days from its current expiry', async () => {
+      const license = await licenseService.createOperatorLicense({ type: 'outbound', days: 1, label: 'x' });
+      const before = license.expiresAt;
+      const extended = await licenseService.extendOperatorLicense({ key: license.key, days: 10 });
+      expect(extended.expiresAt).toBeGreaterThanOrEqual(before + 10 * 86400 * 1000 - 1000);
+    });
+
+    it('returns null extending an unknown key', async () => {
+      expect(await licenseService.extendOperatorLicense({ key: 'HM-NOPE-NOPE-NOPE-NOPE', days: 5 })).toBeNull();
+    });
+  });
+
   describe('metrics', () => {
     beforeEach(() => {
       metrics.licensesCreatedTotal.inc.mockClear();
