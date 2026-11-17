@@ -77,8 +77,17 @@ describe('Outbound Domains HTTP', () => {
         .expect(200);
 
       expect(res.body.domains).toEqual([
-        { domain: 'example.com', state: 'pending', suspended: false, dailyLimit: 1000 },
+        expect.objectContaining({
+          domain: 'example.com',
+          state: 'pending',
+          suspended: false,
+          dailyLimit: 1000,
+          selector: expect.stringMatching(/^hm-/),
+          records: expect.any(Array),
+          lastCheckedAt: null,
+        }),
       ]);
+      expect(res.body.domains[0].records.length).toBeGreaterThan(0);
     });
   });
 

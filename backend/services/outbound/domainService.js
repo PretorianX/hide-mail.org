@@ -167,11 +167,25 @@ const checkDomain = async ({ accountId, domain: rawDomain }) => {
     throw new DomainError('NOT_FOUND', `Domain ${domain} not found`);
   }
 
-  const { state, records } = await verifyDomain({
+  const expected = buildExpectedRecords({
+    domain,
+    selector: meta.selector,
+    publicKeyPem: meta.publicKeyPem,
+  });
+  const { state, records: checkResults } = await verifyDomain({
     domain,
     selector: meta.selector,
     publicKeyPem: meta.publicKeyPem,
     previousState: meta.state,
+  });
+  // Merge expected DNS defs (type/host/value) with per-check status for the portal.
+  const records = expected.map((def) => {
+    const result = checkResults.find((entry) => entry.id === def.id) || {};
+    return {
+      ...def,
+      ...result,
+      value: def.expected,
+    };
   });
 
   const updatedMeta = { ...meta, state, records, lastCheckedAt: Date.now() };
