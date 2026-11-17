@@ -204,6 +204,15 @@ class RedisMock {
     
     return count;
   }
+
+  async xlen(key) {
+    const list = this.data[key];
+    return Array.isArray(list) ? list.length : 0;
+  }
+
+  async xpending(_stream, _group) {
+    return [0, null, null, []];
+  }
 }
 
 module.exports = RedisMock; 
