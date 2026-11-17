@@ -17,7 +17,7 @@ describe('outbound accountService', () => {
     });
 
     it('omits an account whose license already expired from the index', async () => {
-      const created = await accountService.createAccount({ label: 'Gone', days: 0 }); // 0-day: expires immediately
+      const created = await accountService.createAccount({ label: 'Gone', days: 1 });
       // simulate Redis TTL reap by deleting the license key directly
       await redisService.client.del(`license:${created.key}`);
       const accounts = await accountService.listAccounts();

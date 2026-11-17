@@ -173,6 +173,27 @@ describe('licenseService', () => {
     it('returns null extending an unknown key', async () => {
       expect(await licenseService.extendOperatorLicense({ key: 'HM-NOPE-NOPE-NOPE-NOPE', days: 5 })).toBeNull();
     });
+
+    it('returns null extending a non-outbound license', async () => {
+      const proLicense = await licenseService.createLicense({
+        type: 'pro',
+        plan: 'monthly',
+        orderReference: 'pro-not-outbound',
+        ttlSeconds: 3600,
+      });
+      expect(await licenseService.extendOperatorLicense({ key: proLicense.key, days: 5 })).toBeNull();
+    });
+
+    it.each([0, -1, NaN])('rejects creating an outbound license with days=%p', async (days) => {
+      await expect(licenseService.createOperatorLicense({ type: 'outbound', days, label: 'x' }))
+        .rejects.toThrow(/days must be a positive integer/);
+    });
+
+    it.each([0, -1, NaN])('rejects extending an outbound license with days=%p', async (days) => {
+      const license = await licenseService.createOperatorLicense({ type: 'outbound', days: 1, label: 'x' });
+      await expect(licenseService.extendOperatorLicense({ key: license.key, days }))
+        .rejects.toThrow(/days must be a positive integer/);
+    });
   });
 
   describe('metrics', () => {

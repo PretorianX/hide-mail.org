@@ -104,9 +104,14 @@ const createLicense = async ({ type, plan, orderReference, recToken, ttlSeconds 
   return license;
 };
 
+const isPositiveIntegerDays = (days) => Number.isInteger(days) && days > 0;
+
 const createOperatorLicense = async ({ type, days, label }) => {
   if (type !== 'outbound') {
     throw new Error(`Unknown license type: ${type}`);
+  }
+  if (!isPositiveIntegerDays(days)) {
+    throw new Error(`days must be a positive integer, got: ${days}`);
   }
 
   const ttlSeconds = days * 24 * 60 * 60;
@@ -127,6 +132,10 @@ const createOperatorLicense = async ({ type, days, label }) => {
 };
 
 const extendOperatorLicense = async ({ key, days }) => {
+  if (!isPositiveIntegerDays(days)) {
+    throw new Error(`days must be a positive integer, got: ${days}`);
+  }
+
   const existing = await getLicense(key);
   if (!existing || existing.type !== 'outbound') {
     return null;
