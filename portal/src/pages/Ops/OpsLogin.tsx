@@ -6,26 +6,33 @@ import { adminLogin } from '@/api/admin';
 
 const Page = styled.main`
   min-height: 100vh;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: ${({ theme }) => theme.spacing.xl};
-  background: linear-gradient(
-    160deg,
-    ${({ theme }) => theme.colors.background} 0%,
-    ${({ theme }) => theme.colors.surface} 100%
-  );
+  background: ${({ theme }) => theme.colors.background};
 `;
 
-const Card = styled.form`
-  width: min(420px, 100%);
+const Panel = styled.form`
+  width: 100%;
+  max-width: 420px;
   display: flex;
   flex-direction: column;
   gap: ${({ theme }) => theme.spacing.md};
 `;
 
-const Title = styled.h1`
+const Brand = styled.h1`
   margin: 0;
-  font-size: ${({ theme }) => theme.typography.fontSize['2xl']};
+  font-family: ${({ theme }) => theme.typography.fontFamily.sans};
+  font-size: ${({ theme }) => theme.typography.fontSize['3xl']};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+  color: ${({ theme }) => theme.colors.text.primary};
+`;
+
+const Lead = styled.p`
+  margin: 0;
+  color: ${({ theme }) => theme.colors.text.secondary};
+  font-size: ${({ theme }) => theme.typography.fontSize.md};
 `;
 
 export function OpsLogin() {
@@ -51,14 +58,14 @@ export function OpsLogin() {
 
   return (
     <Page>
-      <Card onSubmit={onSubmit}>
-        <Title>Operator admin</Title>
-        <p>Sign in with the ADMIN_EMAIL / ADMIN_PASSWORD from the host .env.</p>
+      <Panel onSubmit={onSubmit}>
+        <Brand>Ops</Brand>
+        <Lead>Operator admin</Lead>
         {error ? <Alert variant="error">{error}</Alert> : null}
         <Input
           type="email"
           aria-label="Admin email"
-          placeholder="admin@hide-mail.org"
+          placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
@@ -74,7 +81,7 @@ export function OpsLogin() {
         <Button type="submit" disabled={busy}>
           {busy ? 'Signing in…' : 'Sign in'}
         </Button>
-      </Card>
+      </Panel>
     </Page>
   );
 }
