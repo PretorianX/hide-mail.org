@@ -24,6 +24,15 @@ const accountService = require('./accountService');
 
 const SENDKEY_PREFIX = 'outbound:sendkey:';
 const accountSendKeysIndexKey = (accountId) => `outbound:account:${accountId}:sendkeys`;
+const MAX_NAME_LENGTH = 100;
+
+class SendKeyError extends Error {
+  constructor(code, message) {
+    super(message);
+    this.name = 'SendKeyError';
+    this.code = code;
+  }
+}
 
 const hashSendKey = (rawKey) => crypto.createHash('sha256').update(rawKey).digest('hex');
 
@@ -33,7 +42,47 @@ const getActiveLicenseForAccount = async (accountId) => {
   return license && licenseService.isActive(license) ? license : null;
 };
 
+const assertValidName = (name) => {
+  if (typeof name !== 'string' || name.trim().length === 0) {
+    throw new SendKeyError('INVALID_NAME', 'name must be a non-empty string');
+  }
+  if (name.length > MAX_NAME_LENGTH) {
+    throw new SendKeyError('INVALID_NAME', `name must be at most ${MAX_NAME_LENGTH} characters`);
+  }
+};
+
+const readSendKeyRecord = async (hash) => {
+  const raw = await redisService.client.get(`${SENDKEY_PREFIX}${hash}`);
+  return raw ? JSON.parse(raw) : null;
+};
+
+// Shared by createSendKey's duplicate-name guard and revokeSendKey's lookup —
+// both need the same "walk this account's index for the entry whose stored
+// name case-sensitively matches" scan, so there is exactly one place that
+// defines what "the key named X" means for an account.
+const findSendKeyEntryByName = async ({ accountId, name }) => {
+  const hashes = await redisService.client.smembers(accountSendKeysIndexKey(accountId));
+  for (const hash of hashes) {
+    const record = await readSendKeyRecord(hash);
+    if (record && record.name === name) {
+      return { hash, record };
+    }
+  }
+  return null;
+};
+
 const createSendKey = async ({ accountId, name }) => {
+  assertValidName(name);
+
+  // A second key under the same name would make revokeSendKey ambiguous:
+  // revoking "by name" could only ever delete the first match it happens to
+  // find, silently leaving the other one valid while the caller is told it
+  // was revoked. Reject the collision up front instead.
+  const duplicate = await findSendKeyEntryByName({ accountId, name });
+  if (duplicate) {
+    throw new SendKeyError('NAME_TAKEN', `A send key named "${name}" already exists for this account`);
+  }
+
   const license = await getActiveLicenseForAccount(accountId);
   if (!license) {
     throw new Error(`Cannot issue a send key for an account with no active licence: ${accountId}`);
@@ -49,11 +98,6 @@ const createSendKey = async ({ accountId, name }) => {
   await redisService.client.sadd(accountSendKeysIndexKey(accountId), hash);
 
   return { key: rawKey, name, createdAt };
-};
-
-const readSendKeyRecord = async (hash) => {
-  const raw = await redisService.client.get(`${SENDKEY_PREFIX}${hash}`);
-  return raw ? JSON.parse(raw) : null;
 };
 
 const listSendKeys = async ({ accountId }) => {
@@ -77,18 +121,14 @@ const listSendKeys = async ({ accountId }) => {
 };
 
 const revokeSendKey = async ({ accountId, name }) => {
-  const hashes = await redisService.client.smembers(accountSendKeysIndexKey(accountId));
-
-  for (const hash of hashes) {
-    const record = await readSendKeyRecord(hash);
-    if (record && record.name === name) {
-      await redisService.client.del(`${SENDKEY_PREFIX}${hash}`);
-      await redisService.client.srem(accountSendKeysIndexKey(accountId), hash);
-      return true;
-    }
+  const found = await findSendKeyEntryByName({ accountId, name });
+  if (!found) {
+    return false;
   }
 
-  return false;
+  await redisService.client.del(`${SENDKEY_PREFIX}${found.hash}`);
+  await redisService.client.srem(accountSendKeysIndexKey(accountId), found.hash);
+  return true;
 };
 
 const validateSendKey = async (rawKey) => {
@@ -105,6 +145,7 @@ const validateSendKey = async (rawKey) => {
 };
 
 module.exports = {
+  SendKeyError,
   createSendKey,
   listSendKeys,
   revokeSendKey,

@@ -41,6 +41,52 @@ describe('outbound sendKeyService', () => {
       expect(hashes).toHaveLength(1);
     });
 
+    it('rejects a second key with the same name for the same account', async () => {
+      const { accountId } = await createOutboundAccount();
+      await sendKeyService.createSendKey({ accountId, name: 'prod' });
+
+      await expect(
+        sendKeyService.createSendKey({ accountId, name: 'prod' })
+      ).rejects.toMatchObject({ code: 'NAME_TAKEN' });
+    });
+
+    it('allows the same name for two different accounts (no cross-account collision)', async () => {
+      const first = await createOutboundAccount();
+      const second = await createOutboundAccount();
+      await sendKeyService.createSendKey({ accountId: first.accountId, name: 'prod' });
+
+      await expect(
+        sendKeyService.createSendKey({ accountId: second.accountId, name: 'prod' })
+      ).resolves.toMatchObject({ name: 'prod' });
+    });
+
+    it('rejects a non-string name', async () => {
+      const { accountId } = await createOutboundAccount();
+
+      await expect(
+        sendKeyService.createSendKey({ accountId, name: 123 })
+      ).rejects.toMatchObject({ code: 'INVALID_NAME' });
+      await expect(
+        sendKeyService.createSendKey({ accountId, name: {} })
+      ).rejects.toMatchObject({ code: 'INVALID_NAME' });
+    });
+
+    it('rejects a name longer than the length cap', async () => {
+      const { accountId } = await createOutboundAccount();
+
+      await expect(
+        sendKeyService.createSendKey({ accountId, name: 'x'.repeat(101) })
+      ).rejects.toMatchObject({ code: 'INVALID_NAME' });
+    });
+
+    it('accepts a name at exactly the length cap', async () => {
+      const { accountId } = await createOutboundAccount();
+
+      await expect(
+        sendKeyService.createSendKey({ accountId, name: 'x'.repeat(100) })
+      ).resolves.toMatchObject({ name: 'x'.repeat(100) });
+    });
+
     it('writes a Redis TTL tracking the account licence remaining seconds', async () => {
       const { accountId } = await createOutboundAccount(10);
       const expireSpy = jest.spyOn(redisService.client, 'expire');

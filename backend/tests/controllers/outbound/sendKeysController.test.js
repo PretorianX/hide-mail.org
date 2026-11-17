@@ -45,6 +45,43 @@ describe('Outbound Send Keys HTTP', () => {
 
       expect(res.body.code).toBe('NAME_REQUIRED');
     });
+
+    it('returns 409 when the name is already used by this account', async () => {
+      const account = await createOutboundAccount();
+      await request(app).post('/api/outbound/send-keys').set('X-License-Key', account.key).send({ name: 'prod' }).expect(201);
+
+      const res = await request(app)
+        .post('/api/outbound/send-keys')
+        .set('X-License-Key', account.key)
+        .send({ name: 'prod' })
+        .expect(409);
+
+      expect(res.body.code).toBe('NAME_TAKEN');
+    });
+
+    it('returns 400 for a non-string name', async () => {
+      const account = await createOutboundAccount();
+
+      const res = await request(app)
+        .post('/api/outbound/send-keys')
+        .set('X-License-Key', account.key)
+        .send({ name: 123 })
+        .expect(400);
+
+      expect(res.body.code).toBe('INVALID_NAME');
+    });
+
+    it('returns 400 for a name over the length cap', async () => {
+      const account = await createOutboundAccount();
+
+      const res = await request(app)
+        .post('/api/outbound/send-keys')
+        .set('X-License-Key', account.key)
+        .send({ name: 'x'.repeat(101) })
+        .expect(400);
+
+      expect(res.body.code).toBe('INVALID_NAME');
+    });
   });
 
   describe('GET /api/outbound/send-keys', () => {
