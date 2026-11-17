@@ -239,6 +239,53 @@ const buildOpenApiSpec = (options = {}) => {
             },
           },
         },
+        OutboundMessageCreateRequest: {
+          type: 'object',
+          required: ['from', 'to'],
+          properties: {
+            from: {
+              type: 'object',
+              required: ['email'],
+              properties: {
+                email: { type: 'string', format: 'email', example: 'billing@mail.example.com' },
+                name: { type: 'string', example: 'Example Accounting' },
+              },
+            },
+            to: { type: 'string', format: 'email', example: 'client@example.org' },
+            subject: { type: 'string' },
+            text: { type: 'string' },
+            html: { type: 'string' },
+            replyTo: { type: 'string', format: 'email' },
+            reference: { type: 'string' },
+          },
+        },
+        OutboundMessageQueuedResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            id: { type: 'string', format: 'uuid' },
+            status: { type: 'string', enum: ['queued'], example: 'queued' },
+          },
+        },
+        OutboundAccountSummaryResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            domains: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  domain: { type: 'string' },
+                  state: { type: 'string' },
+                  suspended: { type: 'boolean' },
+                  dailyLimit: { type: 'integer', nullable: true },
+                  sentToday: { type: 'integer' },
+                },
+              },
+            },
+          },
+        },
         SenderCheckRequest: {
           type: 'object',
           required: ['domain'],
@@ -1090,6 +1137,113 @@ const buildOpenApiSpec = (options = {}) => {
             },
             404: {
               description: 'Send key name not found, or not owned by this account',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+          },
+        },
+      },
+      '/api/outbound/messages': {
+        post: {
+          tags: ['Outbound Sending'],
+          operationId: 'sendOutboundMessage',
+          summary: 'Queue an outbound message',
+          description:
+            'Authenticated with a send key (`Authorization: Bearer hm_send_...`), never a licence key. Optional `Idempotency-Key` header returns the exact first response on replay. Envelope-from is always `b-<id>@hm-bounce.<domain>`.',
+          security: [{ BearerAuth: [] }],
+          parameters: [
+            {
+              name: 'Idempotency-Key',
+              in: 'header',
+              required: false,
+              schema: { type: 'string' },
+            },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/OutboundMessageCreateRequest' },
+              },
+            },
+          },
+          responses: {
+            202: {
+              description: 'Message accepted and queued',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/OutboundMessageQueuedResponse' } } },
+            },
+            401: {
+              description: 'Missing or invalid send key',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+            403: {
+              description: 'Domain not verified / suspended, or licence inactive',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+            413: {
+              description: 'Message too large',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+            422: {
+              description: 'Invalid recipient or suppressed',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+            429: {
+              description: 'Rate limited or daily cap reached',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+            503: {
+              description: 'ZoneMTA unavailable (daily cap not consumed)',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+          },
+        },
+      },
+      '/api/outbound/messages/{id}': {
+        get: {
+          tags: ['Outbound Sending'],
+          operationId: 'getOutboundMessage',
+          summary: 'Fetch a queued/delivered message record',
+          description: 'Authenticated with a send key. Returns 404 (not 403) when the message belongs to another account.',
+          security: [{ BearerAuth: [] }],
+          parameters: [
+            {
+              name: 'id',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+            },
+          ],
+          responses: {
+            200: { description: 'Message record (no body/subject)' },
+            401: {
+              description: 'Missing or invalid send key',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+            404: {
+              description: 'Message not found for this account',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+          },
+        },
+      },
+      '/api/outbound/account/summary': {
+        get: {
+          tags: ['Outbound Sending'],
+          operationId: 'getOutboundAccountSummary',
+          summary: 'Account domain summary with sent-today counters',
+          description: 'Requires an `outbound` licence (`X-License-Key` header).',
+          security: [{ LicenseKeyHeader: [] }],
+          responses: {
+            200: {
+              description: 'Per-domain state, caps, and sent-today',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/OutboundAccountSummaryResponse' } } },
+            },
+            401: {
+              description: 'Missing or invalid licence key',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+            403: {
+              description: 'Licence is not of type `outbound`',
               content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
             },
           },

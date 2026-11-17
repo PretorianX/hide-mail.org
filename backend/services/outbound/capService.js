@@ -80,8 +80,20 @@ const checkAndIncrement = async (domain) => {
   return { allowed: true, remaining: Math.max(0, limit - current), resetAt };
 };
 
+/** Undo a successful checkAndIncrement (e.g. ZoneMTA refused the submission). */
+const releaseIncrement = async (domain) => {
+  await redisService.client.decr(capKey(domain));
+};
+
+const peekCounter = async (domain) => {
+  const raw = await redisService.client.get(capKey(domain));
+  return raw === null ? 0 : Number(raw);
+};
+
 module.exports = {
   getDailyLimit,
   setDailyLimit,
   checkAndIncrement,
+  releaseIncrement,
+  peekCounter,
 };

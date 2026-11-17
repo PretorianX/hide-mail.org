@@ -88,6 +88,10 @@ const config = {
     idempotencyTtlSeconds: parsePositiveNumber(process.env.OUTBOUND_IDEMPOTENCY_TTL_SECONDS, 86400, 'OUTBOUND_IDEMPOTENCY_TTL_SECONDS'),
     maxMessageBytes: parsePositiveNumber(process.env.OUTBOUND_MAX_MESSAGE_BYTES, 10485760, 'OUTBOUND_MAX_MESSAGE_BYTES'),
     ratePerMinuteDefault: parsePositiveNumber(process.env.OUTBOUND_RATE_PER_MINUTE, 600, 'OUTBOUND_RATE_PER_MINUTE'),
+    zoneMta: {
+      host: process.env.ZONEMTA_SMTP_HOST || 'zonemta',
+      port: parseInt(process.env.ZONEMTA_SMTP_PORT || '2526', 10),
+    },
   },
 
   // SMTP Configuration for Forward & Forget feature

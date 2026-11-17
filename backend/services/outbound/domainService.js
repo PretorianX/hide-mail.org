@@ -223,10 +223,13 @@ const removeDomain = async ({ accountId, domain: rawDomain }) => {
   return true;
 };
 
+const getDomainMeta = async (domain) => readMeta(domain);
+
 module.exports = {
   DomainError,
   addDomain,
   checkDomain,
   listDomains,
   removeDomain,
+  getDomainMeta,
 };
