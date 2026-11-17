@@ -1,10 +1,10 @@
 /**
  * Idempotent consumer of ZoneMTA delivery events from Redis Stream outbound:events.
  *
- * Idempotency reasoning (no extra de-dup layer):
+ * Idempotency reasoning (no extra de-dup layer for message/suppression):
  * - messageStore.updateStatus is an unconditional overwrite (Task 8).
  * - suppressionService.addSuppression uses HSET of the same field/value (naturally idempotent).
- * Global Constraints forbid building a second idempotency mechanism on top of these two.
+ * Metrics use outboundMetricsStore terminal/streamId SET NX gates (M2).
  */
 
 const redisService = require('../redisService');
@@ -12,6 +12,7 @@ const logger = require('../../utils/logger');
 const defaultMessageStore = require('./messageStore');
 const defaultBounceClassifier = require('./bounceClassifier');
 const defaultSuppressionService = require('./suppressionService');
+const defaultMetricsStore = require('./outboundMetricsStore');
 
 const STREAM = 'outbound:events';
 const GROUP = 'backend-consumers';
@@ -29,10 +30,35 @@ const fieldsToObject = (flat) => {
   return obj;
 };
 
+const recordMetrics = async (metricsStore, bounceClassifier, fields) => {
+  const { type, messageId, domain, response, streamId } = fields;
+  if (!domain || !type) {
+    return;
+  }
+
+  if (type === 'delivered') {
+    await metricsStore.incrDelivered(domain, messageId);
+    return;
+  }
+  if (type === 'deferred') {
+    await metricsStore.incrDeferred(domain, streamId || messageId);
+    return;
+  }
+  if (type === 'held') {
+    await metricsStore.incrHeld(domain, streamId || messageId);
+    return;
+  }
+  if (type === 'bounced') {
+    const classification = bounceClassifier.classifyDeliveryResponse(response || '');
+    await metricsStore.incrBounced(domain, messageId, classification.category || 'other');
+  }
+};
+
 const createHandler = ({
   messageStore = defaultMessageStore,
   bounceClassifier = defaultBounceClassifier,
   suppressionService = defaultSuppressionService,
+  metricsStore = defaultMetricsStore,
 } = {}) => async (fields) => {
   const { type, messageId, response } = fields;
   if (!messageId || !type) {
@@ -45,6 +71,10 @@ const createHandler = ({
   }
 
   await messageStore.updateStatus({ id: messageId, status: type, response: response || '' });
+  await recordMetrics(metricsStore, bounceClassifier, {
+    ...fields,
+    domain: fields.domain || message.domain,
+  });
 
   if (type !== 'bounced') {
     return;
@@ -80,10 +110,16 @@ const consumeOnce = async (
     messageStore = defaultMessageStore,
     bounceClassifier = defaultBounceClassifier,
     suppressionService = defaultSuppressionService,
+    metricsStore = defaultMetricsStore,
   } = {}
 ) => {
   await ensureGroup(redisClient);
-  const handler = createHandler({ messageStore, bounceClassifier, suppressionService });
+  const handler = createHandler({
+    messageStore,
+    bounceClassifier,
+    suppressionService,
+    metricsStore,
+  });
 
   const result = await redisClient.xreadgroup(
     'GROUP',
@@ -106,6 +142,7 @@ const consumeOnce = async (
   for (const [, entries] of result) {
     for (const [id, flatFields] of entries) {
       const fields = fieldsToObject(flatFields);
+      fields.streamId = id;
       try {
         await handler(fields);
       } catch (error) {

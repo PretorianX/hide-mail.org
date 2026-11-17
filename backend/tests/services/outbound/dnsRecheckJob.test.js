@@ -90,6 +90,25 @@ describe('outbound dnsRecheckJob', () => {
         becameBroken: ['newly-broken.example.com'],
       });
     });
+
+    it('records DNS outcomes including no_answer for metrics', async () => {
+      const metricsStore = require('../../../services/outbound/outboundMetricsStore');
+      await addIndexedDomain({ accountId: 'account-a', domain: 'dns.example.com' });
+      domainService.checkDomain.mockResolvedValue({
+        state: 'verified',
+        records: [
+          { id: 'dkim', status: 'pass', reason: null },
+          { id: 'returnPath', status: 'fail', reason: 'no_answer' },
+          { id: 'dmarc', status: 'fail', reason: 'mismatch' },
+        ],
+      });
+
+      await dnsRecheckJob.runOnce();
+
+      expect(await metricsStore.readDnsOutcome('dns.example.com', 'pass')).toBe(1);
+      expect(await metricsStore.readDnsOutcome('dns.example.com', 'no_answer')).toBe(1);
+      expect(await metricsStore.readDnsOutcome('dns.example.com', 'fail')).toBe(1);
+    });
   });
 
   describe('start', () => {

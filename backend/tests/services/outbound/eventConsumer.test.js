@@ -6,6 +6,7 @@ const messageStore = require('../../../services/outbound/messageStore');
 const suppressionService = require('../../../services/outbound/suppressionService');
 const bounceClassifier = require('../../../services/outbound/bounceClassifier');
 const eventConsumer = require('../../../services/outbound/eventConsumer');
+const metricsStore = require('../../../services/outbound/outboundMetricsStore');
 
 const STREAM = 'outbound:events';
 const GROUP = 'backend-consumers';
@@ -186,5 +187,78 @@ describe('outbound eventConsumer', () => {
     await expect(
       eventConsumer.consumeOnce(redis, { messageStore, bounceClassifier, suppressionService })
     ).resolves.toEqual({ processed: 1 });
+  });
+
+  it('increments delivered once when the same delivered event is applied twice (Review Focus)', async () => {
+    await messageStore.createMessage({
+      id: 'm-del',
+      accountId: 'a1',
+      domain: 'mail.example.com',
+      recipient: 'to@example.org',
+      reference: null,
+    });
+    await metricsStore.incrAccepted('mail.example.com');
+
+    const handler = eventConsumer.createHandler({
+      messageStore,
+      bounceClassifier,
+      suppressionService,
+      metricsStore,
+    });
+    const fields = {
+      type: 'delivered',
+      messageId: 'm-del',
+      domain: 'mail.example.com',
+      response: '250 OK',
+      at: new Date().toISOString(),
+      streamId: '1-0',
+    };
+    await handler(fields);
+    await handler(fields);
+
+    const counters = await metricsStore.readCounters('mail.example.com');
+    expect(counters.delivered).toBe(1);
+    expect(counters.queued).toBe(0);
+  });
+
+  it('increments deferred once per distinct streamId', async () => {
+    await messageStore.createMessage({
+      id: 'm-def',
+      accountId: 'a1',
+      domain: 'mail.example.com',
+      recipient: 'to@example.org',
+      reference: null,
+    });
+
+    const handler = eventConsumer.createHandler({
+      messageStore,
+      bounceClassifier,
+      suppressionService,
+      metricsStore,
+    });
+    await handler({
+      type: 'deferred',
+      messageId: 'm-def',
+      domain: 'mail.example.com',
+      response: '450 try later',
+      streamId: 's-1',
+    });
+    await handler({
+      type: 'deferred',
+      messageId: 'm-def',
+      domain: 'mail.example.com',
+      response: '450 try later',
+      streamId: 's-1',
+    });
+    await handler({
+      type: 'deferred',
+      messageId: 'm-def',
+      domain: 'mail.example.com',
+      response: '450 try later',
+      streamId: 's-2',
+    });
+
+    const counters = await metricsStore.readCounters('mail.example.com');
+    expect(counters.deferred).toBe(2);
   });
 });

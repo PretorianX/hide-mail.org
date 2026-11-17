@@ -11,6 +11,16 @@ const defaultCapService = require('./capService');
 const defaultAccountRateLimiter = require('./accountRateLimiter');
 const defaultMessageStore = require('./messageStore');
 const defaultSuppressionService = require('./suppressionService');
+const defaultMetricsStore = require('./outboundMetricsStore');
+
+const REJECT_REASON_BY_CODE = {
+  RATE_LIMITED: 'rate_limit',
+  DOMAIN_NOT_VERIFIED: 'domain_not_verified',
+  DOMAIN_SUSPENDED: 'domain_suspended',
+  INVALID_RECIPIENT: 'invalid_recipient',
+  RECIPIENT_SUPPRESSED: 'suppressed',
+  DAILY_LIMIT_REACHED: 'daily_limit',
+};
 
 class SendError extends Error {
   constructor(code, message, extra = {}) {
@@ -38,7 +48,16 @@ const resolveDeps = (overrides = {}) => ({
   messageStore: overrides.messageStore || defaultMessageStore,
   suppressionService: overrides.suppressionService || defaultSuppressionService,
   mimeTransport: overrides.mimeTransport || createDefaultTransport(),
+  metricsStore: overrides.metricsStore || defaultMetricsStore,
 });
+
+const rejectAndThrow = async (metricsStore, domain, error) => {
+  const reason = REJECT_REASON_BY_CODE[error.code];
+  if (reason) {
+    await metricsStore.incrRejected(domain || '_unknown', reason);
+  }
+  throw error;
+};
 
 const extractDomain = (fromEmail) => {
   if (!fromEmail || typeof fromEmail !== 'string' || !fromEmail.includes('@')) {
@@ -79,49 +98,80 @@ const sendMessage = async (payload, overrides = {}) => {
     }
   }
 
+  // Domain label for metrics (may be _unknown when From is unusable).
+  const domainHint = extractDomain(from?.email) || '_unknown';
+
   // (1) per-account rate limit
   const rate = await deps.accountRateLimiter.checkAndIncrement(accountId);
   if (!rate.allowed) {
-    throw new SendError('RATE_LIMITED', 'Account send rate limit exceeded', {
-      retryAfterSeconds: rate.retryAfterSeconds,
-      limit: rate.limit,
-    });
+    await rejectAndThrow(
+      deps.metricsStore,
+      domainHint,
+      new SendError('RATE_LIMITED', 'Account send rate limit exceeded', {
+        retryAfterSeconds: rate.retryAfterSeconds,
+        limit: rate.limit,
+      })
+    );
   }
 
   // (3) From domain verified and not suspended (auth already done by middleware)
   const domain = extractDomain(from?.email);
   if (!domain) {
-    throw new SendError('DOMAIN_NOT_VERIFIED', 'From address domain is missing or invalid');
+    await rejectAndThrow(
+      deps.metricsStore,
+      '_unknown',
+      new SendError('DOMAIN_NOT_VERIFIED', 'From address domain is missing or invalid')
+    );
   }
 
   const meta = await deps.domainService.getDomainMeta(domain);
   if (!meta || meta.accountId !== accountId || meta.state !== 'verified') {
-    throw new SendError('DOMAIN_NOT_VERIFIED', `Domain ${domain} is not verified for sending`);
+    await rejectAndThrow(
+      deps.metricsStore,
+      domain,
+      new SendError('DOMAIN_NOT_VERIFIED', `Domain ${domain} is not verified for sending`)
+    );
   }
   if (meta.suspended) {
-    throw new SendError('DOMAIN_SUSPENDED', `Domain ${domain} is suspended`);
+    await rejectAndThrow(
+      deps.metricsStore,
+      domain,
+      new SendError('DOMAIN_SUSPENDED', `Domain ${domain} is suspended`)
+    );
   }
 
   // (4) recipient syntax
   if (!to || typeof to !== 'string' || !RECIPIENT_RE.test(to)) {
-    throw new SendError('INVALID_RECIPIENT', 'Recipient address is invalid');
+    await rejectAndThrow(
+      deps.metricsStore,
+      domain,
+      new SendError('INVALID_RECIPIENT', 'Recipient address is invalid')
+    );
   }
 
   // (5) suppression
   if (await deps.suppressionService.isSuppressed({ accountId, email: to })) {
-    throw new SendError('RECIPIENT_SUPPRESSED', 'Recipient is on the suppression list');
+    await rejectAndThrow(
+      deps.metricsStore,
+      domain,
+      new SendError('RECIPIENT_SUPPRESSED', 'Recipient is on the suppression list')
+    );
   }
 
   // (6) daily cap
   const cap = await deps.capService.checkAndIncrement(domain);
   if (!cap.allowed) {
-    throw new SendError('DAILY_LIMIT_REACHED', 'Daily send limit reached', {
-      resetAt: cap.resetAt,
-      remaining: 0,
-    });
+    await rejectAndThrow(
+      deps.metricsStore,
+      domain,
+      new SendError('DAILY_LIMIT_REACHED', 'Daily send limit reached', {
+        resetAt: cap.resetAt,
+        remaining: 0,
+      })
+    );
   }
 
-  // (7) size — after cap reservation; release on refusal
+  // (7) size — after cap reservation; release on refusal (not a §5.8 rejected reason)
   const sizeBytes = estimateMessageBytes({ text, html, attachments });
   if (sizeBytes > config.outbound.maxMessageBytes) {
     await deps.capService.releaseIncrement(domain);
@@ -166,6 +216,8 @@ const sendMessage = async (payload, overrides = {}) => {
     recipient: to,
     reference: reference ?? null,
   });
+
+  await deps.metricsStore.incrAccepted(domain);
 
   const body = { id: messageId, status: 'queued' };
 
