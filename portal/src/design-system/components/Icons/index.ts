@@ -34,6 +34,7 @@ export {
   WarningIcon,
   ErrorIcon,
   SuccessIcon,
+  CopyIcon,
   iconRegistry,
 } from './Icons';
 export type { IconProps, IconName, IconSize } from './Icons';

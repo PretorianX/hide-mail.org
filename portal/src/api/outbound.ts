@@ -34,6 +34,7 @@ export async function checkDomain(domain: string): Promise<{
   domain: string;
   state: string;
   records: DomainRecord[];
+  dailyLimit?: number | null;
 }> {
   return apiFetch(`/api/outbound/domains/${encodeURIComponent(domain)}/check`, {
     method: 'POST',

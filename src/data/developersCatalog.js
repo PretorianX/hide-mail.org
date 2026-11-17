@@ -588,7 +588,7 @@ export const REST_ENDPOINTS = [
     summary:
       'Send authenticated mail from a verified customer domain. The backend signs DKIM, sets Return-Path to b-<id>@hm-bounce.<domain>, and submits through Postfix. Management routes use an outbound licence (X-License-Key); the Send API uses a send key (Authorization: Bearer hm_send_...).',
     subRoutes: [
-      { method: 'POST', path: '/api/outbound/domains', description: 'Register a sending domain; returns DKIM / Return-Path / DMARC DNS records.' },
+      { method: 'POST', path: '/api/outbound/domains', description: 'Register a sending domain; returns DKIM / Return-Path / SPF / DMARC DNS records.' },
       { method: 'GET', path: '/api/outbound/domains', description: 'List domains for the licence account.' },
       { method: 'POST', path: '/api/outbound/domains/{domain}/check', description: 'Re-check DNS and mark verified / pending / broken.' },
       { method: 'DELETE', path: '/api/outbound/domains/{domain}', description: 'Remove a domain from the account.' },

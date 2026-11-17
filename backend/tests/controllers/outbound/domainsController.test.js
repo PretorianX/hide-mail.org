@@ -36,7 +36,7 @@ describe('Outbound Domains HTTP', () => {
       expect(res.body.success).toBe(true);
       expect(res.body.domain).toBe('example.com');
       expect(res.body.state).toBe('pending');
-      expect(res.body.records).toHaveLength(3);
+      expect(res.body.records).toHaveLength(4);
     });
 
     it('returns 409 DOMAIN_TAKEN for a domain already claimed by another account', async () => {
@@ -106,7 +106,7 @@ describe('Outbound Domains HTTP', () => {
           domain: 'example.com',
           state: 'pending',
           suspended: false,
-          dailyLimit: 1000,
+          dailyLimit: null,
           selector: expect.stringMatching(/^hm-/),
           records: expect.any(Array),
           lastCheckedAt: null,

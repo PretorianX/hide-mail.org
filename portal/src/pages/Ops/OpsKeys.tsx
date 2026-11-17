@@ -109,11 +109,9 @@ export function OpsKeys() {
         label: label.trim() || undefined,
         ratePerMinute: ratePerMinute === '' ? undefined : Number(ratePerMinute),
         dailyLimitDefault:
-          dailyLimitDefault === ''
-            ? undefined
-            : dailyLimitDefault === 'unlimited'
-              ? 'unlimited'
-              : Number(dailyLimitDefault),
+          dailyLimitDefault.trim() === '' || dailyLimitDefault.trim() === 'unlimited'
+            ? 'unlimited'
+            : Number(dailyLimitDefault),
       });
       setRevealed(created.key || null);
       setLabel('');
@@ -189,9 +187,10 @@ export function OpsKeys() {
             />
             <Input
               aria-label="Daily limit default"
-              placeholder="daily limit or unlimited"
+              placeholder="blank = unlimited"
               value={dailyLimitDefault}
               onChange={(e) => setDailyLimitDefault(e.target.value)}
+              helperText="Leave blank for no daily cap, or enter a positive number."
             />
           </>
         ) : null}
@@ -218,11 +217,9 @@ export function OpsKeys() {
                   {license.label ? ` · ${license.label}` : ''}
                   {` · ${license.remainingDays}d left`}
                   {license.ratePerMinute != null ? ` · ${license.ratePerMinute}/min` : ''}
-                  {license.dailyLimitDefault !== undefined && license.dailyLimitDefault !== null
-                    ? ` · daily ${license.dailyLimitDefault}`
-                    : license.dailyLimitDefault === null
-                      ? ' · daily unlimited'
-                      : ''}
+                  {license.dailyLimitDefault === null || license.dailyLimitDefault === undefined
+                    ? ' · daily unlimited'
+                    : ` · daily ${license.dailyLimitDefault}`}
                 </Meta>
               </div>
               <Button type="button" variant="ghost" onClick={() => setDeleteId(license.id)}>

@@ -4,13 +4,16 @@ const { buildExpectedRecords } = require('../../../services/outbound/domainRecor
 
 describe('buildExpectedRecords', () => {
   const originalTarget = process.env.OUTBOUND_RETURN_PATH_TARGET;
+  const originalSpf = process.env.OUTBOUND_SPF_INCLUDE;
 
   afterEach(() => {
     process.env.OUTBOUND_RETURN_PATH_TARGET = originalTarget;
+    process.env.OUTBOUND_SPF_INCLUDE = originalSpf;
   });
 
-  test('builds the three required records with the DKIM public key derived from the PEM', () => {
+  test('builds the four required records with the DKIM public key derived from the PEM', () => {
     process.env.OUTBOUND_RETURN_PATH_TARGET = 'rp.hide-mail.org';
+    process.env.OUTBOUND_SPF_INCLUDE = '_spf.hide-mail.org';
     const { publicKey } = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
     const records = buildExpectedRecords({
       domain: 'mail.example.com',
@@ -29,6 +32,14 @@ describe('buildExpectedRecords', () => {
       type: 'CNAME',
       host: 'hm-bounce.mail.example.com',
       expected: 'rp.hide-mail.org',
+    });
+    expect(records.find((r) => r.id === 'spf')).toMatchObject({
+      id: 'spf',
+      purpose: 'SPF (authorize Hide Mail)',
+      type: 'TXT',
+      host: 'mail.example.com',
+      expected: 'v=spf1 include:_spf.hide-mail.org ~all',
+      includeHost: '_spf.hide-mail.org',
     });
     expect(records.find((r) => r.id === 'dmarc')).toMatchObject({
       id: 'dmarc',
@@ -49,7 +60,7 @@ describe('buildExpectedRecords', () => {
     expect(records.find((r) => r.id === 'dkim').expected).toBe(`v=DKIM1; k=rsa; p=${expectedP}`);
   });
 
-  test('returns exactly three records with the three expected ids', () => {
+  test('returns exactly four records with the four expected ids', () => {
     const { publicKey } = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
     const records = buildExpectedRecords({
       domain: 'x.com',
@@ -57,7 +68,7 @@ describe('buildExpectedRecords', () => {
       publicKeyPem: publicKey.export({ type: 'spki', format: 'pem' }),
     });
 
-    expect(records).toHaveLength(3);
-    expect(records.map((r) => r.id).sort()).toEqual(['dkim', 'dmarc', 'returnPath']);
+    expect(records).toHaveLength(4);
+    expect(records.map((r) => r.id).sort()).toEqual(['dkim', 'dmarc', 'returnPath', 'spf']);
   });
 });

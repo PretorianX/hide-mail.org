@@ -67,10 +67,7 @@ const toPublicRecord = async (license) => {
 
   if (license.type === 'outbound' && license.accountId) {
     record.ratePerMinute = await accountRateLimiter.getLimit(license.accountId);
-    const rawDaily = await redisService.client.get(accountDailyDefaultKey(license.accountId));
-    if (rawDaily !== null && rawDaily !== undefined) {
-      record.dailyLimitDefault = rawDaily === 'null' ? null : Number(rawDaily);
-    }
+    record.dailyLimitDefault = await getAccountDailyLimitDefault(license.accountId);
   }
 
   return record;
@@ -140,18 +137,22 @@ const createLicense = async ({
       }
       await accountRateLimiter.setOverride(created.accountId, rate);
     }
-    if (dailyLimitDefault !== undefined) {
-      const value =
-        dailyLimitDefault === null || dailyLimitDefault === 'unlimited'
-          ? 'null'
-          : String(Number(dailyLimitDefault));
-      if (value !== 'null' && (!Number.isFinite(Number(value)) || Number(value) <= 0)) {
-        const error = new Error('dailyLimitDefault must be a positive number or unlimited');
-        error.code = 'INVALID_DAILY_LIMIT';
-        throw error;
-      }
-      await redisService.client.set(accountDailyDefaultKey(created.accountId), value);
+    // Blank / omitted daily limit means unlimited. Leaving the Redis key unset used to
+    // look like "unlimited" in the ops list while new domains still stamped the system
+    // default (1000) — always persist an explicit value for outbound keys.
+    const value =
+      dailyLimitDefault === undefined ||
+      dailyLimitDefault === null ||
+      dailyLimitDefault === '' ||
+      dailyLimitDefault === 'unlimited'
+        ? 'null'
+        : String(Number(dailyLimitDefault));
+    if (value !== 'null' && (!Number.isFinite(Number(value)) || Number(value) <= 0)) {
+      const error = new Error('dailyLimitDefault must be a positive number or unlimited');
+      error.code = 'INVALID_DAILY_LIMIT';
+      throw error;
     }
+    await redisService.client.set(accountDailyDefaultKey(created.accountId), value);
   } else {
     const ttlSeconds = days * 24 * 60 * 60;
     license = await licenseService.createLicense({
@@ -223,14 +224,13 @@ const deleteLicense = async (adminIdOrKey) => {
 
 const getAccountDailyLimitDefault = async (accountId) => {
   const raw = await redisService.client.get(accountDailyDefaultKey(accountId));
-  if (raw === null || raw === undefined) {
-    return undefined;
-  }
-  if (raw === 'null') {
+  // Missing key and the explicit 'null' sentinel both mean unlimited. Ops must
+  // store a positive number to cap new domains (blank create = unlimited).
+  if (raw === null || raw === undefined || raw === 'null') {
     return null;
   }
   const parsed = Number(raw);
-  return Number.isFinite(parsed) ? parsed : undefined;
+  return Number.isFinite(parsed) ? parsed : null;
 };
 
 module.exports = {
