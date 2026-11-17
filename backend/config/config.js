@@ -39,6 +39,16 @@ const getEmailDomains = () => {
   return process.env.VALID_DOMAINS.split(',').map(domain => domain.trim());
 };
 
+const getOutboundKeyEncryptionSecret = () => {
+  if (!process.env.OUTBOUND_KEY_ENCRYPTION_SECRET && process.env.NODE_ENV !== 'test') {
+    throw new Error(
+      'Outbound key encryption not configured. Set OUTBOUND_KEY_ENCRYPTION_SECRET environment variable.'
+    );
+  }
+
+  return process.env.OUTBOUND_KEY_ENCRYPTION_SECRET;
+};
+
 const parseDomainList = (value) => {
   if (!value || !value.trim()) {
     return [];
@@ -70,6 +80,19 @@ const config = {
   smtpUnknownMailboxCode: parseInt(process.env.SMTP_UNKNOWN_MAILBOX_CODE || 550),
   environment: process.env.NODE_ENV || 'development',
   apiTimeout: parseInt(process.env.API_TIMEOUT || fileConfig.api?.timeout || 5000),
+
+  outbound: {
+    keyEncryptionSecret: getOutboundKeyEncryptionSecret(),
+    dailyLimitDefault: parsePositiveNumber(process.env.OUTBOUND_DAILY_LIMIT_DEFAULT, 1000, 'OUTBOUND_DAILY_LIMIT_DEFAULT'),
+    messageRetentionDays: parsePositiveNumber(process.env.OUTBOUND_MESSAGE_RETENTION_DAYS, 30, 'OUTBOUND_MESSAGE_RETENTION_DAYS'),
+    idempotencyTtlSeconds: parsePositiveNumber(process.env.OUTBOUND_IDEMPOTENCY_TTL_SECONDS, 86400, 'OUTBOUND_IDEMPOTENCY_TTL_SECONDS'),
+    maxMessageBytes: parsePositiveNumber(process.env.OUTBOUND_MAX_MESSAGE_BYTES, 10485760, 'OUTBOUND_MAX_MESSAGE_BYTES'),
+    ratePerMinuteDefault: parsePositiveNumber(process.env.OUTBOUND_RATE_PER_MINUTE, 600, 'OUTBOUND_RATE_PER_MINUTE'),
+    zoneMta: {
+      host: process.env.ZONEMTA_SMTP_HOST || 'zonemta',
+      port: parseInt(process.env.ZONEMTA_SMTP_PORT || '2526', 10),
+    },
+  },
 
   // SMTP Configuration for Forward & Forget feature
   // Used for sending OTP verification emails and forwarding emails

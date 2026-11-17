@@ -241,9 +241,15 @@ const redisConnected = new client.Gauge({
 let metricsServer = null;
 
 const startMetricsServer = () => {
+  // Lazy require: metricsService is imported by redisService; a top-level
+  // require of outboundOperatorMetrics (which needs redis) would circularly
+  // leave redisService.client undefined during module init.
+  const outboundOperatorMetrics = require('./outbound/outboundOperatorMetrics');
+  outboundOperatorMetrics.register();
   metricsServer = http.createServer(async (req, res) => {
     if (req.url === '/metrics' && req.method === 'GET') {
       try {
+        await outboundOperatorMetrics.refresh();
         const metrics = await client.register.metrics();
         res.setHeader('Content-Type', client.register.contentType);
         res.end(metrics);

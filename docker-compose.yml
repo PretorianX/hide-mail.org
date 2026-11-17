@@ -45,7 +45,7 @@ services:
       - SMTP_UNKNOWN_MAILBOX_CODE=${SMTP_UNKNOWN_MAILBOX_CODE:-550}
       - LOG_LEVEL=${LOG_LEVEL:-info}
       - METRICS_PORT=${METRICS_PORT:-9001}
-      - ALLOWED_ORIGINS=https://hide-mail.org,https://www.hide-mail.org
+      - ALLOWED_ORIGINS=https://hide-mail.org,https://www.hide-mail.org,https://send.hide-mail.org
       # Forward & Forget - Outgoing SMTP configuration (connects to Postfix relay)
       - SMTP_HOST=${SMTP_HOST:-postfix}
       - SMTP_OUTGOING_PORT=${SMTP_OUTGOING_PORT:-587}
@@ -81,15 +81,72 @@ services:
       - FORWARDING_PRO_LIMIT=${FORWARDING_PRO_LIMIT:-100}
       # Paddle is not implemented. Placeholder only if a MoR application is approved later.
       - PADDLE_WEBHOOK_SECRET=${PADDLE_WEBHOOK_SECRET:-}
+      # Outbound Send (hm-send)
+      - OUTBOUND_KEY_ENCRYPTION_SECRET=${OUTBOUND_KEY_ENCRYPTION_SECRET}
+      - OUTBOUND_DAILY_LIMIT_DEFAULT=${OUTBOUND_DAILY_LIMIT_DEFAULT:-1000}
+      - OUTBOUND_RATE_PER_MINUTE=${OUTBOUND_RATE_PER_MINUTE:-600}
+      - OUTBOUND_MAX_MESSAGE_BYTES=${OUTBOUND_MAX_MESSAGE_BYTES:-10485760}
+      - OUTBOUND_MESSAGE_RETENTION_DAYS=${OUTBOUND_MESSAGE_RETENTION_DAYS:-30}
+      - OUTBOUND_IDEMPOTENCY_TTL_SECONDS=${OUTBOUND_IDEMPOTENCY_TTL_SECONDS:-86400}
+      - OUTBOUND_DNS_RECHECK_SECONDS=${OUTBOUND_DNS_RECHECK_SECONDS:-3600}
+      - OUTBOUND_RETURN_PATH_TARGET=${OUTBOUND_RETURN_PATH_TARGET:-rp.hide-mail.org}
+      - OUTBOUND_HELO_HOSTNAME=${OUTBOUND_HELO_HOSTNAME:-mail.hide-mail.org}
+      - ZONEMTA_SMTP_HOST=${ZONEMTA_SMTP_HOST:-zonemta}
+      - ZONEMTA_SMTP_PORT=${ZONEMTA_SMTP_PORT:-2526}
     depends_on:
       - redis
       - postfix
+      - zonemta
     restart: unless-stopped
     volumes:
       - ./backend/logs:/app/logs
     networks:
       - internal
       - default
+
+  portal:
+    image: ghcr.io/pretorianx/hide-mail.org/portal:latest
+    build:
+      context: ./portal
+      dockerfile: Dockerfile
+    ports:
+      - "127.0.0.1:3003:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - default
+
+  mongo:
+    image: mongo:6
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - internal
+    restart: unless-stopped
+
+  zonemta:
+    image: ghcr.io/pretorianx/hide-mail.org/mta:latest
+    build:
+      context: ./mta
+      dockerfile: Dockerfile
+    depends_on:
+      - mongo
+      - redis
+    environment:
+      - MONGO_URL=mongodb://mongo:27017/zone-mta
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - PLUGIN_REDIS_URL=redis://redis:6379/0
+      - OUTBOUND_KEY_ENCRYPTION_SECRET=${OUTBOUND_KEY_ENCRYPTION_SECRET}
+      - OUTBOUND_HELO_HOSTNAME=${OUTBOUND_HELO_HOSTNAME:-mail.hide-mail.org}
+    ports:
+      # Feeder SMTP (2526) is internal-only — not published to the host.
+      - "127.0.0.1:12080:12080"
+    networks:
+      - internal
+      - default  # Required to reach real recipient MX on the public internet
+    restart: unless-stopped
 
   # Postfix - Outgoing SMTP relay for production
   # Sends emails directly to destination mail servers
@@ -148,6 +205,7 @@ services:
 volumes:
   redis-data:
   postfix-spool:
+  mongo-data:
 
 networks:
   internal:

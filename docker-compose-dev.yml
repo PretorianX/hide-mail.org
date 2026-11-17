@@ -32,6 +32,16 @@ services:
       - ./src:/app/src
       - ./public:/app/public
 
+  portal:
+    build:
+      context: ./portal
+      dockerfile: Dockerfile
+    ports:
+      - "127.0.0.1:3003:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
   backend:
     build:
       context: ./backend

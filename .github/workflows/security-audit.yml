@@ -36,6 +36,18 @@ jobs:
         working-directory: backend
         run: npm ci && npm audit --audit-level=high
 
+      - name: MTA npm audit
+        id: mta-audit
+        continue-on-error: true
+        working-directory: mta
+        run: npm ci && npm audit --audit-level=high
+
+      - name: Portal npm audit
+        id: portal-audit
+        continue-on-error: true
+        working-directory: portal
+        run: npm ci && npm audit --audit-level=high
+
       - name: Count open Dependabot alerts
         id: dependabot
         continue-on-error: true
@@ -61,6 +73,8 @@ jobs:
         env:
           FRONTEND_AUDIT: ${{ steps.frontend-audit.outcome }}
           BACKEND_AUDIT: ${{ steps.backend-audit.outcome }}
+          MTA_AUDIT: ${{ steps.mta-audit.outcome }}
+          PORTAL_AUDIT: ${{ steps.portal-audit.outcome }}
           DEPENDABOT_OUTCOME: ${{ steps.dependabot.outcome }}
           OPEN_COUNT: ${{ steps.dependabot.outputs.open_count }}
         with:
@@ -96,6 +110,8 @@ jobs:
               `| --- | --- |`,
               `| Frontend \`npm audit --audit-level=high\` | \`${process.env.FRONTEND_AUDIT}\` |`,
               `| Backend \`npm audit --audit-level=high\` | \`${process.env.BACKEND_AUDIT}\` |`,
+              `| MTA \`npm audit --audit-level=high\` | \`${process.env.MTA_AUDIT}\` |`,
+              `| Portal \`npm audit --audit-level=high\` | \`${process.env.PORTAL_AUDIT}\` |`,
               `| Open Dependabot alerts | \`${process.env.OPEN_COUNT || 'n/a'}\` (\`${process.env.DEPENDABOT_OUTCOME}\`) |`,
               '',
               '### Open Dependabot alerts',
@@ -143,5 +159,5 @@ jobs:
             }
 
       - name: Fail job if any check failed
-        if: steps.frontend-audit.outcome == 'failure' || steps.backend-audit.outcome == 'failure' || steps.dependabot.outcome == 'failure'
+        if: steps.frontend-audit.outcome == 'failure' || steps.backend-audit.outcome == 'failure' || steps.mta-audit.outcome == 'failure' || steps.portal-audit.outcome == 'failure' || steps.dependabot.outcome == 'failure'
         run: exit 1

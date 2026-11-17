@@ -26,6 +26,14 @@ class RedisMock {
   }
 
   async set(key, value, ...args) {
+    // Minimal support for the NX flag (ioredis: `.set(key, value, 'NX')`),
+    // additive only — existing callers that pass other/no extra args are
+    // unaffected. Mirrors real Redis: NX only writes if the key is absent,
+    // returning null (not 'OK') when it already exists.
+    const flags = args.map((arg) => String(arg).toUpperCase());
+    if (flags.includes('NX') && Object.prototype.hasOwnProperty.call(this.data, key)) {
+      return null;
+    }
     this.data[key] = value;
     return 'OK';
   }
@@ -38,6 +46,13 @@ class RedisMock {
   async incr(key) {
     const current = parseInt(this.data[key], 10) || 0;
     const next = current + 1;
+    this.data[key] = String(next);
+    return next;
+  }
+
+  async decr(key) {
+    const current = parseInt(this.data[key], 10) || 0;
+    const next = current - 1;
     this.data[key] = String(next);
     return next;
   }
@@ -188,6 +203,53 @@ class RedisMock {
     });
     
     return count;
+  }
+
+  async xlen(key) {
+    const list = this.data[key];
+    return Array.isArray(list) ? list.length : 0;
+  }
+
+  async xpending(_stream, _group) {
+    return [0, null, null, []];
+  }
+
+  // Sorted-set helpers used by outbound message activity index.
+  // Stored as Map(member -> score) under this.data[key].
+  _ensureZset(key) {
+    if (!(this.data[key] instanceof Map)) {
+      this.data[key] = new Map();
+    }
+    return this.data[key];
+  }
+
+  async zadd(key, ...args) {
+    const zset = this._ensureZset(key);
+    let added = 0;
+    for (let i = 0; i + 1 < args.length; i += 2) {
+      const score = Number(args[i]);
+      const member = String(args[i + 1]);
+      if (!zset.has(member)) {
+        added += 1;
+      }
+      zset.set(member, score);
+    }
+    return added;
+  }
+
+  async zrevrange(key, start, stop) {
+    const zset = this.data[key];
+    if (!(zset instanceof Map)) {
+      return [];
+    }
+    const sorted = [...zset.entries()].sort((a, b) => b[1] - a[1]);
+    const end = stop < 0 ? sorted.length : stop + 1;
+    return sorted.slice(start, end).map(([member]) => member);
+  }
+
+  async zcard(key) {
+    const zset = this.data[key];
+    return zset instanceof Map ? zset.size : 0;
   }
 }
 

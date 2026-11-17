@@ -73,7 +73,7 @@ const isActive = (license) => {
   return license.expiresAt > Date.now();
 };
 
-const LICENSE_TYPES = new Set(['pro', 'api', 'grade', 'sender', 'reports', 'bounce', 'complaint', 'tls', 'suite']);
+const LICENSE_TYPES = new Set(['pro', 'api', 'grade', 'sender', 'reports', 'bounce', 'complaint', 'tls', 'suite', 'outbound']);
 const API_KEY_TYPES = new Set(['api', 'grade', 'sender', 'reports', 'bounce', 'complaint', 'tls', 'suite']);
 
 const canIssueApiKey = (type) => API_KEY_TYPES.has(type);
@@ -102,6 +102,52 @@ const createLicense = async ({ type, plan, orderReference, recToken, ttlSeconds 
   metrics.licensesCreatedTotal.inc({ type, plan });
   logger.info(`License created type=${type} plan=${plan} order=${sanitizeForLog(orderReference)}`);
   return license;
+};
+
+const isPositiveIntegerDays = (days) => Number.isInteger(days) && days > 0;
+
+const createOperatorLicense = async ({ type, days, label }) => {
+  if (type !== 'outbound') {
+    throw new Error(`Unknown license type: ${type}`);
+  }
+  if (!isPositiveIntegerDays(days)) {
+    throw new Error(`days must be a positive integer, got: ${days}`);
+  }
+
+  const ttlSeconds = days * 24 * 60 * 60;
+  const now = Date.now();
+  const license = {
+    key: generateLicenseKey(),
+    type,
+    accountId: crypto.randomUUID(),
+    label,
+    status: 'active',
+    createdAt: now,
+    expiresAt: now + ttlSeconds * 1000,
+  };
+
+  await persistLicense(license, ttlSeconds);
+  logger.info(`Operator license created type=${type} accountId=${license.accountId}`);
+  return license;
+};
+
+const extendOperatorLicense = async ({ key, days }) => {
+  if (!isPositiveIntegerDays(days)) {
+    throw new Error(`days must be a positive integer, got: ${days}`);
+  }
+
+  const existing = await getLicense(key);
+  if (!existing || existing.type !== 'outbound') {
+    return null;
+  }
+
+  const base = Math.max(existing.expiresAt, Date.now());
+  existing.expiresAt = base + days * 24 * 60 * 60 * 1000;
+
+  const redisTtl = Math.max(1, Math.ceil((existing.expiresAt - Date.now()) / 1000));
+  await persistLicense(existing, redisTtl);
+  logger.info(`Operator license extended key=${maskKey(existing.key)} days=${days}`);
+  return existing;
 };
 
 const validateLicense = async (key) => {
@@ -246,6 +292,8 @@ module.exports = {
   generateLicenseKey,
   maskKey,
   createLicense,
+  createOperatorLicense,
+  extendOperatorLicense,
   getLicense,
   isActive,
   validateLicense,

@@ -7,6 +7,9 @@ const redisService = require('./services/redisService');
 const inboundMailService = require('./services/inboundMailService');
 const { resolveKnownRecipient } = require('./services/recipientResolver');
 const forwardingService = require('./services/forwardingService');
+const dnsRecheckJob = require('./services/outbound/dnsRecheckJob');
+const eventConsumer = require('./services/outbound/eventConsumer');
+const { shouldAcceptOutboundBounceRcpt } = require('./services/outbound/inboundBounceRcpt');
 const metrics = require('./services/metricsService');
 const billingMetricsCollector = require('./services/billingMetricsCollector');
 const httpMetricsMiddleware = require('./middleware/httpMetrics');
@@ -16,6 +19,7 @@ const logger = require('./utils/logger');
 const apiRoutes = require('./routes/api');
 const mcpRoutes = require('./routes/mcp');
 const openApiRoutes = require('./routes/openApi');
+const outboundRoutes = require('./routes/outbound');
 const billingController = require('./controllers/billingController');
 const attachLicense = require('./middleware/attachLicense');
 const { createOriginVerifier, parseAllowedOrigins } = require('./services/originVerifier');
@@ -35,6 +39,8 @@ const SMTP_PORT = process.env.SMTP_PORT || 2525;
     
     // Initialize Forward & Forget service
     forwardingService.initialize();
+    dnsRecheckJob.start();
+    eventConsumer.start();
   } catch (error) {
     logger.error('Failed to initialize services:', error);
   }
@@ -122,6 +128,7 @@ const originVerifier = createOriginVerifier({
 // Routes with origin verification
 app.use('/api/mcp', mcpRoutes);
 app.use('/api', openApiRoutes);
+app.use('/api/outbound', outboundRoutes);
 app.use('/api', originVerifier, attachLicense, apiRoutes);
 
 // Health check endpoint
@@ -173,6 +180,13 @@ const smtpServer = new SMTPServer({
     (async () => {
       try {
         logger.info(`SMTP: RCPT TO: ${address.address}`);
+
+        // Late outbound DSN mail-back (b-<id>@hm-bounce.<domain> or return-path target)
+        if (shouldAcceptOutboundBounceRcpt(address.address)) {
+          logger.info(`SMTP: Accepted outbound bounce recipient: ${address.address}`);
+          metrics.smtpRecipientsAcceptedTotal.inc();
+          return callback();
+        }
         
         // Extract domain from email
         const domain = address.address.split('@')[1];

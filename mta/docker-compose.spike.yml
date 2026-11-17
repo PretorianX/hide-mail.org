@@ -1,0 +1,83 @@
+# M0 outbound Send spike: ZoneMTA + its Mongo queue store, gated behind the
+# `spike` profile so a normal `docker compose up` (no --profile) is unaffected.
+#
+# Invoke together with the root compose file so the `internal` network and
+# the existing `redis` service (reused here, see hidemail-outbound's redis
+# key and zone-mta's own dbs.redis below) are available:
+#
+#   docker compose -f docker-compose.yml -f mta/docker-compose.spike.yml \
+#     --profile spike up -d --build redis mongo zonemta
+#
+# NOTE: paths below are written relative to the REPO ROOT, not this file's
+# directory - Docker Compose resolves relative paths in merged files against
+# the project directory, which defaults to the directory of the FIRST -f file
+# (docker-compose.yml, at repo root).
+services:
+  # Published loopback-only, ADDED ON TOP of the root compose's existing
+  # `redis` service definition (same service name => Compose merges this in;
+  # it does not duplicate the container). This only takes effect when this
+  # file is included via -f, so a plain `docker compose up` on the root file
+  # alone is unaffected and redis stays unpublished there. Needed so the
+  # integration test (running on the host, not in a container) can set/read
+  # the `outbound:spike:domain:*` gate key the hidemail-outbound plugin reads.
+  redis:
+    ports:
+      - "127.0.0.1:6379:6379"
+    networks:
+      # ADDS `default` on top of root compose's `internal`-only redis, spike
+      # override only. Finding: Docker Desktop's port-publish proxy could not
+      # actually bind the host side (HostConfig.PortBindings populated but
+      # NetworkSettings.Ports stayed empty, regardless of host port chosen)
+      # while redis's only network was the `internal: true` bridge - that
+      # network has no gateway/route for the proxy to reach into. Adding
+      # `default` (already used by backend/postfix for the same class of
+      # reason) fixes it; zone-mta/the plugin still only ever reach redis by
+      # its service name over `internal`, this is purely for the test's
+      # host-side access to set/clear the gate key.
+      - internal
+      - default
+
+  mongo:
+    image: mongo:6
+    profiles: [spike]
+    volumes:
+      - mongo-spike-data:/data/db
+    networks:
+      - internal
+    restart: "no"
+
+  zonemta:
+    profiles: [spike]
+    build:
+      context: ./mta
+      dockerfile: Dockerfile
+    depends_on:
+      - mongo
+    environment:
+      - MONGO_URL=mongodb://mongo:27017/zone-mta-spike
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - PLUGIN_REDIS_URL=redis://redis:6379/3
+      # Fixed port the integration test's local fake-receiver SMTP server
+      # binds to (see tests/integration/deliver-and-hold.test.js). Matches
+      # config/zonemta.js's zones.default smarthost override.
+      - SPIKE_RECEIVER_HOST=host.docker.internal
+      - SPIKE_RECEIVER_PORT=2599
+    ports:
+      # Loopback-only, per the M0 spike's binding constraint - never 0.0.0.0.
+      - "127.0.0.1:2526:2526"
+      - "127.0.0.1:12080:12080"
+    volumes:
+      # Generated locally by scripts/generate-spike-dkim.js; not baked into
+      # the image, not committed (see mta/testdata/.gitignore).
+      - ./mta/testdata:/app/testdata:ro
+    networks:
+      # `internal` to reach the shared redis + spike-local mongo.
+      # `default` to reach host.docker.internal (the test's fake receiver,
+      # which runs on the host, outside any container).
+      - internal
+      - default
+    restart: "no"
+
+volumes:
+  mongo-spike-data:

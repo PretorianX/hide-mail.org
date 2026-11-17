@@ -12,18 +12,24 @@ description: Check Dependabot alerts and npm audit, bump vulnerable packages via
    gh api --paginate repos/PretorianX/hide-mail.org/dependabot/alerts \
      --jq '[.[] | select(.state=="open")] | .[] | {number, package: .security_vulnerability.package.name, severity: .security_advisory.severity, patched: .security_vulnerability.first_patched_version.identifier, path: .dependency.manifest_path}'
    ```
-2. Run audits in both trees:
+2. Run audits in all four trees:
    ```bash
    npm audit
    (cd backend && npm audit)
+   (cd mta && npm audit)
+   (cd portal && npm audit)
    ```
-3. Fix with `overrides` in `package.json` and/or `backend/package.json`, then `npm install` in each tree.
+3. Fix with `overrides` in the affected `package.json`, then `npm install` in that tree.
 4. Verify:
    ```bash
    npm test
    (cd backend && npm test -- --forceExit)
+   (cd mta && npm test)
+   (cd portal && npm test -- --watchAll=false)
    npm audit --audit-level=high
    (cd backend && npm audit --audit-level=high)
+   (cd mta && npm audit --audit-level=high)
+   (cd portal && npm audit --audit-level=high)
    ```
 5. Conventional commit, e.g. `fix(deps): resolve Dependabot advisories`.
 6. After push to `main`, CI publishes GHCR `:latest` and `hidemail-autodeploy.timer` on the host pulls it within ~5 minutes. Nothing to trigger and no issue to close; confirm it landed with:

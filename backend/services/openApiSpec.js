@@ -68,6 +68,11 @@ const buildOpenApiSpec = (options = {}) => {
         name: 'Billing & Licenses',
         description: 'Plan catalog, license validation, and `hm_api_...` bearer key issuance.',
       },
+      {
+        name: 'Outbound Sending',
+        description:
+          'Operator accounts (`outbound` licence) that register sending domains, publish DKIM/Return-Path/DMARC DNS records, and watch domain verification state.',
+      },
     ],
     components: {
       securitySchemes: {
@@ -82,6 +87,12 @@ const buildOpenApiSpec = (options = {}) => {
           in: 'header',
           name: 'X-API-Key',
           description: 'API key passed via `X-API-Key: hm_api_...` header.',
+        },
+        LicenseKeyHeader: {
+          type: 'apiKey',
+          in: 'header',
+          name: 'X-License-Key',
+          description: 'Outbound operator licence key (`HM-XXXX-XXXX-XXXX-XXXX`), passed via `X-License-Key` header (or `Authorization: Bearer ...`). Management-only — never used to authenticate a send.',
         },
       },
       schemas: {
@@ -132,6 +143,207 @@ const buildOpenApiSpec = (options = {}) => {
                       detail: { type: 'string' },
                     },
                   },
+                },
+              },
+            },
+          },
+        },
+        DomainAddRequest: {
+          type: 'object',
+          required: ['domain'],
+          properties: {
+            domain: {
+              type: 'string',
+              description: 'Sending domain to register (lowercased, trailing dot stripped).',
+              example: 'example.com',
+            },
+          },
+        },
+        DomainRecord: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', enum: ['dkim', 'returnPath', 'dmarc'] },
+            type: { type: 'string', enum: ['TXT', 'CNAME'] },
+            host: { type: 'string', example: 'hm-4f2a9c3d._domainkey.example.com' },
+            expected: { type: 'string', nullable: true },
+            status: { type: 'string', enum: ['pass', 'fail'] },
+            reason: { type: 'string', nullable: true },
+          },
+        },
+        DomainResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            domain: { type: 'string', example: 'example.com' },
+            selector: { type: 'string', example: 'hm-4f2a9c3d' },
+            state: { type: 'string', enum: ['pending', 'verified', 'broken'], example: 'pending' },
+            records: { type: 'array', items: { $ref: '#/components/schemas/DomainRecord' } },
+          },
+        },
+        DomainListResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            domains: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  domain: { type: 'string', example: 'example.com' },
+                  state: { type: 'string', enum: ['pending', 'verified', 'broken'] },
+                  suspended: { type: 'boolean' },
+                  dailyLimit: { type: 'integer', nullable: true },
+                  selector: { type: 'string', example: 'hm-4f2a9c3d' },
+                  records: { type: 'array', items: { $ref: '#/components/schemas/DomainRecord' } },
+                  lastCheckedAt: { type: 'integer', nullable: true },
+                },
+              },
+            },
+          },
+        },
+        SendKeyCreateRequest: {
+          type: 'object',
+          required: ['name'],
+          properties: {
+            name: {
+              type: 'string',
+              description: 'Caller-chosen label for this send key (used to list/revoke it later).',
+              example: 'production',
+            },
+          },
+        },
+        SendKeyCreateResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            key: {
+              type: 'string',
+              description: 'Raw send key, returned once. Use as `Authorization: Bearer <key>` on the Send API.',
+              example: 'hm_send_1a2b3c...',
+            },
+            name: { type: 'string', example: 'production' },
+            createdAt: { type: 'integer', example: 1732000000000 },
+          },
+        },
+        SendKeyListResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            sendKeys: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string', example: 'production' },
+                  createdAt: { type: 'integer', example: 1732000000000 },
+                  maskedKey: { type: 'string', example: '****9f3a' },
+                },
+              },
+            },
+          },
+        },
+        MetricsTokenRotateResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            key: {
+              type: 'string',
+              description: 'Raw metrics token, returned once. Use as `Authorization: Bearer <key>` on GET /api/outbound/metrics.',
+              example: 'hm_metrics_1a2b3c...',
+            },
+            createdAt: { type: 'integer', example: 1732000000000 },
+            scrapeConfig: { type: 'object' },
+          },
+        },
+        MetricsTokenMetaResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            createdAt: { type: 'integer', example: 1732000000000 },
+            maskedKey: { type: 'string', example: '****9f3a' },
+            tokenPresent: { type: 'boolean', example: true },
+            scrapeConfig: { type: 'object' },
+          },
+        },
+        OutboundMessageCreateRequest: {
+          type: 'object',
+          required: ['from', 'to'],
+          properties: {
+            from: {
+              type: 'object',
+              required: ['email'],
+              properties: {
+                email: { type: 'string', format: 'email', example: 'billing@mail.example.com' },
+                name: { type: 'string', example: 'Example Accounting' },
+              },
+            },
+            to: { type: 'string', format: 'email', example: 'client@example.org' },
+            subject: { type: 'string' },
+            text: { type: 'string' },
+            html: { type: 'string' },
+            replyTo: { type: 'string', format: 'email' },
+            reference: { type: 'string' },
+          },
+        },
+        OutboundMessageQueuedResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            id: { type: 'string', format: 'uuid' },
+            status: { type: 'string', enum: ['queued'], example: 'queued' },
+          },
+        },
+        OutboundAccountSummaryResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            ratePerMinute: {
+              type: 'integer',
+              description: 'Per-account send rate limit (messages per UTC minute). Not a daily cap.',
+              example: 600,
+            },
+            domains: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  domain: { type: 'string' },
+                  state: { type: 'string' },
+                  suspended: { type: 'boolean' },
+                  dailyLimit: { type: 'integer', nullable: true },
+                  sentToday: { type: 'integer' },
+                  delivered: { type: 'integer' },
+                  deferred: { type: 'integer' },
+                  bounced: { type: 'integer' },
+                  delivered24h: { type: 'integer' },
+                  deferred24h: { type: 'integer' },
+                  bounced24h: { type: 'integer' },
+                  delivered7d: { type: 'integer' },
+                  deferred7d: { type: 'integer' },
+                  bounced7d: { type: 'integer' },
+                },
+              },
+            },
+          },
+        },
+        OutboundActivityResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            messages: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string' },
+                  accountId: { type: 'string' },
+                  domain: { type: 'string' },
+                  recipient: { type: 'string' },
+                  reference: { type: 'string', nullable: true },
+                  status: { type: 'string' },
+                  createdAt: { type: 'integer' },
+                  lastEventAt: { type: 'integer', nullable: true },
+                  lastResponse: { type: 'string', nullable: true },
                 },
               },
             },
@@ -772,6 +984,509 @@ const buildOpenApiSpec = (options = {}) => {
           },
           responses: {
             200: { description: 'Issued API key and remaining days' },
+          },
+        },
+      },
+      '/api/outbound/domains': {
+        post: {
+          tags: ['Outbound Sending'],
+          operationId: 'addOutboundDomain',
+          summary: 'Register a sending domain and generate its DKIM key pair',
+          description:
+            'Requires an `outbound` licence (`X-License-Key` header). Generates a 2048-bit RSA key pair and a unique DKIM selector, returns the three DNS records (DKIM, Return-Path CNAME, DMARC) to publish. Starts `pending` until `POST /api/outbound/domains/{domain}/check` confirms all three.',
+          security: [{ LicenseKeyHeader: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/DomainAddRequest' },
+              },
+            },
+          },
+          responses: {
+            201: {
+              description: 'Domain registered, pending DNS verification',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/DomainResponse' } } },
+            },
+            401: {
+              description: 'Missing or invalid licence key',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+            403: {
+              description: 'Licence is not of type `outbound`',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+            409: {
+              description: 'Domain already registered to a different account',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+          },
+        },
+        get: {
+          tags: ['Outbound Sending'],
+          operationId: 'listOutboundDomains',
+          summary: 'List this account\'s sending domains',
+          description: 'Requires an `outbound` licence (`X-License-Key` header). Returns each domain\'s verification state, suspension flag, and daily send cap.',
+          security: [{ LicenseKeyHeader: [] }],
+          responses: {
+            200: {
+              description: 'Domains owned by this account',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/DomainListResponse' } } },
+            },
+            401: {
+              description: 'Missing or invalid licence key',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+            403: {
+              description: 'Licence is not of type `outbound`',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+          },
+        },
+      },
+      '/api/outbound/domains/{domain}/check': {
+        post: {
+          tags: ['Outbound Sending'],
+          operationId: 'checkOutboundDomain',
+          summary: 'Re-verify a sending domain\'s DNS records',
+          description:
+            'Requires an `outbound` licence (`X-License-Key` header). Queries the domain\'s authoritative nameservers for the DKIM/Return-Path/DMARC records and updates `pending`/`verified`/`broken` state accordingly. Once `verified`, the domain\'s gate record allows ZoneMTA to send on its behalf.',
+          security: [{ LicenseKeyHeader: [] }],
+          parameters: [
+            {
+              name: 'domain',
+              in: 'path',
+              required: true,
+              schema: { type: 'string' },
+              description: 'Domain to re-verify.',
+            },
+          ],
+          responses: {
+            200: {
+              description: 'Updated verification state and per-record results',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/DomainResponse' } } },
+            },
+            401: {
+              description: 'Missing or invalid licence key',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+            403: {
+              description: 'Licence is not of type `outbound`',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+            404: {
+              description: 'Domain not found, or not owned by this account',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+          },
+        },
+      },
+      '/api/outbound/domains/{domain}': {
+        delete: {
+          tags: ['Outbound Sending'],
+          operationId: 'removeOutboundDomain',
+          summary: 'Remove a sending domain',
+          description:
+            'Requires an `outbound` licence (`X-License-Key` header). Frees the domain name for any account to register again; already-queued mail for this domain is unaffected (ZoneMTA treats a missing gate record the same as `maySend: false`).',
+          security: [{ LicenseKeyHeader: [] }],
+          parameters: [
+            {
+              name: 'domain',
+              in: 'path',
+              required: true,
+              schema: { type: 'string' },
+              description: 'Domain to remove.',
+            },
+          ],
+          responses: {
+            200: { description: 'Domain removed' },
+            401: {
+              description: 'Missing or invalid licence key',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+            403: {
+              description: 'Licence is not of type `outbound`',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+            404: {
+              description: 'Domain not found, or not owned by this account',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+          },
+        },
+      },
+      '/api/outbound/send-keys': {
+        post: {
+          tags: ['Outbound Sending'],
+          operationId: 'createOutboundSendKey',
+          summary: 'Issue a send key for the Send API',
+          description:
+            'Requires an `outbound` licence (`X-License-Key` header). Returns the raw `hm_send_...` key once — it is never stored or returned again. The key is valid for as long as the issuing account\'s licence (no fixed 30-day cap). Use it as `Authorization: Bearer <key>` on the Send API, never `X-License-Key`.',
+          security: [{ LicenseKeyHeader: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/SendKeyCreateRequest' },
+              },
+            },
+          },
+          responses: {
+            201: {
+              description: 'Send key issued',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/SendKeyCreateResponse' } } },
+            },
+            400: {
+              description: 'Missing name',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+            401: {
+              description: 'Missing or invalid licence key',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+            403: {
+              description: 'Licence is not of type `outbound`',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+          },
+        },
+        get: {
+          tags: ['Outbound Sending'],
+          operationId: 'listOutboundSendKeys',
+          summary: 'List this account\'s send keys',
+          description: 'Requires an `outbound` licence (`X-License-Key` header). Returns each key\'s name, creation time, and a 4-character mask — the raw key and its hash are never returned once issued.',
+          security: [{ LicenseKeyHeader: [] }],
+          responses: {
+            200: {
+              description: 'Send keys owned by this account',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/SendKeyListResponse' } } },
+            },
+            401: {
+              description: 'Missing or invalid licence key',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+            403: {
+              description: 'Licence is not of type `outbound`',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+          },
+        },
+      },
+      '/api/outbound/metrics-token': {
+        post: {
+          tags: ['Outbound Sending'],
+          operationId: 'rotateOutboundMetricsToken',
+          summary: 'Issue or rotate the account metrics token',
+          description:
+            'Requires an `outbound` licence (`X-License-Key` header). One token per account; rotating invalidates the previous token. Returns the raw `hm_metrics_...` key once.',
+          security: [{ LicenseKeyHeader: [] }],
+          responses: {
+            201: {
+              description: 'Metrics token issued',
+              content: {
+                'application/json': { schema: { $ref: '#/components/schemas/MetricsTokenRotateResponse' } },
+              },
+            },
+            401: {
+              description: 'Missing or invalid licence key',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+            403: {
+              description: 'Licence is not of type `outbound`',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+          },
+        },
+        get: {
+          tags: ['Outbound Sending'],
+          operationId: 'getOutboundMetricsTokenMeta',
+          summary: 'Get metrics token metadata (no raw key)',
+          description: 'Requires an `outbound` licence. Returns masked key and a scrape_config template without the secret.',
+          security: [{ LicenseKeyHeader: [] }],
+          responses: {
+            200: {
+              description: 'Token metadata',
+              content: {
+                'application/json': { schema: { $ref: '#/components/schemas/MetricsTokenMetaResponse' } },
+              },
+            },
+            404: {
+              description: 'No token issued yet',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+          },
+        },
+      },
+      '/api/outbound/metrics': {
+        get: {
+          tags: ['Outbound Sending'],
+          operationId: 'scrapeOutboundMetrics',
+          summary: 'Customer Prometheus scrape for this account\'s domains',
+          description:
+            'Authenticated with `Authorization: Bearer hm_metrics_...` only. Returns Prometheus text exposition for this account\'s domains (no `account` label).',
+          security: [{ BearerAuth: [] }],
+          responses: {
+            200: {
+              description: 'Prometheus text',
+              content: { 'text/plain': { schema: { type: 'string' } } },
+            },
+            401: {
+              description: 'Missing or invalid metrics token',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+          },
+        },
+      },
+      '/api/outbound/send-keys/{name}': {
+        delete: {
+          tags: ['Outbound Sending'],
+          operationId: 'revokeOutboundSendKey',
+          summary: 'Revoke a send key by name',
+          description: 'Requires an `outbound` licence (`X-License-Key` header). Immediately invalidates the key for the Send API.',
+          security: [{ LicenseKeyHeader: [] }],
+          parameters: [
+            {
+              name: 'name',
+              in: 'path',
+              required: true,
+              schema: { type: 'string' },
+              description: 'The name the send key was created with.',
+            },
+          ],
+          responses: {
+            200: { description: 'Send key revoked' },
+            401: {
+              description: 'Missing or invalid licence key',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+            403: {
+              description: 'Licence is not of type `outbound`',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+            404: {
+              description: 'Send key name not found, or not owned by this account',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+          },
+        },
+      },
+      '/api/outbound/messages': {
+        post: {
+          tags: ['Outbound Sending'],
+          operationId: 'sendOutboundMessage',
+          summary: 'Queue an outbound message',
+          description:
+            'Authenticated with a send key (`Authorization: Bearer hm_send_...`), never a licence key. Optional `Idempotency-Key` header returns the exact first response on replay. Envelope-from is always `b-<id>@hm-bounce.<domain>`.',
+          security: [{ BearerAuth: [] }],
+          parameters: [
+            {
+              name: 'Idempotency-Key',
+              in: 'header',
+              required: false,
+              schema: { type: 'string' },
+            },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/OutboundMessageCreateRequest' },
+              },
+            },
+          },
+          responses: {
+            202: {
+              description: 'Message accepted and queued',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/OutboundMessageQueuedResponse' } } },
+            },
+            401: {
+              description: 'Missing or invalid send key',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+            403: {
+              description: 'Domain not verified / suspended, or licence inactive',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+            413: {
+              description: 'Message too large',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+            422: {
+              description: 'Invalid recipient or suppressed',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+            429: {
+              description: 'Rate limited or daily cap reached',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+            503: {
+              description: 'ZoneMTA unavailable (daily cap not consumed)',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+          },
+        },
+      },
+      '/api/outbound/messages/{id}': {
+        get: {
+          tags: ['Outbound Sending'],
+          operationId: 'getOutboundMessage',
+          summary: 'Fetch a queued/delivered message record',
+          description: 'Authenticated with a send key. Returns 404 (not 403) when the message belongs to another account.',
+          security: [{ BearerAuth: [] }],
+          parameters: [
+            {
+              name: 'id',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+            },
+          ],
+          responses: {
+            200: { description: 'Message record (no body/subject)' },
+            401: {
+              description: 'Missing or invalid send key',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+            404: {
+              description: 'Message not found for this account',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+          },
+        },
+      },
+      '/api/outbound/account/summary': {
+        get: {
+          tags: ['Outbound Sending'],
+          operationId: 'getOutboundAccountSummary',
+          summary: 'Account domain summary with sent-today, rate limit, and delivery windows',
+          description:
+            'Requires an `outbound` licence (`X-License-Key` header). Includes `ratePerMinute` (not a daily cap) and per-domain 24h/7d counts derived from recent message activity.',
+          security: [{ LicenseKeyHeader: [] }],
+          responses: {
+            200: {
+              description: 'Per-domain state, caps, rate, lifetime counters, and window counts',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/OutboundAccountSummaryResponse' } } },
+            },
+            401: {
+              description: 'Missing or invalid licence key',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+            403: {
+              description: 'Licence is not of type `outbound`',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+          },
+        },
+      },
+      '/api/outbound/activity': {
+        get: {
+          tags: ['Outbound Sending'],
+          operationId: 'listOutboundActivity',
+          summary: 'List recent outbound messages for the portal Activity page',
+          description:
+            'Requires an `outbound` licence (`X-License-Key` header). Returns newest-first message records (no body/subject), including late-bounce status transitions.',
+          security: [{ LicenseKeyHeader: [] }],
+          parameters: [
+            {
+              name: 'limit',
+              in: 'query',
+              required: false,
+              schema: { type: 'integer', minimum: 1, maximum: 200, default: 50 },
+            },
+          ],
+          responses: {
+            200: {
+              description: 'Recent messages',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/OutboundActivityResponse' } } },
+            },
+            401: {
+              description: 'Missing or invalid licence key',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+            403: {
+              description: 'Licence is not of type `outbound`',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+          },
+        },
+      },
+      '/api/outbound/suppressions': {
+        get: {
+          tags: ['Outbound Sending'],
+          operationId: 'listOutboundSuppressions',
+          summary: 'List suppressed recipients for this account',
+          security: [{ LicenseKeyHeader: [] }],
+          responses: {
+            200: { description: 'Suppression entries' },
+            401: {
+              description: 'Missing or invalid licence key',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+          },
+        },
+        post: {
+          tags: ['Outbound Sending'],
+          operationId: 'addOutboundSuppression',
+          summary: 'Manually suppress a recipient',
+          security: [{ LicenseKeyHeader: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['email'],
+                  properties: {
+                    email: { type: 'string', format: 'email' },
+                    reason: { type: 'string', enum: ['manual', 'hard_bounce'] },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            201: { description: 'Suppression added' },
+            400: {
+              description: 'Missing email',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+          },
+        },
+      },
+      '/api/outbound/suppressions/export': {
+        get: {
+          tags: ['Outbound Sending'],
+          operationId: 'exportOutboundSuppressions',
+          summary: 'Export suppressions as CSV',
+          security: [{ LicenseKeyHeader: [] }],
+          responses: {
+            200: {
+              description: 'CSV export',
+              content: { 'text/csv': { schema: { type: 'string' } } },
+            },
+          },
+        },
+      },
+      '/api/outbound/suppressions/{email}': {
+        delete: {
+          tags: ['Outbound Sending'],
+          operationId: 'removeOutboundSuppression',
+          summary: 'Remove a recipient from the suppression list',
+          security: [{ LicenseKeyHeader: [] }],
+          parameters: [
+            {
+              name: 'email',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'email' },
+            },
+          ],
+          responses: {
+            200: { description: 'Suppression removed' },
+            404: {
+              description: 'Entry not found',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
           },
         },
       },
