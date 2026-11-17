@@ -36,6 +36,17 @@ describe('outboundMetricsStore', () => {
     expect(counters.queued).toBe(0);
   });
 
+  it('incrBounced supersedes a prior delivered terminal without double-decr queued', async () => {
+    await store.incrAccepted('mail.example.com');
+    expect(await store.incrDelivered('mail.example.com', 'msg-late')).toBe(true);
+    expect(await store.incrBounced('mail.example.com', 'msg-late', 'unknown_recipient')).toBe(true);
+    expect(await store.incrBounced('mail.example.com', 'msg-late', 'unknown_recipient')).toBe(false);
+    const counters = await store.readCounters('mail.example.com');
+    expect(counters.delivered).toBe(0);
+    expect(counters.bounced.unknown_recipient).toBe(1);
+    expect(counters.queued).toBe(0);
+  });
+
   it('incrDeferred is idempotent per streamId', async () => {
     expect(await store.incrDeferred('mail.example.com', 'stream-1')).toBe(true);
     expect(await store.incrDeferred('mail.example.com', 'stream-1')).toBe(false);

@@ -12,7 +12,8 @@
  *   outbound:metrics:queued:<domain>
  *   outbound:metrics:dns:<domain>:<outcome>
  *   outbound:metrics:applied:<streamId>     SET NX, TTL 30d
- *   outbound:metrics:terminal:<messageId>   SET NX (delivered|bounced)
+ *   outbound:metrics:terminal:<messageId>   SET NX (delivered|bounced);
+ *     late bounce may supersede a prior `delivered` value (see incrBounced)
  */
 
 const redisService = require('../redisService');
@@ -115,6 +116,27 @@ const incrDelivered = async (domain, messageId) => {
 
 const incrBounced = async (domain, messageId, category) => {
   const cat = BOUNCE_CATEGORIES.includes(category) ? category : 'other';
+  if (!messageId) {
+    return false;
+  }
+
+  const existing = await redisService.client.get(terminalKey(messageId));
+  if (existing === 'bounced') {
+    return false;
+  }
+
+  if (existing === 'delivered') {
+    // Late DSN after ZoneMTA ACCEPTED: move the count from delivered → bounced.
+    // Queued was already decremented at deliver time — do not DECR again.
+    const deliveredCount = await readInt(counterKey(domain, 'delivered'));
+    if (deliveredCount > 0) {
+      await redisService.client.decr(counterKey(domain, 'delivered'));
+    }
+    await redisService.client.set(terminalKey(messageId), 'bounced');
+    await redisService.client.incr(counterKey(domain, `bounced:${cat}`));
+    return true;
+  }
+
   if (!(await markTerminal(messageId, 'bounced'))) {
     return false;
   }
