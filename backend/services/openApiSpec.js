@@ -198,6 +198,47 @@ const buildOpenApiSpec = (options = {}) => {
             },
           },
         },
+        SendKeyCreateRequest: {
+          type: 'object',
+          required: ['name'],
+          properties: {
+            name: {
+              type: 'string',
+              description: 'Caller-chosen label for this send key (used to list/revoke it later).',
+              example: 'production',
+            },
+          },
+        },
+        SendKeyCreateResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            key: {
+              type: 'string',
+              description: 'Raw send key, returned once. Use as `Authorization: Bearer <key>` on the Send API.',
+              example: 'hm_send_1a2b3c...',
+            },
+            name: { type: 'string', example: 'production' },
+            createdAt: { type: 'integer', example: 1732000000000 },
+          },
+        },
+        SendKeyListResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            sendKeys: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string', example: 'production' },
+                  createdAt: { type: 'integer', example: 1732000000000 },
+                  maskedKey: { type: 'string', example: '****9f3a' },
+                },
+              },
+            },
+          },
+        },
         SenderCheckRequest: {
           type: 'object',
           required: ['domain'],
@@ -959,6 +1000,96 @@ const buildOpenApiSpec = (options = {}) => {
             },
             404: {
               description: 'Domain not found, or not owned by this account',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+          },
+        },
+      },
+      '/api/outbound/send-keys': {
+        post: {
+          tags: ['Outbound Sending'],
+          operationId: 'createOutboundSendKey',
+          summary: 'Issue a send key for the Send API',
+          description:
+            'Requires an `outbound` licence (`X-License-Key` header). Returns the raw `hm_send_...` key once — it is never stored or returned again. The key is valid for as long as the issuing account\'s licence (no fixed 30-day cap). Use it as `Authorization: Bearer <key>` on the Send API, never `X-License-Key`.',
+          security: [{ LicenseKeyHeader: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/SendKeyCreateRequest' },
+              },
+            },
+          },
+          responses: {
+            201: {
+              description: 'Send key issued',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/SendKeyCreateResponse' } } },
+            },
+            400: {
+              description: 'Missing name',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+            401: {
+              description: 'Missing or invalid licence key',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+            403: {
+              description: 'Licence is not of type `outbound`',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+          },
+        },
+        get: {
+          tags: ['Outbound Sending'],
+          operationId: 'listOutboundSendKeys',
+          summary: 'List this account\'s send keys',
+          description: 'Requires an `outbound` licence (`X-License-Key` header). Returns each key\'s name, creation time, and a 4-character mask — the raw key and its hash are never returned once issued.',
+          security: [{ LicenseKeyHeader: [] }],
+          responses: {
+            200: {
+              description: 'Send keys owned by this account',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/SendKeyListResponse' } } },
+            },
+            401: {
+              description: 'Missing or invalid licence key',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+            403: {
+              description: 'Licence is not of type `outbound`',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+          },
+        },
+      },
+      '/api/outbound/send-keys/{name}': {
+        delete: {
+          tags: ['Outbound Sending'],
+          operationId: 'revokeOutboundSendKey',
+          summary: 'Revoke a send key by name',
+          description: 'Requires an `outbound` licence (`X-License-Key` header). Immediately invalidates the key for the Send API.',
+          security: [{ LicenseKeyHeader: [] }],
+          parameters: [
+            {
+              name: 'name',
+              in: 'path',
+              required: true,
+              schema: { type: 'string' },
+              description: 'The name the send key was created with.',
+            },
+          ],
+          responses: {
+            200: { description: 'Send key revoked' },
+            401: {
+              description: 'Missing or invalid licence key',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+            403: {
+              description: 'Licence is not of type `outbound`',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+            404: {
+              description: 'Send key name not found, or not owned by this account',
               content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
             },
           },
