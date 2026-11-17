@@ -1,3 +1,6 @@
+const fs = require('fs');
+const path = require('path');
+
 process.env.VALID_DOMAINS = 'hide-mail.org';
 
 jest.mock('../../services/apiRateLimiter', () => ({
@@ -6,6 +9,19 @@ jest.mock('../../services/apiRateLimiter', () => ({
 
 const { OPENAPI_VERSION, buildOpenApiSpec, buildSwaggerUiHtml } = require('../../services/openApiSpec');
 const { handleOpenApiJson, handleSwaggerUi } = require('../../routes/openApi');
+
+const normalizeExplorerPath = (apiPath) =>
+  String(apiPath || '').replace(/:([A-Za-z_][A-Za-z0-9_]*)/g, '{$1}');
+
+const listDevelopersCatalogPaths = () => {
+  const catalogPath = path.join(__dirname, '../../../src/data/developersCatalog.js');
+  const source = fs.readFileSync(catalogPath, 'utf8');
+  const covered = new Set(['/api/mcp']);
+  for (const match of source.matchAll(/path:\s*'(\/api\/[^']+)'/g)) {
+    covered.add(normalizeExplorerPath(match[1]));
+  }
+  return covered;
+};
 
 describe('OpenAPI 3.1.0 Specification & Swagger UI', () => {
   test('builds a valid OpenAPI 3.1.0 specification covering all Deliverability, QA, and MCP endpoints', () => {
@@ -41,6 +57,17 @@ describe('OpenAPI 3.1.0 Specification & Swagger UI', () => {
     // MCP paths
     expect(spec.paths['/api/mcp'].get.operationId).toBe('discoverMcpServer');
     expect(spec.paths['/api/mcp'].post.operationId).toBe('callMcpJsonRpc');
+  });
+
+  test('developers catalog covers every OpenAPI path shown in Swagger', () => {
+    const spec = buildOpenApiSpec({ baseUrl: 'https://hide-mail.org' });
+    const covered = listDevelopersCatalogPaths();
+    const missing = Object.keys(spec.paths).filter((apiPath) => !covered.has(apiPath));
+
+    expect(missing).toEqual([]);
+    expect(covered.has('/api/billing/plans')).toBe(true);
+    expect(covered.has('/api/billing/license/api-key')).toBe(true);
+    expect(covered.has('/api/outbound/suppressions/export')).toBe(true);
   });
 
   test('renders Swagger UI HTML pointing at /api/openapi.json', () => {

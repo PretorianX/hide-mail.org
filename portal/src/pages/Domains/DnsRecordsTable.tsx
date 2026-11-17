@@ -22,6 +22,13 @@ const Table = styled.table`
   }
 `;
 
+const Notes = styled.ul`
+  margin: ${({ theme }) => theme.spacing.md} 0 0;
+  padding-left: ${({ theme }) => theme.spacing.lg};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+`;
+
 const ReasonList = styled.ul`
   margin: ${({ theme }) => theme.spacing.sm} 0 0;
   padding-left: ${({ theme }) => theme.spacing.lg};
@@ -29,12 +36,18 @@ const ReasonList = styled.ul`
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
 `;
 
+function purposeLabel(record: DomainRecord): string {
+  if (record.purpose) return record.purpose;
+  if (record.id === 'dkim') return 'DKIM signing';
+  if (record.id === 'returnPath') return 'Bounce / Return-Path';
+  if (record.id === 'dmarc') return 'DMARC policy';
+  return '—';
+}
+
 function recordValue(record: DomainRecord): string {
   if (record.value != null && record.value !== '') return String(record.value);
-  if ('expected' in record && (record as { expected?: string | null }).expected != null) {
-    return String((record as { expected?: string | null }).expected);
-  }
-  if (record.id === 'dmarc') return '(yours — any valid v=DMARC1)';
+  if (record.expected != null && record.expected !== '') return String(record.expected);
+  if (record.id === 'dmarc') return 'v=DMARC1; p=none;';
   return '—';
 }
 
@@ -50,6 +63,7 @@ export function DnsRecordsTable({ records }: { records: DomainRecord[] }) {
       <Table>
         <thead>
           <tr>
+            <th>Purpose</th>
             <th>Type</th>
             <th>Host</th>
             <th>Value</th>
@@ -61,6 +75,7 @@ export function DnsRecordsTable({ records }: { records: DomainRecord[] }) {
             const status = statusLabel(record);
             return (
               <tr key={record.id || `${record.type}-${record.host}`}>
+                <td>{purposeLabel(record)}</td>
                 <td>{record.type || '—'}</td>
                 <td>{record.host || '—'}</td>
                 <td>{recordValue(record)}</td>
@@ -72,6 +87,17 @@ export function DnsRecordsTable({ records }: { records: DomainRecord[] }) {
           })}
         </tbody>
       </Table>
+      <Notes>
+        <li>
+          <strong>Bounce / Return-Path:</strong> CNAME <code>hm-bounce.&lt;your-domain&gt;</code> to
+          Hide Mail&apos;s return-path host (<code>rp.hide-mail.org</code>; rp means return-path)
+          so bounce notices for this domain are delivered to us.
+        </li>
+        <li>
+          <strong>DMARC:</strong> publish the suggested TXT if you do not already have one. An existing
+          valid <code>v=DMARC1</code> policy also passes the check.
+        </li>
+      </Notes>
       <ReasonList>
         {records.flatMap((record) => {
           const lines: string[] = [];

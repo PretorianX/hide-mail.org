@@ -84,25 +84,53 @@ function Developers() {
   const [openApiLoading, setOpenApiLoading] = useState(false);
 
   useEffect(() => {
-    if (activeTab === 'openapi' && !openApiSpec) {
-      const clientSpec = JSON.stringify(buildClientOpenApiSpec(), null, 2);
-      setOpenApiSpec(clientSpec);
+    if (activeTab !== 'openapi' || openApiSpec) {
+      return undefined;
     }
+
+    let cancelled = false;
+    setOpenApiLoading(true);
+    (async () => {
+      try {
+        const res = await fetch(resolveApiUrl('/api/openapi.json'));
+        if (!res.ok) {
+          throw new Error(`OpenAPI fetch failed with HTTP ${res.status}`);
+        }
+        const spec = await res.json();
+        if (!cancelled) {
+          setOpenApiSpec(JSON.stringify(spec, null, 2));
+        }
+      } catch {
+        if (!cancelled) {
+          setOpenApiSpec(JSON.stringify(buildClientOpenApiSpec(), null, 2));
+        }
+      } finally {
+        if (!cancelled) {
+          setOpenApiLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [activeTab, openApiSpec]);
 
   const fetchOpenApiSpec = async () => {
     if (openApiSpec) return openApiSpec;
     if (openApiLoading) return null;
-    
+
     setOpenApiLoading(true);
     try {
       const res = await fetch(resolveApiUrl('/api/openapi.json'));
+      if (!res.ok) {
+        throw new Error(`OpenAPI fetch failed with HTTP ${res.status}`);
+      }
       const spec = await res.json();
       const specString = JSON.stringify(spec, null, 2);
       setOpenApiSpec(specString);
       return specString;
     } catch {
-      // Fallback to client-built spec if backend fetch fails
       const fallback = JSON.stringify(buildClientOpenApiSpec(), null, 2);
       setOpenApiSpec(fallback);
       return fallback;
@@ -190,28 +218,34 @@ function Developers() {
     setApiResponse(null);
 
     const startTime = Date.now();
-    let parsedBody;
-    try {
-      parsedBody = JSON.parse(requestBody);
-    } catch (err) {
-      setApiRunning(false);
-      setApiResponse({
-        ok: false,
-        status: 400,
-        statusText: 'Client JSON Error',
-        durationMs: 0,
-        body: { error: `Invalid JSON in request body: ${err.message}` },
-      });
-      return;
-    }
-
     const useBrowserPreview = runnerMode === 'browser' && currentEndpoint.browserPath;
     const targetPath = useBrowserPreview ? currentEndpoint.browserPath : currentEndpoint.path;
+    const method = String(currentEndpoint.method || 'POST').toUpperCase();
+    const hasBody = method !== 'GET' && method !== 'HEAD' && method !== 'DELETE';
+    let parsedBody = currentEndpoint.sampleRequest;
+    if (hasBody) {
+      try {
+        parsedBody = JSON.parse(requestBody);
+      } catch (err) {
+        setApiRunning(false);
+        setApiResponse({
+          ok: false,
+          status: 400,
+          statusText: 'Client JSON Error',
+          durationMs: 0,
+          body: { error: `Invalid JSON in request body: ${err.message}` },
+        });
+        return;
+      }
+    }
+
     const headers = {
-      'Content-Type': 'application/json',
       Accept: 'application/json',
     };
-    if (!useBrowserPreview && apiKey.trim()) {
+    if (hasBody) {
+      headers['Content-Type'] = 'application/json';
+    }
+    if (!useBrowserPreview && apiKey.trim() && currentEndpoint.authScheme !== 'none') {
       if (currentEndpoint.authScheme === 'license') {
         headers['X-License-Key'] = apiKey.trim();
       } else if (currentEndpoint.authScheme === 'sendKey') {
@@ -224,9 +258,9 @@ function Developers() {
 
     try {
       const res = await fetch(resolveApiUrl(targetPath), {
-        method: currentEndpoint.method,
+        method,
         headers,
-        body: JSON.stringify(parsedBody),
+        ...(hasBody ? { body: JSON.stringify(parsedBody) } : {}),
       });
       const durationMs = Math.max(1, Date.now() - startTime);
       let data;
@@ -402,8 +436,9 @@ function Developers() {
         <h1>API Explorer &amp; MCP Hub</h1>
         <p className="developers-lede">
           Integration contracts for every Hide Mail REST product — deliverability suite, QA mailboxes,
-          and Outbound Send — plus OpenAPI 3.1 and the Model Context Protocol (MCP) server. MCP requires
-          an <code>hm_api_…</code> key via <code>X-API-Key</code> or <code>Authorization: Bearer</code>.
+          Outbound Send, and billing — matching Swagger at <code>/api/docs</code>. Plus OpenAPI 3.1 and
+          the MCP server (requires an <code>hm_api_…</code> key via <code>X-API-Key</code> or{' '}
+          <code>Authorization: Bearer</code>).
         </p>
         <div className="developers-openapi-bar" data-testid="developers-openapi-bar">
           <a
@@ -478,26 +513,41 @@ function Developers() {
         </div>
 
         <div className="developers-key-bar">
-          <label htmlFor="developers-api-key">
-            {activeTab === 'mcp'
-              ? 'API Key for MCP (hm_api_…)'
-              : currentEndpoint?.authScheme === 'sendKey'
-                ? 'Send key (hm_send_…)'
-                : 'API Key (hm_api_…)'}
-          </label>
-          <input
-            id="developers-api-key"
-            type="password"
-            autoComplete="off"
-            placeholder={
-              activeTab === 'mcp' || currentEndpoint?.authScheme !== 'sendKey'
-                ? 'hm_api_... (required for live calls & MCP)'
-                : 'hm_send_... (required for Send API live calls)'
-            }
-            value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
-            data-testid="developers-api-key-input"
-          />
+          {activeTab === 'api' && currentEndpoint?.authScheme === 'none' ? (
+            <p className="developers-key-public" data-testid="developers-public-endpoint-note">
+              Public endpoint — no API key header required
+              {currentEndpoint.id === 'billing-api-key' ? ' (pass license key in the JSON body).' : '.'}
+            </p>
+          ) : (
+            <>
+              <label htmlFor="developers-api-key">
+                {activeTab === 'mcp'
+                  ? 'API Key for MCP (hm_api_…)'
+                  : currentEndpoint?.authScheme === 'sendKey'
+                    ? 'Send key (hm_send_…)'
+                    : currentEndpoint?.authScheme === 'license'
+                      ? 'License key (HM-…)'
+                      : 'API Key (hm_api_…)'}
+              </label>
+              <input
+                id="developers-api-key"
+                type="password"
+                autoComplete="off"
+                placeholder={
+                  activeTab === 'mcp'
+                    ? 'hm_api_... (required for live calls & MCP)'
+                    : currentEndpoint?.authScheme === 'sendKey'
+                      ? 'hm_send_... (required for Send API live calls)'
+                      : currentEndpoint?.authScheme === 'license'
+                        ? 'HM-XXXX-XXXX-XXXX-XXXX'
+                        : 'hm_api_... (required for live calls)'
+                }
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                data-testid="developers-api-key-input"
+              />
+            </>
+          )}
           <Link to="/pro" className="developers-key-link">
             Get a key or compare plans →
           </Link>
@@ -557,6 +607,23 @@ function Developers() {
                 <span className="developers-endpoint-btn-path">{ep.path}</span>
               </button>
             ))}
+
+            <p className="developers-nav-heading">Billing &amp; Licenses</p>
+            {REST_ENDPOINTS.filter((ep) => ep.category === 'Billing & Licenses').map((ep) => (
+              <button
+                key={ep.id}
+                type="button"
+                className={`developers-endpoint-btn${currentEndpoint.id === ep.id ? ' is-selected' : ''}`}
+                onClick={() => handleSelectEndpoint(ep.id)}
+                data-testid={`endpoint-nav-${ep.id}`}
+              >
+                <div className="developers-endpoint-btn-top">
+                  <span className="developers-method-badge">{ep.method}</span>
+                  <span className="developers-endpoint-btn-title">{ep.shortTitle}</span>
+                </div>
+                <span className="developers-endpoint-btn-path">{ep.path}</span>
+              </button>
+            ))}
           </aside>
 
           <div className="developers-detail-panel">
@@ -587,7 +654,9 @@ function Developers() {
                   <h3>
                     {currentEndpoint.category === 'Outbound Send'
                       ? 'Outbound Send routes'
-                      : 'All QA Mailbox & Webhook Routes'}
+                      : currentEndpoint.category === 'Billing & Licenses'
+                        ? 'Billing routes'
+                        : 'All QA Mailbox & Webhook Routes'}
                   </h3>
                   <div className="developers-table-wrap">
                     <table className="developers-table">
@@ -873,11 +942,22 @@ function Developers() {
               </div>
             </div>
             <p>
-              Import <code>https://hide-mail.org/api/openapi.json</code> directly into Postman,
-              Insomnia, Bruno, OpenAPI Generator, or Swagger UI at <code>/api/docs</code>.
+              This tab loads the live server spec from <code>/api/openapi.json</code> (same source as
+              Swagger). Import that URL into Postman, Insomnia, Bruno, or OpenAPI Generator.
             </p>
+            <iframe
+              title="Hide Mail Swagger UI"
+              src={SWAGGER_UI_PATH}
+              className="developers-swagger-frame"
+              data-testid="developers-swagger-iframe"
+            />
             <pre className="developers-pre" data-testid="openapi-spec-preview">
-              <code>{openApiSpec || (openApiLoading ? 'Loading OpenAPI spec...' : 'Click Copy or Download to load the spec')}</code>
+              <code>
+                {openApiSpec ||
+                  (openApiLoading
+                    ? 'Loading live OpenAPI spec from /api/openapi.json...'
+                    : 'OpenAPI spec unavailable')}
+              </code>
             </pre>
           </section>
         </div>

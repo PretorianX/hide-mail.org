@@ -25,15 +25,17 @@ describe('buildExpectedRecords', () => {
     expect(records.find((r) => r.id === 'dkim').expected).toMatch(/^v=DKIM1; k=rsa; p=/);
     expect(records.find((r) => r.id === 'returnPath')).toEqual({
       id: 'returnPath',
+      purpose: 'Bounce / Return-Path',
       type: 'CNAME',
       host: 'hm-bounce.mail.example.com',
       expected: 'rp.hide-mail.org',
     });
     expect(records.find((r) => r.id === 'dmarc')).toMatchObject({
       id: 'dmarc',
+      purpose: 'DMARC policy',
       type: 'TXT',
       host: '_dmarc.mail.example.com',
-      expected: null,
+      expected: 'v=DMARC1; p=none;',
     });
   });
 

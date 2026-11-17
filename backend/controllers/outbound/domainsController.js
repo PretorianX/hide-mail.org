@@ -11,10 +11,22 @@ const DOMAIN_ERROR_STATUS = {
   NOT_FOUND: 404,
 };
 
+const isOutboundNotConfigured = (error) =>
+  Boolean(error?.message && String(error.message).includes('OUTBOUND_KEY_ENCRYPTION_SECRET'));
+
 const handleDomainError = (error, res, next) => {
   if (error instanceof domainService.DomainError) {
     const status = DOMAIN_ERROR_STATUS[error.code] || 400;
     return res.status(status).json({ success: false, error: error.message, code: error.code });
+  }
+  if (isOutboundNotConfigured(error)) {
+    logger.error('Outbound domains error', error);
+    return res.status(503).json({
+      success: false,
+      error:
+        'Outbound Send is not configured on this server (missing OUTBOUND_KEY_ENCRYPTION_SECRET in the backend container).',
+      code: 'OUTBOUND_NOT_CONFIGURED',
+    });
   }
   logger.error('Outbound domains error', error);
   return next(error);
