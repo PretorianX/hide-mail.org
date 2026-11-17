@@ -2,6 +2,7 @@ const crypto = require('crypto');
 
 const ALGORITHM = 'aes-256-gcm';
 const IV_BYTES = 12;
+const AUTH_TAG_BYTES = 16;
 
 const deriveKey = (secret) => crypto.createHash('sha256').update(secret).digest();
 
@@ -21,12 +22,19 @@ const decrypt = (encoded, secret) => {
   }
 
   const [, ivHex, authTagHex, cipherHex] = parts;
+  const iv = Buffer.from(ivHex, 'hex');
+  const authTag = Buffer.from(authTagHex, 'hex');
+  if (iv.length !== IV_BYTES || authTag.length !== AUTH_TAG_BYTES) {
+    throw new Error('Invalid encrypted value format');
+  }
+
   const decipher = crypto.createDecipheriv(
     ALGORITHM,
     deriveKey(secret),
-    Buffer.from(ivHex, 'hex')
+    iv,
+    { authTagLength: AUTH_TAG_BYTES }
   );
-  decipher.setAuthTag(Buffer.from(authTagHex, 'hex'));
+  decipher.setAuthTag(authTag);
 
   return Buffer.concat([
     decipher.update(Buffer.from(cipherHex, 'hex')),

@@ -21,3 +21,14 @@ test('rejects a wrong secret with an auth-tag failure', () => {
 test('rejects a malformed encoded string', () => {
   expect(() => keyCrypto.decrypt('not-the-right-format', 'any')).toThrow();
 });
+
+test('rejects a truncated auth tag as an invalid format', () => {
+  const truncatedTag = FIXTURE_ENCODED.replace(
+    '71a349df9ee4f61d8017ec861873f2fd',
+    '71a349df9ee4f61d'
+  );
+
+  expect(() => keyCrypto.decrypt(truncatedTag, FIXTURE_SECRET)).toThrow(
+    'Invalid encrypted value format'
+  );
+});
