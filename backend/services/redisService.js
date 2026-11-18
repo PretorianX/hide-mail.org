@@ -1,7 +1,7 @@
 const Redis = require('ioredis');
 const config = require('../config/config');
 const logger = require('../utils/logger');
-const { sanitizeEmail } = require('../utils/sanitize');
+const { sanitizeEmail, sanitizeMessageId } = require('../utils/sanitize');
 const metrics = require('./metricsService');
 
 // Create Redis client
@@ -346,7 +346,7 @@ const redisService = {
       }
 
       if (removed > 0 || existed) {
-        logger.info(`Email deleted: ${id}`);
+        logger.info(`Email deleted: ${sanitizeMessageId(id)}`);
         return true;
       }
 
