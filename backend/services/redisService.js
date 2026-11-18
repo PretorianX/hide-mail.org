@@ -41,6 +41,8 @@ const getMailboxCleanupGraceSeconds = () => {
   return config.mailboxCleanupGraceDays * 24 * 60 * 60;
 };
 
+const normalizeEmail = (email) => String(email).trim().toLowerCase();
+
 const redisService = {
   /**
    * Initialize Redis with domains
@@ -95,8 +97,9 @@ const redisService = {
    */
   async registerMailbox(email, expirationSeconds = 1800) {
     try {
-      const activeKey = `${KEY_PREFIXES.ACTIVE_MAILBOX}${email}`;
-      const knownKey = `${KEY_PREFIXES.KNOWN_MAILBOX}${email}`;
+      const normalizedEmail = normalizeEmail(email);
+      const activeKey = `${KEY_PREFIXES.ACTIVE_MAILBOX}${normalizedEmail}`;
+      const knownKey = `${KEY_PREFIXES.KNOWN_MAILBOX}${normalizedEmail}`;
       
       // Set active mailbox with standard expiration
       await redis.set(activeKey, Date.now());
@@ -108,7 +111,7 @@ const redisService = {
       await redis.set(knownKey, Date.now());
       await redis.expire(knownKey, knownExpiration);
       
-      logger.info(`Mailbox registered: ${sanitizeEmail(email)} (cleanup in ${knownExpiration}s)`);
+      logger.info(`Mailbox registered: ${sanitizeEmail(normalizedEmail)} (cleanup in ${knownExpiration}s)`);
     } catch (error) {
       logger.error('Error registering mailbox in Redis:', error);
       throw error;
@@ -119,7 +122,7 @@ const redisService = {
    * Store Pro/API mailbox metadata (license, alias, inbound webhook).
    */
   async setMailboxMeta(email, meta, ttlSeconds) {
-    const key = `mailbox_meta:${String(email).toLowerCase()}`;
+    const key = `mailbox_meta:${normalizeEmail(email)}`;
     const existingRaw = await redis.get(key);
     const existing = existingRaw ? JSON.parse(existingRaw) : {};
     await redis.set(key, JSON.stringify({ ...existing, ...meta }));
@@ -129,14 +132,15 @@ const redisService = {
   },
 
   async getMailboxMeta(email) {
-    const raw = await redis.get(`mailbox_meta:${String(email).toLowerCase()}`);
+    const raw = await redis.get(`mailbox_meta:${normalizeEmail(email)}`);
     return raw ? JSON.parse(raw) : null;
   },
 
   async setMailboxWebhook(email, url) {
-    const mailboxKey = `${KEY_PREFIXES.ACTIVE_MAILBOX}${email}`;
+    const normalizedEmail = normalizeEmail(email);
+    const mailboxKey = `${KEY_PREFIXES.ACTIVE_MAILBOX}${normalizedEmail}`;
     const ttl = await redis.ttl(mailboxKey);
-    await this.setMailboxMeta(email, { webhookUrl: url }, ttl > 0 ? ttl : undefined);
+    await this.setMailboxMeta(normalizedEmail, { webhookUrl: url }, ttl > 0 ? ttl : undefined);
   },
 
   async getMailboxWebhook(email) {
@@ -151,7 +155,7 @@ const redisService = {
    */
   async isMailboxActive(email) {
     try {
-      const key = `${KEY_PREFIXES.ACTIVE_MAILBOX}${email}`;
+      const key = `${KEY_PREFIXES.ACTIVE_MAILBOX}${normalizeEmail(email)}`;
       return await redis.exists(key) === 1;
     } catch (error) {
       logger.error('Error checking mailbox activity in Redis:', error);
@@ -167,7 +171,7 @@ const redisService = {
    */
   async isMailboxKnown(email) {
     try {
-      const key = `${KEY_PREFIXES.KNOWN_MAILBOX}${email}`;
+      const key = `${KEY_PREFIXES.KNOWN_MAILBOX}${normalizeEmail(email)}`;
       return await redis.exists(key) === 1;
     } catch (error) {
       logger.error('Error checking if mailbox is known in Redis:', error);
@@ -182,7 +186,7 @@ const redisService = {
    * @returns {Promise<number>}
    */
   async getMailboxTtl(email) {
-    return redis.ttl(`${KEY_PREFIXES.ACTIVE_MAILBOX}${email}`);
+    return redis.ttl(`${KEY_PREFIXES.ACTIVE_MAILBOX}${normalizeEmail(email)}`);
   },
 
   /**
@@ -193,8 +197,9 @@ const redisService = {
    */
   async refreshMailbox(email, expirationSeconds = 1800) {
     try {
-      const activeKey = `${KEY_PREFIXES.ACTIVE_MAILBOX}${email}`;
-      const knownKey = `${KEY_PREFIXES.KNOWN_MAILBOX}${email}`;
+      const normalizedEmail = normalizeEmail(email);
+      const activeKey = `${KEY_PREFIXES.ACTIVE_MAILBOX}${normalizedEmail}`;
+      const knownKey = `${KEY_PREFIXES.KNOWN_MAILBOX}${normalizedEmail}`;
       const exists = await redis.exists(activeKey);
       
       if (exists) {
@@ -206,12 +211,12 @@ const redisService = {
         await redis.expire(knownKey, knownExpiration);
 
         // Refresh mailbox metadata (including capability token hash) TTL
-        const metaKey = `mailbox_meta:${String(email).toLowerCase()}`;
+        const metaKey = `mailbox_meta:${normalizedEmail}`;
         if (await redis.exists(metaKey)) {
           await redis.expire(metaKey, expirationSeconds);
         }
         
-        logger.info(`Mailbox refreshed: ${sanitizeEmail(email)}`);
+        logger.info(`Mailbox refreshed: ${sanitizeEmail(normalizedEmail)}`);
         return true;
       }
       
@@ -386,19 +391,20 @@ const redisService = {
    */
   async deactivateMailbox(email) {
     try {
-      const key = `${KEY_PREFIXES.ACTIVE_MAILBOX}${email}`;
+      const normalizedEmail = normalizeEmail(email);
+      const key = `${KEY_PREFIXES.ACTIVE_MAILBOX}${normalizedEmail}`;
       
       // Check if mailbox exists
       const exists = await redis.exists(key);
       
       if (exists) {
         // Delete the key to deactivate and invalidate mailbox metadata/capability
-        const metaKey = `mailbox_meta:${String(email).toLowerCase()}`;
+        const metaKey = `mailbox_meta:${normalizedEmail}`;
         await redis.del(key);
         await redis.del(metaKey);
-        logger.info(`Mailbox deactivated: ${sanitizeEmail(email)}`);
+        logger.info(`Mailbox deactivated: ${sanitizeEmail(normalizedEmail)}`);
       } else {
-        logger.warn(`Attempted to deactivate non-existent mailbox: ${sanitizeEmail(email)}`);
+        logger.warn(`Attempted to deactivate non-existent mailbox: ${sanitizeEmail(normalizedEmail)}`);
       }
       
       return true;

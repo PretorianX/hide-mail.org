@@ -238,4 +238,56 @@ describe('Mailbox capability authentication (#222)', () => {
       .set('X-Mailbox-Token', mailboxToken)
       .expect(401);
   });
+
+  it('canonicalizes mixed-case email across registration, active_mailbox, refresh, deactivate, and token verification', async () => {
+    const mixedEmail = ' Mixed.Case@Hide-Mail.org ';
+    const canonicalEmail = 'mixed.case@hide-mail.org';
+
+    const reg = await request(app)
+      .post('/api/mailbox/register')
+      .send({ email: mixedEmail })
+      .expect(200);
+
+    expect(reg.body.data.email).toBe(canonicalEmail);
+    const { mailboxToken } = reg.body.data;
+
+    expect(redisService.client.data[`active_mailbox:${canonicalEmail}`]).toBeDefined();
+    expect(redisService.client.data[`active_mailbox:${mixedEmail}`]).toBeUndefined();
+    expect(redisService.client.data[`mailbox_meta:${canonicalEmail}`]).toBeDefined();
+
+    // Lowercase re-registration must be rejected as already in use (cannot hijack mixed-case mailbox)
+    const hijack = await request(app)
+      .post('/api/mailbox/register')
+      .send({ email: canonicalEmail })
+      .expect(409);
+    expect(hijack.body.code).toBe('ALIAS_TAKEN');
+
+    // Missing vs invalid token error codes remain distinct
+    const missingRes = await request(app)
+      .get(`/api/emails/${encodeURIComponent('MIXED.CASE@HIDE-MAIL.ORG')}`)
+      .expect(401);
+    expect(missingRes.body.code).toBe('MAILBOX_TOKEN_REQUIRED');
+
+    const invalidRes = await request(app)
+      .get(`/api/emails/${encodeURIComponent('MIXED.CASE@HIDE-MAIL.ORG')}`)
+      .set('X-Mailbox-Token', 'wrong-token')
+      .expect(401);
+    expect(invalidRes.body.code).toBe('INVALID_MAILBOX_TOKEN');
+
+    // Mixed-case refresh and deactivate succeed with the issued token
+    await request(app)
+      .post('/api/mailbox/refresh')
+      .set('X-Mailbox-Token', mailboxToken)
+      .send({ email: ' MIXED.CASE@HIDE-MAIL.ORG ' })
+      .expect(200);
+
+    await request(app)
+      .post('/api/mailbox/deactivate')
+      .set('X-Mailbox-Token', mailboxToken)
+      .send({ email: 'Mixed.Case@Hide-Mail.org' })
+      .expect(200);
+
+    expect(redisService.client.data[`active_mailbox:${canonicalEmail}`]).toBeUndefined();
+    expect(redisService.client.data[`mailbox_meta:${canonicalEmail}`]).toBeUndefined();
+  });
 });

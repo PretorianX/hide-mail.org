@@ -201,6 +201,7 @@ const emailController = {
       if (!email || typeof email !== 'string' || !email.includes('@')) {
         return res.status(400).json({ error: 'Invalid email address' });
       }
+      email = email.trim().toLowerCase();
 
       if (wantsAlias) {
         if (!entitlements.customAlias) {
@@ -273,11 +274,12 @@ const emailController = {
    */
   async refreshMailbox(req, res, next) {
     try {
-      const { email, ttlSeconds } = req.body;
+      const { email: rawEmail, ttlSeconds } = req.body;
       
-      if (!email || !email.includes('@')) {
+      if (!rawEmail || typeof rawEmail !== 'string' || !rawEmail.includes('@')) {
         return res.status(400).json({ error: 'Invalid email address' });
       }
+      const email = rawEmail.trim().toLowerCase();
 
       const remainingSeconds = await redisService.getMailboxTtl(email);
       const expirationSeconds = entitlementService.resolveRefreshTtl(
@@ -308,11 +310,12 @@ const emailController = {
    */
   async deactivateMailbox(req, res, next) {
     try {
-      const { email } = req.body;
+      const { email: rawEmail } = req.body;
       
-      if (!email || !email.includes('@')) {
+      if (!rawEmail || typeof rawEmail !== 'string' || !rawEmail.includes('@')) {
         return res.status(400).json({ error: 'Invalid email address' });
       }
+      const email = rawEmail.trim().toLowerCase();
       
       await redisService.deactivateMailbox(email);
       metrics.mailboxesDeactivatedTotal.inc();

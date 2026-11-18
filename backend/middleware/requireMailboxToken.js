@@ -12,30 +12,25 @@ const { verifyMailboxToken } = require('../services/mailboxTokenService');
 function requireMailboxToken(extractEmail) {
   return async (req, res, next) => {
     try {
-      const email = extractEmail(req);
+      const rawEmail = extractEmail(req);
 
-      if (!email || typeof email !== 'string' || !email.includes('@')) {
+      if (!rawEmail || typeof rawEmail !== 'string' || !rawEmail.includes('@')) {
         return res.status(400).json({
           success: false,
           error: 'Invalid email address',
         });
       }
 
+      const email = rawEmail.trim().toLowerCase();
       const token = req.get('X-Mailbox-Token');
-      if (!token) {
-        return res.status(401).json({
-          success: false,
-          error: 'Mailbox token is required',
-          code: 'MAILBOX_TOKEN_REQUIRED',
-        });
-      }
-
       const meta = await redisService.getMailboxMeta(email);
-      if (!meta || !meta.tokenHash || !verifyMailboxToken(token, meta.tokenHash)) {
+      const isValid = Boolean(meta?.tokenHash && verifyMailboxToken(token, meta.tokenHash));
+
+      if (!isValid) {
         return res.status(401).json({
           success: false,
-          error: 'Invalid or expired mailbox token',
-          code: 'INVALID_MAILBOX_TOKEN',
+          error: token ? 'Invalid or expired mailbox token' : 'Mailbox token is required',
+          code: token ? 'INVALID_MAILBOX_TOKEN' : 'MAILBOX_TOKEN_REQUIRED',
         });
       }
 
