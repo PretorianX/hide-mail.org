@@ -136,6 +136,69 @@ const enforceRateLimit = async (tempMailbox, limitOverride) => {
 };
 
 /**
+ * Atomically reserve a forwarding slot before SMTP delivery.
+ * Increments the counter first and rolls back with DECR if over limit.
+ * @param {string} tempMailbox - Temporary mailbox
+ * @param {number} limit - Maximum forwards allowed in window
+ * @returns {Promise<Object>} - Reservation status
+ */
+const reserveForwardSlot = async (tempMailbox, limit = config.forwarding.freeLimit) => {
+  const key = getRateLimitKey(tempMailbox);
+  const newCount = await redisService.client.incr(key);
+
+  const now = new Date();
+  const nextHour = new Date(now);
+  nextHour.setHours(nextHour.getHours() + 1, 0, 0, 0);
+  const resetInSeconds = Math.ceil((nextHour - now) / 1000);
+
+  if (newCount === 1) {
+    const expireAt = new Date(now);
+    expireAt.setHours(expireAt.getHours() + 1, 1, 0, 0);
+    const ttl = Math.max(1, Math.ceil((expireAt - now) / 1000));
+    await redisService.client.expire(key, ttl);
+  }
+
+  if (newCount > limit) {
+    await redisService.client.decr(key);
+    const error = new Error('Rate limit exceeded');
+    error.code = 'RATE_LIMIT_EXCEEDED';
+    error.status = {
+      allowed: false,
+      limit,
+      current: limit,
+      remaining: 0,
+      resetInSeconds,
+      resetAt: nextHour.toISOString(),
+    };
+    throw error;
+  }
+
+  return {
+    allowed: true,
+    limit,
+    current: newCount,
+    remaining: Math.max(0, limit - newCount),
+    resetInSeconds,
+    resetAt: nextHour.toISOString(),
+  };
+};
+
+/**
+ * Release a previously reserved forwarding slot on defined transient/connection failures.
+ * @param {string} tempMailbox - Temporary mailbox
+ * @returns {Promise<number>} - Updated count (>= 0)
+ */
+const releaseForwardSlot = async (tempMailbox) => {
+  const key = getRateLimitKey(tempMailbox);
+  const next = await redisService.client.decr(key);
+  if (next < 0) {
+    await redisService.client.set(key, '0');
+    return 0;
+  }
+  return next;
+};
+
+/**
  * Reset rate limit for a mailbox (admin use)
  * @param {string} tempMailbox - Temporary mailbox
  * @returns {Promise<void>}
@@ -149,6 +212,8 @@ const resetRateLimit = async (tempMailbox) => {
 module.exports = {
   checkRateLimit,
   incrementForwardCount,
+  reserveForwardSlot,
+  releaseForwardSlot,
   getForwardingStats,
   enforceRateLimit,
   resetRateLimit,
