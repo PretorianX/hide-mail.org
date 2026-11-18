@@ -4,6 +4,7 @@ process.env.OUTBOUND_KEY_ENCRYPTION_SECRET = 'test-secret-for-outbound-domain-ke
 
 const redisService = require('../../../services/redisService');
 const messageStore = require('../../../services/outbound/messageStore');
+const { buildBounceEnvelopeFrom } = require('../../../services/outbound/bounceEnvelope');
 const bounceMailbackService = require('../../../services/outbound/bounceMailbackService');
 
 const hardDeliveryStatus = [
@@ -88,9 +89,15 @@ describe('bounceMailbackService', () => {
       recipient: 'gone@example.org',
       reference: null,
     });
+    const recipient = buildBounceEnvelopeFrom({
+      messageId: 'm1',
+      accountId: 'a1',
+      domain: 'mail.example.com',
+      recipient: 'gone@example.org',
+    });
     const redis = createCapturingRedis();
     const result = await bounceMailbackService.processBounceMailback({
-      recipient: 'b-m1@hm-bounce.mail.example.com',
+      recipient,
       rawBody: mimeBounce(hardDeliveryStatus),
       redisClient: redis,
     });
@@ -113,9 +120,15 @@ describe('bounceMailbackService', () => {
       recipient: 'busy@example.org',
       reference: null,
     });
+    const recipient = buildBounceEnvelopeFrom({
+      messageId: 'm2',
+      accountId: 'a1',
+      domain: 'mail.example.com',
+      recipient: 'busy@example.org',
+    });
     const redis = createCapturingRedis();
     const result = await bounceMailbackService.processBounceMailback({
-      recipient: 'b-m2@hm-bounce.mail.example.com',
+      recipient,
       rawBody: mimeBounce(softDeliveryStatus),
       redisClient: redis,
     });
@@ -143,9 +156,15 @@ describe('bounceMailbackService', () => {
       recipient: 'x@example.org',
       reference: null,
     });
+    const recipient = buildBounceEnvelopeFrom({
+      messageId: 'm3',
+      accountId: 'a1',
+      domain: 'mail.example.com',
+      recipient: 'x@example.org',
+    });
     const redis = createCapturingRedis();
     const result = await bounceMailbackService.processBounceMailback({
-      recipient: 'b-m3@hm-bounce.mail.example.com',
+      recipient,
       rawBody: ordinaryMail,
       redisClient: redis,
     });
@@ -172,13 +191,95 @@ describe('bounceMailbackService', () => {
       recipient: 'gone@example.org',
       reference: null,
     });
+    const signedLocal = buildBounceEnvelopeFrom({
+      messageId: 'm4',
+      accountId: 'a1',
+      domain: 'mail.example.com',
+      recipient: 'gone@example.org',
+    }).split('@')[0];
     const redis = createCapturingRedis();
     const result = await bounceMailbackService.processBounceMailback({
-      recipient: 'b-m4@rp.hide-mail.org',
+      recipient: `${signedLocal}@rp.hide-mail.org`,
       rawBody: mimeBounce(hardDeliveryStatus),
       redisClient: redis,
     });
     expect(result).toMatchObject({ handled: true, eventType: 'bounced', messageId: 'm4' });
     expect(redis.events[0].fields.domain).toBe('mail.example.com');
+  });
+
+  it('rejects a forged DSN without a valid HMAC before parsing (#230)', async () => {
+    await messageStore.createMessage({
+      id: 'm5',
+      accountId: 'a1',
+      domain: 'mail.example.com',
+      recipient: 'gone@example.org',
+      reference: null,
+    });
+    const redis = createCapturingRedis();
+
+    const unsignedResult = await bounceMailbackService.processBounceMailback({
+      recipient: 'b-m5@hm-bounce.mail.example.com',
+      rawBody: mimeBounce(hardDeliveryStatus),
+      redisClient: redis,
+    });
+    expect(unsignedResult).toEqual({ handled: true, reason: 'invalid_verp_signature' });
+
+    const tamperedResult = await bounceMailbackService.processBounceMailback({
+      recipient: 'b-m5.tampered00000000000000@hm-bounce.mail.example.com',
+      rawBody: mimeBounce(hardDeliveryStatus),
+      redisClient: redis,
+    });
+    expect(tamperedResult).toEqual({ handled: true, reason: 'invalid_verp_signature' });
+    expect(redis.events).toHaveLength(0);
+  });
+
+  it('rejects a DSN whose Final-Recipient does not match the stored message recipient (#230)', async () => {
+    await messageStore.createMessage({
+      id: 'm6',
+      accountId: 'a1',
+      domain: 'mail.example.com',
+      recipient: 'actual@example.org',
+      reference: null,
+    });
+    const recipient = buildBounceEnvelopeFrom({
+      messageId: 'm6',
+      accountId: 'a1',
+      domain: 'mail.example.com',
+      recipient: 'actual@example.org',
+    });
+    const redis = createCapturingRedis();
+
+    const result = await bounceMailbackService.processBounceMailback({
+      recipient,
+      rawBody: mimeBounce(hardDeliveryStatus), // Final-Recipient is gone@example.org
+      redisClient: redis,
+    });
+    expect(result).toEqual({ handled: true, reason: 'recipient_mismatch' });
+    expect(redis.events).toHaveLength(0);
+  });
+
+  it('rejects a DSN whose VERP domain does not match the stored message domain (#230)', async () => {
+    await messageStore.createMessage({
+      id: 'm7',
+      accountId: 'a1',
+      domain: 'mail.example.com',
+      recipient: 'gone@example.org',
+      reference: null,
+    });
+    const validLocal = buildBounceEnvelopeFrom({
+      messageId: 'm7',
+      accountId: 'a1',
+      domain: 'mail.example.com',
+      recipient: 'gone@example.org',
+    }).split('@')[0];
+    const redis = createCapturingRedis();
+
+    const result = await bounceMailbackService.processBounceMailback({
+      recipient: `${validLocal}@hm-bounce.spoofed.example.com`,
+      rawBody: mimeBounce(hardDeliveryStatus),
+      redisClient: redis,
+    });
+    expect(result).toEqual({ handled: true, reason: 'domain_mismatch' });
+    expect(redis.events).toHaveLength(0);
   });
 });

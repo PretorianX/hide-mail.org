@@ -8,6 +8,7 @@ const suppressionService = require('../../../services/outbound/suppressionServic
 const bounceClassifier = require('../../../services/outbound/bounceClassifier');
 const metricsStore = require('../../../services/outbound/outboundMetricsStore');
 const eventConsumer = require('../../../services/outbound/eventConsumer');
+const { buildBounceEnvelopeFrom } = require('../../../services/outbound/bounceEnvelope');
 const bounceMailbackService = require('../../../services/outbound/bounceMailbackService');
 
 const hardDeliveryStatus = [
@@ -84,9 +85,16 @@ describe('bounce mailback E2E (Review Focus)', () => {
       metricsStore,
     });
 
+    const signedRecipient = buildBounceEnvelopeFrom({
+      messageId: 'm-late',
+      accountId: 'a1',
+      domain: 'mail.example.com',
+      recipient: 'gone@example.org',
+    });
+
     const applyOnce = async () => {
       const result = await bounceMailbackService.processBounceMailback({
-        recipient: 'b-m-late@hm-bounce.mail.example.com',
+        recipient: signedRecipient,
         rawBody: mimeBounce(hardDeliveryStatus),
         redisClient: redis,
       });
@@ -110,5 +118,31 @@ describe('bounce mailback E2E (Review Focus)', () => {
 
     const list = await suppressionService.listSuppressions({ accountId: 'a1' });
     expect(list).toHaveLength(1);
+
+    // Terminal state: bounced cannot be overwritten by deferred or delivered
+    await handler({ type: 'deferred', messageId: 'm-late', domain: 'mail.example.com', response: '450 later', streamId: '99-0' });
+    await handler({ type: 'delivered', messageId: 'm-late', domain: 'mail.example.com', response: '250 OK', streamId: '100-0' });
+    await expect(messageStore.getMessage('m-late')).resolves.toMatchObject({ status: 'bounced' });
+  });
+
+  it('prevents downgrading delivered to deferred (#230)', async () => {
+    await messageStore.createMessage({
+      id: 'm-deliv',
+      accountId: 'a1',
+      domain: 'mail.example.com',
+      recipient: 'ok@example.org',
+      reference: null,
+    });
+    await messageStore.updateStatus({ id: 'm-deliv', status: 'delivered', response: '250 OK' });
+
+    const handler = eventConsumer.createHandler({
+      messageStore,
+      bounceClassifier,
+      suppressionService,
+      metricsStore,
+    });
+
+    await handler({ type: 'deferred', messageId: 'm-deliv', domain: 'mail.example.com', response: '450 delay', streamId: '1-0' });
+    await expect(messageStore.getMessage('m-deliv')).resolves.toMatchObject({ status: 'delivered' });
   });
 });

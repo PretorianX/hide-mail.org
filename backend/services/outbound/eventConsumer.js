@@ -55,6 +55,22 @@ const recordMetrics = async (metricsStore, bounceClassifier, fields) => {
   }
 };
 
+const ALLOWED_TRANSITIONS = {
+  queued: new Set(['deferred', 'held', 'delivered', 'bounced']),
+  deferred: new Set(['deferred', 'held', 'delivered', 'bounced']),
+  held: new Set(['deferred', 'held', 'delivered', 'bounced']),
+  delivered: new Set(['bounced']),
+  bounced: new Set(),
+};
+
+const canTransitionStatus = (currentStatus, nextType) => {
+  const allowed = ALLOWED_TRANSITIONS[currentStatus || 'queued'];
+  if (!allowed) {
+    return false;
+  }
+  return allowed.has(nextType);
+};
+
 const createHandler = ({
   messageStore = defaultMessageStore,
   bounceClassifier = defaultBounceClassifier,
@@ -71,10 +87,14 @@ const createHandler = ({
     return;
   }
 
+  if (!canTransitionStatus(message.status, type)) {
+    return;
+  }
+
   await messageStore.updateStatus({ id: messageId, status: type, response: response || '' });
   await recordMetrics(metricsStore, bounceClassifier, {
     ...fields,
-    domain: fields.domain || message.domain,
+    domain: message.domain || fields.domain,
   });
 
   if (type !== 'bounced') {

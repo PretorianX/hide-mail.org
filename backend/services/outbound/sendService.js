@@ -9,6 +9,7 @@ const nodemailer = require('nodemailer');
 
 const config = require('../../config/config');
 const keyCrypto = require('./keyCrypto');
+const { buildBounceEnvelopeFrom } = require('./bounceEnvelope');
 const defaultDomainService = require('./domainService');
 const defaultCapService = require('./capService');
 const defaultAccountRateLimiter = require('./accountRateLimiter');
@@ -218,7 +219,12 @@ const sendMessage = async (payload, overrides = {}) => {
   }
 
   const messageId = crypto.randomUUID();
-  const envelopeFrom = `b-${messageId}@hm-bounce.${domain}`;
+  const envelopeFrom = buildBounceEnvelopeFrom({
+    messageId,
+    accountId: meta.accountId,
+    domain,
+    recipient: to,
+  });
 
   let dkim;
   try {
