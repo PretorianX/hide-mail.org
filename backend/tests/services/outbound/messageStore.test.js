@@ -154,5 +154,36 @@ describe('outbound messageStore', () => {
       const replay = await messageStore.getReplay({ accountId: 'acct-1', idempotencyKey: 'k1' });
       expect(replay).toEqual({ statusCode: 202, body });
     });
+
+    it('reserveReplay uses NX semantics and releaseReplay only deletes matching pending claim', async () => {
+      const first = await messageStore.reserveReplay({
+        accountId: 'acct-1',
+        idempotencyKey: 'k2',
+        requestHash: 'hash-1',
+        messageId: 'msg-a',
+      });
+      expect(first).toEqual({ reserved: true });
+
+      const second = await messageStore.reserveReplay({
+        accountId: 'acct-1',
+        idempotencyKey: 'k2',
+        requestHash: 'hash-1',
+        messageId: 'msg-b',
+      });
+      expect(second.reserved).toBe(false);
+      expect(second.existing).toMatchObject({
+        state: 'pending',
+        requestHash: 'hash-1',
+        messageId: 'msg-a',
+      });
+
+      // Wrong messageId does not release
+      await messageStore.releaseReplay({ accountId: 'acct-1', idempotencyKey: 'k2', messageId: 'msg-b' });
+      expect(await messageStore.getReplay({ accountId: 'acct-1', idempotencyKey: 'k2' })).not.toBeNull();
+
+      // Matching messageId releases
+      await messageStore.releaseReplay({ accountId: 'acct-1', idempotencyKey: 'k2', messageId: 'msg-a' });
+      expect(await messageStore.getReplay({ accountId: 'acct-1', idempotencyKey: 'k2' })).toBeNull();
+    });
   });
 });

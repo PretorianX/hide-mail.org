@@ -281,10 +281,18 @@ describe('outbound sendService.sendMessage', () => {
     expect(first).toMatchObject({ id: expect.any(String), status: 'queued' });
 
     const second = await sendService.sendMessage(
-      { ...basePayload(), idempotencyKey: 'abc', to: 'DIFFERENT@example.org' },
+      { ...basePayload(), idempotencyKey: 'abc' },
       deps
     );
     expect(second).toEqual(first);
+    expect(relayTransportMock.sendMail).toHaveBeenCalledTimes(1);
+
+    await expect(
+      sendService.sendMessage(
+        { ...basePayload(), idempotencyKey: 'abc', to: 'DIFFERENT@example.org' },
+        deps
+      )
+    ).rejects.toMatchObject({ code: 'IDEMPOTENCY_CONFLICT' });
     expect(relayTransportMock.sendMail).toHaveBeenCalledTimes(1);
 
     const mailArgs = relayTransportMock.sendMail.mock.calls[0][0];
@@ -294,6 +302,161 @@ describe('outbound sendService.sendMessage', () => {
       keySelector: 'hmtest',
       privateKey: testPrivateKeyPem,
     });
+  });
+
+  it('concurrent same-key requests send exactly once', async () => {
+    const domainService = { getDomainMeta: jest.fn().mockResolvedValue(verifiedMeta) };
+    const accountRateLimiter = {
+      checkAndIncrement: jest.fn().mockResolvedValue({ allowed: true, limit: 600, retryAfterSeconds: 60 }),
+    };
+
+    let releaseMail;
+    const mailGate = new Promise((resolve) => {
+      releaseMail = resolve;
+    });
+    const relayTransportMock = {
+      sendMail: jest.fn().mockImplementation(async () => {
+        await mailGate;
+        return { messageId: 'smtp-1' };
+      }),
+    };
+
+    const deps = {
+      domainService,
+      accountRateLimiter,
+      capService: {
+        checkAndIncrement: jest.fn().mockResolvedValue({ allowed: true, remaining: 9, resetAt: 1 }),
+        releaseIncrement: jest.fn(),
+      },
+      messageStore,
+      suppressionService: { isSuppressed: jest.fn().mockResolvedValue(false) },
+      mimeTransport: relayTransportMock,
+    };
+
+    const p1 = sendService.sendMessage({ ...basePayload(), idempotencyKey: 'concurrent-1' }, deps);
+    const p2 = sendService.sendMessage({ ...basePayload(), idempotencyKey: 'concurrent-1' }, deps);
+
+    // Let p1 reach sendMail and p2 hit the pending reservation
+    await Promise.resolve();
+    await Promise.resolve();
+    releaseMail();
+
+    const results = await Promise.allSettled([p1, p2]);
+    const fulfilled = results.filter((r) => r.status === 'fulfilled');
+    const rejected = results.filter((r) => r.status === 'rejected');
+
+    expect(fulfilled).toHaveLength(1);
+    expect(rejected).toHaveLength(1);
+    expect(rejected[0].reason).toMatchObject({ code: 'IDEMPOTENCY_IN_FLIGHT' });
+    expect(relayTransportMock.sendMail).toHaveBeenCalledTimes(1);
+  });
+
+  it('Redis failure after relay acceptance does not cause a duplicate on retry', async () => {
+    const domainService = { getDomainMeta: jest.fn().mockResolvedValue(verifiedMeta) };
+    const accountRateLimiter = {
+      checkAndIncrement: jest.fn().mockResolvedValue({ allowed: true, limit: 600, retryAfterSeconds: 60 }),
+    };
+    const relayTransportMock = { sendMail: jest.fn().mockResolvedValue({ messageId: 'smtp-1' }) };
+    const failingStore = {
+      ...messageStore,
+      createMessage: jest.fn().mockRejectedValueOnce(new Error('ECONNRESET')),
+    };
+
+    const deps = {
+      domainService,
+      accountRateLimiter,
+      capService: {
+        checkAndIncrement: jest.fn().mockResolvedValue({ allowed: true, remaining: 9, resetAt: 1 }),
+        releaseIncrement: jest.fn(),
+      },
+      messageStore: failingStore,
+      suppressionService: { isSuppressed: jest.fn().mockResolvedValue(false) },
+      mimeTransport: relayTransportMock,
+    };
+
+    await expect(
+      sendService.sendMessage({ ...basePayload(), idempotencyKey: 'redis-fail-1' }, deps)
+    ).rejects.toThrow('ECONNRESET');
+    expect(relayTransportMock.sendMail).toHaveBeenCalledTimes(1);
+
+    // Retry after Redis recovers must NOT re-send
+    await expect(
+      sendService.sendMessage({ ...basePayload(), idempotencyKey: 'redis-fail-1' }, { ...deps, messageStore })
+    ).rejects.toMatchObject({ code: 'IDEMPOTENCY_IN_FLIGHT' });
+    expect(relayTransportMock.sendMail).toHaveBeenCalledTimes(1);
+  });
+
+  it('reconciles pending idempotency record if message was persisted before storeReplay failed', async () => {
+    const domainService = { getDomainMeta: jest.fn().mockResolvedValue(verifiedMeta) };
+    const accountRateLimiter = {
+      checkAndIncrement: jest.fn().mockResolvedValue({ allowed: true, limit: 600, retryAfterSeconds: 60 }),
+    };
+    const relayTransportMock = { sendMail: jest.fn().mockResolvedValue({ messageId: 'smtp-1' }) };
+    const failingReplayStore = {
+      ...messageStore,
+      storeReplay: jest.fn().mockRejectedValueOnce(new Error('Redis write timeout')),
+    };
+
+    const deps = {
+      domainService,
+      accountRateLimiter,
+      capService: {
+        checkAndIncrement: jest.fn().mockResolvedValue({ allowed: true, remaining: 9, resetAt: 1 }),
+        releaseIncrement: jest.fn(),
+      },
+      messageStore: failingReplayStore,
+      suppressionService: { isSuppressed: jest.fn().mockResolvedValue(false) },
+      mimeTransport: relayTransportMock,
+    };
+
+    await expect(
+      sendService.sendMessage({ ...basePayload(), idempotencyKey: 'redis-fail-2' }, deps)
+    ).rejects.toThrow('Redis write timeout');
+    expect(relayTransportMock.sendMail).toHaveBeenCalledTimes(1);
+
+    // Retry reconciles from persisted message without calling sendMail again
+    const retryResult = await sendService.sendMessage(
+      { ...basePayload(), idempotencyKey: 'redis-fail-2' },
+      { ...deps, messageStore }
+    );
+    expect(retryResult).toMatchObject({ id: expect.any(String), status: 'queued' });
+    expect(relayTransportMock.sendMail).toHaveBeenCalledTimes(1);
+  });
+
+  it('releases idempotency reservation when relay fails so client can retry', async () => {
+    const domainService = { getDomainMeta: jest.fn().mockResolvedValue(verifiedMeta) };
+    const accountRateLimiter = {
+      checkAndIncrement: jest.fn().mockResolvedValue({ allowed: true, limit: 600, retryAfterSeconds: 60 }),
+    };
+    const relayTransportMock = {
+      sendMail: jest
+        .fn()
+        .mockRejectedValueOnce(new Error('transient smtp error'))
+        .mockResolvedValueOnce({ messageId: 'smtp-2' }),
+    };
+
+    const deps = {
+      domainService,
+      accountRateLimiter,
+      capService: {
+        checkAndIncrement: jest.fn().mockResolvedValue({ allowed: true, remaining: 9, resetAt: 1 }),
+        releaseIncrement: jest.fn(),
+      },
+      messageStore,
+      suppressionService: { isSuppressed: jest.fn().mockResolvedValue(false) },
+      mimeTransport: relayTransportMock,
+    };
+
+    await expect(
+      sendService.sendMessage({ ...basePayload(), idempotencyKey: 'retry-after-503' }, deps)
+    ).rejects.toMatchObject({ code: 'RELAY_UNAVAILABLE' });
+
+    const second = await sendService.sendMessage(
+      { ...basePayload(), idempotencyKey: 'retry-after-503' },
+      deps
+    );
+    expect(second).toMatchObject({ id: expect.any(String), status: 'queued' });
+    expect(relayTransportMock.sendMail).toHaveBeenCalledTimes(2);
   });
 
   it('persists subject, from, envelopeFrom, clientIp, and sendKeyName on the message record', async () => {
