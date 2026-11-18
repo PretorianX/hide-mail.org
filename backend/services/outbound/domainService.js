@@ -25,6 +25,11 @@ const META_PREFIX = 'outbound:domain:meta:';
 const GATE_PREFIX = 'outbound:domain:gate:';
 const GLOBAL_DOMAINS_INDEX = 'outbound:domains:index';
 const accountDomainsKey = (accountId) => `outbound:account:${accountId}:domains`;
+const accountDomainLockKey = (accountId) => `outbound:account:${accountId}:domain_lock`;
+const ACCOUNT_DOMAIN_LOCK_TTL_SECONDS = 10;
+const ACCOUNT_DOMAIN_LOCK_WAIT_MS = 5000;
+const ACCOUNT_DOMAIN_LOCK_RETRY_MS = 10;
+const accountLockQueues = new Map();
 // Single source of truth for this key lives in accountService.js (it's the
 // one that writes it, in createAccount); import rather than duplicate it.
 const { accountLicenseKeyIndexKey } = accountService;
@@ -174,6 +179,63 @@ const resolveExistingDomainClaim = ({ accountId, domain, existing }) => {
   return { domain, selector: existing.selector, records: existing.records, state: existing.state };
 };
 
+// Serialize per-account quota checks + account-set reservation both in-process
+// and across processes (Redis SET NX lock) so concurrent addDomain calls for
+// distinct domains cannot all pass countLiveAccountDomains before any SADD.
+const withInProcessAccountLock = async (accountId, fn) => {
+  const prev = accountLockQueues.get(accountId) || Promise.resolve();
+  let release;
+  const next = new Promise((resolve) => {
+    release = resolve;
+  });
+  const tail = prev.then(() => next);
+  accountLockQueues.set(accountId, tail);
+  await prev;
+  try {
+    return await fn();
+  } finally {
+    release();
+    if (accountLockQueues.get(accountId) === tail) {
+      accountLockQueues.delete(accountId);
+    }
+  }
+};
+
+const withAccountDomainLock = (accountId, fn) =>
+  withInProcessAccountLock(accountId, async () => {
+    const lockKey = accountDomainLockKey(accountId);
+    const lockToken = crypto.randomBytes(16).toString('hex');
+    const deadline = Date.now() + ACCOUNT_DOMAIN_LOCK_WAIT_MS;
+    let acquired = null;
+
+    while (!acquired) {
+      acquired = await redisService.client.set(
+        lockKey,
+        lockToken,
+        'EX',
+        ACCOUNT_DOMAIN_LOCK_TTL_SECONDS,
+        'NX'
+      );
+      if (acquired) break;
+      if (Date.now() >= deadline) {
+        throw new DomainError(
+          'DOMAIN_LOCK_TIMEOUT',
+          `Timed out waiting for account ${accountId} domain quota lock`
+        );
+      }
+      await new Promise((resolve) => setTimeout(resolve, ACCOUNT_DOMAIN_LOCK_RETRY_MS));
+    }
+
+    try {
+      return await fn();
+    } finally {
+      const current = await redisService.client.get(lockKey);
+      if (current === lockToken) {
+        await redisService.client.del(lockKey);
+      }
+    }
+  });
+
 const addDomain = async ({ accountId, domain: rawDomain }) => {
   const domain = normalizeDomain(rawDomain);
   const metaKey = `${META_PREFIX}${domain}`;
@@ -203,14 +265,21 @@ const addDomain = async ({ accountId, domain: rawDomain }) => {
     }
   }
 
+  let reservedInAccountSet = false;
   try {
-    const liveCount = await countLiveAccountDomains(accountId, domain);
-    if (liveCount >= config.outbound.maxDomainsPerAccount) {
-      throw new DomainError(
-        'DOMAIN_QUOTA_EXCEEDED',
-        `Account has reached the maximum of ${config.outbound.maxDomainsPerAccount} domains`
-      );
-    }
+    await withAccountDomainLock(accountId, async () => {
+      const liveCount = await countLiveAccountDomains(accountId, domain);
+      if (liveCount >= config.outbound.maxDomainsPerAccount) {
+        throw new DomainError(
+          'DOMAIN_QUOTA_EXCEEDED',
+          `Account has reached the maximum of ${config.outbound.maxDomainsPerAccount} domains`
+        );
+      }
+      // Reserve the slot in the account set before releasing the lock so
+      // subsequent concurrent addDomain calls for other names see it.
+      await redisService.client.sadd(accountDomainsKey(accountId), domain);
+      reservedInAccountSet = true;
+    });
 
     const selector = `hm-${crypto.randomBytes(4).toString('hex')}`;
     const { publicKeyPem, privateKeyPem } = generateDomainKeyMaterial();
@@ -241,14 +310,17 @@ const addDomain = async ({ accountId, domain: rawDomain }) => {
       state: meta.state,
       suspended: meta.suspended,
     });
-    await redisService.client.sadd(accountDomainsKey(accountId), domain);
     await redisService.client.sadd(GLOBAL_DOMAINS_INDEX, domain);
 
     return { domain, selector, records, state: meta.state };
   } catch (error) {
-    // Don't leave a half-finished claim permanently blocking this domain
-    // name if key generation/encryption/persistence fails partway through.
+    // Don't leave a half-finished claim or account-set reservation
+    // permanently blocking this domain name or consuming quota if
+    // quota check or key generation/encryption/persistence fails.
     await redisService.client.del(metaKey);
+    if (reservedInAccountSet) {
+      await redisService.client.srem(accountDomainsKey(accountId), domain);
+    }
     throw error;
   }
 };

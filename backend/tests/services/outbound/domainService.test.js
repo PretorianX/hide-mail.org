@@ -449,6 +449,53 @@ describe('outbound domainService', () => {
       }
     });
 
+    it('enforces per-account domain quota under concurrent addDomain calls for distinct domains', async () => {
+      const config = require('../../../config/config');
+      const originalMax = config.outbound.maxDomainsPerAccount;
+      config.outbound.maxDomainsPerAccount = 2;
+
+      try {
+        const { accountId } = await accountService.createAccount({ label: 'ConcurrentAcme', days: 30 });
+        const candidates = [
+          'race-1.example.com',
+          'race-2.example.com',
+          'race-3.example.com',
+          'race-4.example.com',
+          'race-5.example.com',
+        ];
+
+        const settled = await Promise.allSettled(
+          candidates.map((domain) => domainService.addDomain({ accountId, domain }))
+        );
+
+        const fulfilled = settled.filter((r) => r.status === 'fulfilled');
+        const rejected = settled.filter((r) => r.status === 'rejected');
+
+        expect(fulfilled).toHaveLength(2);
+        expect(rejected).toHaveLength(3);
+        for (const r of rejected) {
+          expect(r.reason).toMatchObject({ code: 'DOMAIN_QUOTA_EXCEEDED' });
+        }
+
+        const accountDomains = await redisService.client.smembers(
+          `outbound:account:${accountId}:domains`
+        );
+        expect(accountDomains).toHaveLength(2);
+
+        const succeededDomains = new Set(fulfilled.map((r) => r.value.domain));
+        for (const domain of candidates) {
+          const meta = await redisService.client.get(`outbound:domain:meta:${domain}`);
+          if (succeededDomains.has(domain)) {
+            expect(meta).not.toBeNull();
+          } else {
+            expect(meta).toBeNull();
+          }
+        }
+      } finally {
+        config.outbound.maxDomainsPerAccount = originalMax;
+      }
+    });
+
     it('operator releaseDomain and transferDomain update ownership and indices', async () => {
       const first = await accountService.createAccount({ label: 'First', days: 30 });
       const second = await accountService.createAccount({ label: 'Second', days: 30 });
