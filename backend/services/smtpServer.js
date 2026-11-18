@@ -208,10 +208,48 @@ const createSmtpServer = (options = {}) => {
           metrics.emailsReceivedTotal.inc();
           metrics.emailSizeBytes.observe(totalBytes);
 
-          const recipient = session.envelope.rcptTo[0].address;
-          logger.info(`SMTP: Processing email for recipient: ${recipient}`);
+          const seen = new Set();
+          const recipients = [];
+          for (const rcpt of session.envelope.rcptTo || []) {
+            const addr = String(rcpt.address || '').trim();
+            const key = addr.toLowerCase();
+            if (addr && !seen.has(key)) {
+              seen.add(key);
+              recipients.push(addr);
+            }
+          }
 
-          await inboundMailService.deliverInboundMessage({ recipient, rawBody: mailData });
+          if (recipients.length === 0) {
+            return finish(smtpError('No valid recipients in envelope', 554));
+          }
+
+          const results = await Promise.allSettled(
+            recipients.map(async (recipient) => {
+              logger.info(`SMTP: Processing email for recipient: ${recipient}`);
+              return inboundMailService.deliverInboundMessage({ recipient, rawBody: mailData });
+            })
+          );
+
+          let succeeded = 0;
+          let firstError = null;
+          results.forEach((outcome, idx) => {
+            const recipient = recipients[idx];
+            if (outcome.status === 'fulfilled') {
+              succeeded += 1;
+              const info = outcome.value || {};
+              logger.info(
+                `SMTP: Recipient ${recipient} processed (delivered=${Boolean(info.delivered)}, reason=${info.reason || 'ok'})`
+              );
+            } else {
+              if (!firstError) firstError = outcome.reason;
+              metrics.smtpErrorsTotal.inc();
+              logger.error(`SMTP: Error processing recipient ${recipient}: ${outcome.reason?.message}`, outcome.reason);
+            }
+          });
+
+          if (succeeded === 0 && firstError) {
+            return finish(new Error(`Error processing email: ${firstError.message}`));
+          }
 
           finish();
         } catch (error) {

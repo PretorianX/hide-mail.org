@@ -202,3 +202,86 @@ describe('smtpServer security limits (#224)', () => {
     }
   });
 });
+
+describe('smtpServer multi-recipient delivery (#232)', () => {
+  it('delivers one message with two valid RCPTs to both mailboxes', async () => {
+    const { server, port, deps } = await startServer();
+
+    try {
+      const responses = await smtpExchange(port, [
+        'EHLO test.example',
+        'MAIL FROM:<sender@example.com>',
+        'RCPT TO:<alice@hide-mail.org>',
+        'RCPT TO:<bob@hide-mail.org>',
+        'DATA',
+        'Subject: Multi\r\n\r\nHello both\r\n.',
+        'QUIT',
+      ]);
+
+      expect(responses.some((l) => l.startsWith('250 2.0.0') || l.startsWith('250 OK'))).toBe(true);
+      expect(deps.inboundMailService.deliverInboundMessage).toHaveBeenCalledTimes(2);
+      expect(deps.inboundMailService.deliverInboundMessage).toHaveBeenCalledWith(
+        expect.objectContaining({ recipient: 'alice@hide-mail.org' })
+      );
+      expect(deps.inboundMailService.deliverInboundMessage).toHaveBeenCalledWith(
+        expect.objectContaining({ recipient: 'bob@hide-mail.org' })
+      );
+    } finally {
+      await stopServer(server);
+    }
+  });
+
+  it('processes mixed inbox and outbound bounce recipients in one envelope', async () => {
+    const { server, port, deps } = await startServer({
+      shouldAcceptOutboundBounceRcpt: (addr) => addr.startsWith('b-'),
+    });
+
+    try {
+      const responses = await smtpExchange(port, [
+        'EHLO test.example',
+        'MAIL FROM:<>',
+        'RCPT TO:<alice@hide-mail.org>',
+        'RCPT TO:<b-msg123@hm-bounce.example.com>',
+        'DATA',
+        'Subject: Mixed\r\n\r\nBody\r\n.',
+        'QUIT',
+      ]);
+
+      expect(responses.some((l) => l.startsWith('250 OK'))).toBe(true);
+      expect(deps.inboundMailService.deliverInboundMessage).toHaveBeenCalledTimes(2);
+      expect(deps.inboundMailService.deliverInboundMessage).toHaveBeenCalledWith(
+        expect.objectContaining({ recipient: 'alice@hide-mail.org' })
+      );
+      expect(deps.inboundMailService.deliverInboundMessage).toHaveBeenCalledWith(
+        expect.objectContaining({ recipient: 'b-msg123@hm-bounce.example.com' })
+      );
+    } finally {
+      await stopServer(server);
+    }
+  });
+
+  it('continues delivering to remaining recipients if one recipient fails', async () => {
+    const { server, port, deps } = await startServer();
+    deps.inboundMailService.deliverInboundMessage
+      .mockRejectedValueOnce(new Error('transient redis error'))
+      .mockResolvedValueOnce({ delivered: true });
+
+    try {
+      const responses = await smtpExchange(port, [
+        'EHLO test.example',
+        'MAIL FROM:<sender@example.com>',
+        'RCPT TO:<fail@hide-mail.org>',
+        'RCPT TO:<ok@hide-mail.org>',
+        'DATA',
+        'Subject: Partial\r\n\r\nBody\r\n.',
+        'QUIT',
+      ]);
+
+      expect(responses.some((l) => l.startsWith('250 OK'))).toBe(true);
+      expect(deps.inboundMailService.deliverInboundMessage).toHaveBeenCalledTimes(2);
+      expect(deps.metrics.smtpErrorsTotal.inc).toHaveBeenCalledTimes(1);
+    } finally {
+      await stopServer(server);
+    }
+  });
+});
