@@ -405,7 +405,9 @@ const customerReturn = async (req, res, next) => {
         target.hash = '';
       }
       const token = await orderService.createHandoffToken(orderReference);
-      target.searchParams.set('handoffToken', token);
+      const hashParams = new URLSearchParams(target.hash.replace(/^#/, ''));
+      hashParams.set('handoffToken', token);
+      target.hash = hashParams.toString();
     }
     return res.redirect(302, target.toString());
   } catch (error) {

@@ -65,7 +65,8 @@ describe('WayForPay customer return', () => {
       const target = new URL(targetUrl);
       expect(target.origin + target.pathname).toBe('https://hide-mail.org/pro');
       expect(target.searchParams.get('orderReference')).toBeNull();
-      expect(target.searchParams.get('handoffToken')).toMatch(/^[0-9a-f-]{36}$/i);
+      expect(target.searchParams.get('handoffToken')).toBeNull();
+      expect(new URLSearchParams(target.hash.slice(1)).get('handoffToken')).toMatch(/^[0-9a-f-]{36}$/i);
     });
 
     it('sends a Mail Grade payer to /grade rather than the Pro page', async () => {
@@ -89,7 +90,8 @@ describe('WayForPay customer return', () => {
       const [, targetUrl] = res.redirect.mock.calls[0];
       const target = new URL(targetUrl);
       expect(target.origin + target.pathname).toBe('https://hide-mail.org/grade');
-      expect(target.searchParams.get('handoffToken')).toMatch(/^[0-9a-f-]{36}$/i);
+      expect(target.searchParams.get('handoffToken')).toBeNull();
+      expect(new URLSearchParams(target.hash.slice(1)).get('handoffToken')).toMatch(/^[0-9a-f-]{36}$/i);
     });
 
     it('sends a Sender Check payer to /sender rather than the Pro page', async () => {
@@ -113,7 +115,8 @@ describe('WayForPay customer return', () => {
       const [, targetUrl] = res.redirect.mock.calls[0];
       const target = new URL(targetUrl);
       expect(target.origin + target.pathname).toBe('https://hide-mail.org/sender');
-      expect(target.searchParams.get('handoffToken')).toMatch(/^[0-9a-f-]{36}$/i);
+      expect(target.searchParams.get('handoffToken')).toBeNull();
+      expect(new URLSearchParams(target.hash.slice(1)).get('handoffToken')).toMatch(/^[0-9a-f-]{36}$/i);
     });
 
     it('sends a DMARC Reports payer to /reports rather than the Pro page', async () => {
@@ -137,7 +140,8 @@ describe('WayForPay customer return', () => {
       const [, targetUrl] = res.redirect.mock.calls[0];
       const target = new URL(targetUrl);
       expect(target.origin + target.pathname).toBe('https://hide-mail.org/reports');
-      expect(target.searchParams.get('handoffToken')).toMatch(/^[0-9a-f-]{36}$/i);
+      expect(target.searchParams.get('handoffToken')).toBeNull();
+      expect(new URLSearchParams(target.hash.slice(1)).get('handoffToken')).toMatch(/^[0-9a-f-]{36}$/i);
     });
 
     it('sends a Bounce Read payer to /bounces rather than the Pro page', async () => {
@@ -161,7 +165,8 @@ describe('WayForPay customer return', () => {
       const [, bounceUrl] = res.redirect.mock.calls[0];
       const bounceTarget = new URL(bounceUrl);
       expect(bounceTarget.origin + bounceTarget.pathname).toBe('https://hide-mail.org/bounces');
-      expect(bounceTarget.searchParams.get('handoffToken')).toMatch(/^[0-9a-f-]{36}$/i);
+      expect(bounceTarget.searchParams.get('handoffToken')).toBeNull();
+      expect(new URLSearchParams(bounceTarget.hash.slice(1)).get('handoffToken')).toMatch(/^[0-9a-f-]{36}$/i);
     });
 
     it('sends a Complaint Read payer to /complaints rather than the Pro page', async () => {
@@ -185,7 +190,8 @@ describe('WayForPay customer return', () => {
       const [, complaintUrl] = res.redirect.mock.calls[0];
       const complaintTarget = new URL(complaintUrl);
       expect(complaintTarget.origin + complaintTarget.pathname).toBe('https://hide-mail.org/complaints');
-      expect(complaintTarget.searchParams.get('handoffToken')).toMatch(/^[0-9a-f-]{36}$/i);
+      expect(complaintTarget.searchParams.get('handoffToken')).toBeNull();
+      expect(new URLSearchParams(complaintTarget.hash.slice(1)).get('handoffToken')).toMatch(/^[0-9a-f-]{36}$/i);
     });
 
     it('sends a TLS Reports payer to /tls rather than the Pro page', async () => {
@@ -209,7 +215,8 @@ describe('WayForPay customer return', () => {
       const [, tlsUrl] = res.redirect.mock.calls[0];
       const tlsTarget = new URL(tlsUrl);
       expect(tlsTarget.origin + tlsTarget.pathname).toBe('https://hide-mail.org/tls');
-      expect(tlsTarget.searchParams.get('handoffToken')).toMatch(/^[0-9a-f-]{36}$/i);
+      expect(tlsTarget.searchParams.get('handoffToken')).toBeNull();
+      expect(new URLSearchParams(tlsTarget.hash.slice(1)).get('handoffToken')).toMatch(/^[0-9a-f-]{36}$/i);
     });
 
     it('redirects to the Pro page even without an order reference', async () => {
@@ -242,7 +249,8 @@ describe('WayForPay customer return', () => {
         .expect(302);
 
       const target = new URL(res.headers.location);
-      expect(target.searchParams.get('handoffToken')).toBeTruthy();
+      expect(target.searchParams.get('handoffToken')).toBeNull();
+      expect(new URLSearchParams(target.hash.slice(1)).get('handoffToken')).toBeTruthy();
       expect(target.searchParams.get('orderReference')).toBeNull();
     });
 
@@ -260,7 +268,9 @@ describe('WayForPay customer return', () => {
         .send('transactionStatus=Approved')
         .expect(302);
 
-      expect(new URL(res.headers.location).searchParams.get('handoffToken')).toBeTruthy();
+      const target = new URL(res.headers.location);
+      expect(target.searchParams.get('handoffToken')).toBeNull();
+      expect(new URLSearchParams(target.hash.slice(1)).get('handoffToken')).toBeTruthy();
     });
 
     it('ignores an attacker supplied order reference that is not a string', async () => {

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import BounceService from '../services/BounceService';
 import LicenseService from '../services/LicenseService';
+import { readHandoffToken, clearHandoffToken } from '../utils/handoffToken';
 
 const HANDOFF_POLL_MS = 1000;
 const HANDOFF_POLL_ATTEMPTS = 18;
@@ -10,16 +11,6 @@ const HANDOFF_STORAGE_KEY = 'hidemail_bounce_handoff_token';
 const sleep = (ms) => new Promise((resolve) => {
   setTimeout(resolve, ms);
 });
-
-const readHandoffToken = () => {
-  const params = new URLSearchParams(window.location.search);
-  const fromUrl = params.get('handoffToken') || params.get('handoff_token');
-  if (fromUrl) {
-    sessionStorage.setItem(HANDOFF_STORAGE_KEY, fromUrl);
-    return fromUrl;
-  }
-  return sessionStorage.getItem(HANDOFF_STORAGE_KEY);
-};
 
 const BounceOffer = () => {
   const [offer, setOffer] = useState(null);
@@ -60,11 +51,10 @@ const BounceOffer = () => {
   }, []);
 
   useEffect(() => {
-    const handoffToken = readHandoffToken();
+    const handoffToken = readHandoffToken(HANDOFF_STORAGE_KEY);
     if (!handoffToken) {
       return undefined;
     }
-    window.history.replaceState({}, '', window.location.pathname);
     let cancelled = false;
     setConfirming(true);
 
@@ -89,7 +79,7 @@ const BounceOffer = () => {
       if (cancelled) {
         return;
       }
-      sessionStorage.removeItem(HANDOFF_STORAGE_KEY);
+      clearHandoffToken(HANDOFF_STORAGE_KEY);
       if (!paid?.licenseKey || (paid.data?.type !== 'bounce' && paid.data?.type !== 'suite')) {
         setConfirming(false);
         setError(paid?.licenseKey
