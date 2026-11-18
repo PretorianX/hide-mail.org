@@ -92,6 +92,16 @@ const config = {
     idempotencyTtlSeconds: parsePositiveNumber(process.env.OUTBOUND_IDEMPOTENCY_TTL_SECONDS, 86400, 'OUTBOUND_IDEMPOTENCY_TTL_SECONDS'),
     maxMessageBytes: parsePositiveNumber(process.env.OUTBOUND_MAX_MESSAGE_BYTES, 10485760, 'OUTBOUND_MAX_MESSAGE_BYTES'),
     ratePerMinuteDefault: parsePositiveNumber(process.env.OUTBOUND_RATE_PER_MINUTE, 600, 'OUTBOUND_RATE_PER_MINUTE'),
+    pendingDomainTtlSeconds: parsePositiveNumber(
+      process.env.OUTBOUND_PENDING_DOMAIN_TTL_SECONDS,
+      7 * 24 * 60 * 60,
+      'OUTBOUND_PENDING_DOMAIN_TTL_SECONDS'
+    ),
+    maxDomainsPerAccount: parsePositiveNumber(
+      process.env.OUTBOUND_MAX_DOMAINS_PER_ACCOUNT,
+      20,
+      'OUTBOUND_MAX_DOMAINS_PER_ACCOUNT'
+    ),
     // Outbound Send submits through the same Postfix relay as Forward & Forget (no ZoneMTA/Mongo).
     relay: {
       host: process.env.SMTP_HOST || 'postfix',

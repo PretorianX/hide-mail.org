@@ -53,6 +53,9 @@ const RATE_LIMITS = {
   tlsReport: { requests: 20, windowSeconds: 600 },
   // Paid TLS Reports API.
   tlsRead: { requests: 120, windowSeconds: 60 },
+  // Outbound domain creation and DNS verification checks.
+  outboundDomainCreate: { requests: 30, windowSeconds: 3600 },
+  outboundDomainCheck: { requests: 20, windowSeconds: 60 },
 };
 
 /**
@@ -134,6 +137,8 @@ module.exports = {
   complaintRead: createRateLimiter('complaintRead'),
   tlsReport: createRateLimiter('tlsReport'),
   tlsRead: createRateLimiter('tlsRead'),
+  outboundDomainCreate: createRateLimiter('outboundDomainCreate'),
+  outboundDomainCheck: createRateLimiter('outboundDomainCheck'),
   default: createRateLimiter('default'),
   RATE_LIMITS,
 };

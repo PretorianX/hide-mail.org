@@ -44,8 +44,76 @@ const readMeta = async (domain) => {
   return raw ? JSON.parse(raw) : null;
 };
 
+const pendingDomainTtlSeconds = () =>
+  Math.max(1, Math.ceil(config.outbound.pendingDomainTtlSeconds));
+
+const remainingPendingTtlSeconds = (meta) => {
+  const fullTtlMs = pendingDomainTtlSeconds() * 1000;
+  if (typeof meta?.createdAt === 'number') {
+    const remainingMs = meta.createdAt + fullTtlMs - Date.now();
+    return Math.max(1, Math.ceil(remainingMs / 1000));
+  }
+  return pendingDomainTtlSeconds();
+};
+
 const writeMeta = async (domain, meta) => {
-  await redisService.client.set(`${META_PREFIX}${domain}`, JSON.stringify(meta));
+  const key = `${META_PREFIX}${domain}`;
+  const value = JSON.stringify(meta);
+  if (meta.state === 'pending') {
+    await redisService.client.setex(key, remainingPendingTtlSeconds(meta), value);
+    return;
+  }
+  await redisService.client.set(key, value);
+};
+
+const isAccountLicenseActive = async (accountId) => {
+  if (!accountId) return false;
+  const licenseKey = await redisService.client.get(accountLicenseKeyIndexKey(accountId));
+  if (!licenseKey) return false;
+  const license = await accountService.getAccountByKey(licenseKey);
+  return Boolean(license && licenseService.isActive(license));
+};
+
+const isClaimExpiredOrUnlicensed = async (existing) => {
+  if (!existing) return true;
+  if (
+    existing.state === 'pending' &&
+    typeof existing.createdAt === 'number' &&
+    Date.now() - existing.createdAt >= pendingDomainTtlSeconds() * 1000
+  ) {
+    return true;
+  }
+  if (existing.accountId && !(await isAccountLicenseActive(existing.accountId))) {
+    return true;
+  }
+  return false;
+};
+
+const cleanupStaleClaim = async (domain, existing) => {
+  await redisService.client.del(`${META_PREFIX}${domain}`);
+  await redisService.client.del(`${GATE_PREFIX}${domain}`);
+  if (existing?.accountId) {
+    await redisService.client.srem(accountDomainsKey(existing.accountId), domain);
+  }
+  await redisService.client.srem(GLOBAL_DOMAINS_INDEX, domain);
+};
+
+const countLiveAccountDomains = async (accountId, excludeDomain) => {
+  const domains = await redisService.client.smembers(accountDomainsKey(accountId));
+  let count = 0;
+  for (const d of domains) {
+    if (d === excludeDomain) continue;
+    const meta = await readMeta(d);
+    if (!meta || (await isClaimExpiredOrUnlicensed(meta))) {
+      await redisService.client.srem(accountDomainsKey(accountId), d);
+      if (meta) {
+        await cleanupStaleClaim(d, meta);
+      }
+      continue;
+    }
+    count += 1;
+  }
+  return count;
 };
 
 // The gate record carries maySend + encrypted key material; it must never
@@ -114,14 +182,32 @@ const addDomain = async ({ accountId, domain: rawDomain }) => {
   // (and in the test mock, see __mocks__/ioredis.js), so only one caller can
   // ever win it for a given key.
   const claimPlaceholder = JSON.stringify({ accountId, state: 'pending' });
-  const claimed = await redisService.client.set(metaKey, claimPlaceholder, 'NX');
+  const pendingTtl = pendingDomainTtlSeconds();
+  let claimed = await redisService.client.set(metaKey, claimPlaceholder, 'EX', pendingTtl, 'NX');
 
   if (!claimed) {
     const existing = await readMeta(domain);
-    return resolveExistingDomainClaim({ accountId, domain, existing });
+    if (existing && (await isClaimExpiredOrUnlicensed(existing))) {
+      await cleanupStaleClaim(domain, existing);
+      claimed = await redisService.client.set(metaKey, claimPlaceholder, 'EX', pendingTtl, 'NX');
+    }
+    if (!claimed) {
+      const current = existing && !(await isClaimExpiredOrUnlicensed(existing))
+        ? existing
+        : await readMeta(domain);
+      return resolveExistingDomainClaim({ accountId, domain, existing: current });
+    }
   }
 
   try {
+    const liveCount = await countLiveAccountDomains(accountId, domain);
+    if (liveCount >= config.outbound.maxDomainsPerAccount) {
+      throw new DomainError(
+        'DOMAIN_QUOTA_EXCEEDED',
+        `Account has reached the maximum of ${config.outbound.maxDomainsPerAccount} domains`
+      );
+    }
+
     const selector = `hm-${crypto.randomBytes(4).toString('hex')}`;
     const { publicKeyPem, privateKeyPem } = generateDomainKeyMaterial();
     const privateKeyEnc = keyCrypto.encrypt(privateKeyPem, config.outbound.keyEncryptionSecret);
@@ -217,7 +303,13 @@ const listDomains = async ({ accountId }) => {
   const results = await Promise.all(
     domains.map(async (domain) => {
       const meta = await readMeta(domain);
-      if (!meta) return null;
+      if (!meta || (await isClaimExpiredOrUnlicensed(meta))) {
+        await redisService.client.srem(accountDomainsKey(accountId), domain);
+        if (meta) {
+          await cleanupStaleClaim(domain, meta);
+        }
+        return null;
+      }
       return {
         domain,
         state: meta.state,
@@ -269,6 +361,47 @@ const setSuspended = async ({ domain: rawDomain, suspended }) => {
   });
 };
 
+const releaseDomain = async ({ domain: rawDomain }) => {
+  const domain = normalizeDomain(rawDomain);
+  const meta = await readMeta(domain);
+  if (!meta) {
+    throw new DomainError('NOT_FOUND', `Domain ${domain} not found`);
+  }
+  await cleanupStaleClaim(domain, meta);
+  return { domain, previousAccountId: meta.accountId };
+};
+
+const transferDomain = async ({ domain: rawDomain, toAccountId }) => {
+  const domain = normalizeDomain(rawDomain);
+  const meta = await readMeta(domain);
+  if (!meta) {
+    throw new DomainError('NOT_FOUND', `Domain ${domain} not found`);
+  }
+  if (!(await isAccountLicenseActive(toAccountId))) {
+    throw new DomainError('NOT_FOUND', `Target account ${toAccountId} not found or inactive`);
+  }
+
+  const fromAccountId = meta.accountId;
+  if (fromAccountId && fromAccountId !== toAccountId) {
+    await redisService.client.srem(accountDomainsKey(fromAccountId), domain);
+  }
+
+  const updated = { ...meta, accountId: toAccountId };
+  await writeMeta(domain, updated);
+  await writeGateRecord({
+    accountId: toAccountId,
+    domain,
+    selector: updated.selector,
+    privateKeyEnc: updated.privateKeyEnc,
+    state: updated.state,
+    suspended: updated.suspended,
+  });
+  await redisService.client.sadd(accountDomainsKey(toAccountId), domain);
+  await redisService.client.sadd(GLOBAL_DOMAINS_INDEX, domain);
+
+  return { domain, fromAccountId, toAccountId };
+};
+
 module.exports = {
   DomainError,
   addDomain,
@@ -277,4 +410,6 @@ module.exports = {
   removeDomain,
   getDomainMeta,
   setSuspended,
+  releaseDomain,
+  transferDomain,
 };
