@@ -78,6 +78,17 @@ const config = {
   mailboxCleanupGraceDays: parseInt(process.env.MAILBOX_CLEANUP_GRACE_DAYS || 7),
   // SMTP response code for unknown mailboxes (550=reject, 450=temp fail, 250=accept & drop)
   smtpUnknownMailboxCode: parseInt(process.env.SMTP_UNKNOWN_MAILBOX_CODE || 550),
+  smtpInbound: {
+    maxMessageBytes: parsePositiveNumber(process.env.SMTP_MAX_MESSAGE_BYTES, 10 * 1024 * 1024, 'SMTP_MAX_MESSAGE_BYTES'),
+    maxClients: parsePositiveNumber(process.env.SMTP_MAX_CLIENTS, 100, 'SMTP_MAX_CLIENTS'),
+    socketTimeoutMs: parsePositiveNumber(process.env.SMTP_SOCKET_TIMEOUT_MS, 30000, 'SMTP_SOCKET_TIMEOUT_MS'),
+    maxRecipients: parsePositiveNumber(process.env.SMTP_MAX_RECIPIENTS, 25, 'SMTP_MAX_RECIPIENTS'),
+    maxConnectionsPerIp: parsePositiveNumber(process.env.SMTP_MAX_CONNECTIONS_PER_IP, 20, 'SMTP_MAX_CONNECTIONS_PER_IP'),
+    rateLimitWindowMs: parsePositiveNumber(process.env.SMTP_RATE_LIMIT_WINDOW_MS, 60000, 'SMTP_RATE_LIMIT_WINDOW_MS'),
+    rateLimitMaxPerIp: parsePositiveNumber(process.env.SMTP_RATE_LIMIT_MAX_PER_IP, 60, 'SMTP_RATE_LIMIT_MAX_PER_IP'),
+    maxAttachmentBytes: parsePositiveNumber(process.env.SMTP_MAX_ATTACHMENT_BYTES, 5 * 1024 * 1024, 'SMTP_MAX_ATTACHMENT_BYTES'),
+    maxStoredRawBodyBytes: parsePositiveNumber(process.env.SMTP_MAX_STORED_RAW_BODY_BYTES, 512 * 1024, 'SMTP_MAX_STORED_RAW_BODY_BYTES'),
+  },
   environment: process.env.NODE_ENV || 'development',
   apiTimeout: parseInt(process.env.API_TIMEOUT || fileConfig.api?.timeout || 5000),
 

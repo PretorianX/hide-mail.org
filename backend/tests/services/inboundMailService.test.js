@@ -152,4 +152,54 @@ describe('inboundMailService.deliverInboundMessage', () => {
 
     expect(metrics.emailsSiteAddressedTotal.inc).toHaveBeenCalled();
   });
+
+  it('caps aggregate attachment storage and omits duplicate raw body for large attachment messages', async () => {
+    activeMailboxes('nova7@hide-mail.org');
+
+    const config = require('../../config/config');
+    const origMaxAtt = config.smtpInbound.maxAttachmentBytes;
+    const origMaxRaw = config.smtpInbound.maxStoredRawBodyBytes;
+    config.smtpInbound.maxAttachmentBytes = 20;
+    config.smtpInbound.maxStoredRawBodyBytes = 100;
+
+    try {
+      const part1 = Buffer.from('123456789012345').toString('base64'); // 15 bytes
+      const part2 = Buffer.from('1234567890').toString('base64'); // 10 bytes (15+10 > 20)
+      const raw = [
+        'From: Acme <no-reply@acme.example>',
+        'To: nova7@hide-mail.org',
+        'Subject: Attachments',
+        'MIME-Version: 1.0',
+        'Content-Type: multipart/mixed; boundary="b1"',
+        '',
+        '--b1',
+        'Content-Type: text/plain; charset=utf-8',
+        '',
+        'See attached.',
+        '--b1',
+        'Content-Type: application/octet-stream; name="a.bin"',
+        'Content-Disposition: attachment; filename="a.bin"',
+        'Content-Transfer-Encoding: base64',
+        '',
+        part1,
+        '--b1',
+        'Content-Type: application/octet-stream; name="b.bin"',
+        'Content-Disposition: attachment; filename="b.bin"',
+        'Content-Transfer-Encoding: base64',
+        '',
+        part2,
+        '--b1--',
+      ].join('\r\n');
+
+      await deliverInboundMessage({ recipient: 'nova7@hide-mail.org', rawBody: raw });
+
+      const email = redisService.storeEmail.mock.calls[0][1];
+      expect(email.attachments).toHaveLength(1);
+      expect(email.attachments[0].filename).toBe('a.bin');
+      expect(email.body).toBeUndefined();
+    } finally {
+      config.smtpInbound.maxAttachmentBytes = origMaxAtt;
+      config.smtpInbound.maxStoredRawBodyBytes = origMaxRaw;
+    }
+  });
 });
