@@ -202,4 +202,20 @@ describe('inboundMailService.deliverInboundMessage', () => {
       config.smtpInbound.maxStoredRawBodyBytes = origMaxRaw;
     }
   });
+
+  it('does not block inbound delivery on a stalling QA webhook (#231)', async () => {
+    activeMailboxes('nova7@hide-mail.org');
+    qaWebhookService.notifyMailboxWebhook.mockImplementationOnce(() => new Promise(() => {}));
+
+    const result = await Promise.race([
+      deliverInboundMessage({
+        recipient: 'nova7@hide-mail.org',
+        rawBody: rawMessage({ to: 'nova7@hide-mail.org' }),
+      }),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('deliverInboundMessage blocked on webhook')), 200)),
+    ]);
+
+    expect(result.delivered).toBe(true);
+    expect(qaWebhookService.notifyMailboxWebhook).toHaveBeenCalledTimes(1);
+  });
 });

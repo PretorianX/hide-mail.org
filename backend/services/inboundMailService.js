@@ -109,7 +109,10 @@ const deliverInboundMessage = async ({ recipient, rawBody }) => {
     metrics.emailsSiteAddressedTotal.inc();
   }
 
-  await qaWebhookService.notifyMailboxWebhook(route.mailbox, email);
+  // Fire-and-forget so a slow or stalling QA webhook never blocks inbound SMTP completion.
+  Promise.resolve(qaWebhookService.notifyMailboxWebhook(route.mailbox, email)).catch((err) => {
+    logger.warn(`Inbound: QA webhook dispatch error for ${sanitizeEmail(route.mailbox)}: ${err.message}`);
+  });
 
   logger.info(
     `Inbound: Stored message ${email.id} for ${sanitizeEmail(route.mailbox)}` +
