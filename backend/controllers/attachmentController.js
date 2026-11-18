@@ -10,6 +10,7 @@
 
 const redisService = require('../services/redisService');
 const attachmentService = require('../services/attachmentService');
+const { assertMailboxOwner, MailboxOwnershipError } = require('../services/mailboxAuth');
 const logger = require('../utils/logger');
 const { sanitizeEmail, sanitizeMessageId } = require('../utils/sanitize');
 
@@ -23,6 +24,10 @@ const downloadAttachment = async (req, res, next) => {
         error: 'Invalid email address',
         code: 'INVALID_ADDRESS',
       });
+    }
+
+    if (req.apiLicense) {
+      await assertMailboxOwner(email, req.apiLicense);
     }
 
     const message = await redisService.getEmailById(email, id);
@@ -57,6 +62,13 @@ const downloadAttachment = async (req, res, next) => {
 
     return res.status(200).send(attachment.content);
   } catch (error) {
+    if (error instanceof MailboxOwnershipError) {
+      return res.status(error.statusCode).json({
+        success: false,
+        error: error.message,
+        code: error.code,
+      });
+    }
     logger.error('Error in downloadAttachment controller:', error);
     return next(error);
   }

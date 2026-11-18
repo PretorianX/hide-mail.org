@@ -16,6 +16,7 @@ const redisService = require('../services/redisService');
 const entitlementService = require('../services/entitlementService');
 const { resolveActiveRecipient } = require('../services/recipientResolver');
 const { validatePublicHttpsWebhookUrl } = require('../services/webhookUrlGuard');
+const { assertMailboxOwner, MailboxOwnershipError } = require('../services/mailboxAuth');
 const logger = require('../utils/logger');
 
 // Mirrors the Pro alias rules in emailController: lowercase, no edge separators.
@@ -84,9 +85,22 @@ const createMailbox = async (req, res, next) => {
   }
 };
 
+const handleControllerError = (res, next, label, error) => {
+  if (error instanceof MailboxOwnershipError) {
+    return res.status(error.statusCode).json({
+      success: false,
+      error: error.message,
+      code: error.code,
+    });
+  }
+  logger.error(label, error);
+  return next(error);
+};
+
 const listMessages = async (req, res, next) => {
   try {
     const { email } = req.params;
+    await assertMailboxOwner(email, req.apiLicense);
     const active = await redisService.isMailboxActive(email);
     if (!active) {
       return res.status(404).json({ success: false, error: 'Mailbox not found' });
@@ -94,28 +108,28 @@ const listMessages = async (req, res, next) => {
     const messages = await redisService.getEmails(email);
     return res.status(200).json({ success: true, data: messages });
   } catch (error) {
-    logger.error('QA listMessages error', error);
-    return next(error);
+    return handleControllerError(res, next, 'QA listMessages error', error);
   }
 };
 
 const getMessage = async (req, res, next) => {
   try {
     const { email, id } = req.params;
+    await assertMailboxOwner(email, req.apiLicense);
     const message = await redisService.getEmailById(email, id);
     if (!message) {
       return res.status(404).json({ success: false, error: 'Message not found' });
     }
     return res.status(200).json({ success: true, data: message });
   } catch (error) {
-    logger.error('QA getMessage error', error);
-    return next(error);
+    return handleControllerError(res, next, 'QA getMessage error', error);
   }
 };
 
 const setWebhook = async (req, res, next) => {
   try {
     const { email } = req.params;
+    await assertMailboxOwner(email, req.apiLicense);
     const { url } = req.body || {};
     if (!url || typeof url !== 'string') {
       return res.status(400).json({
@@ -140,19 +154,18 @@ const setWebhook = async (req, res, next) => {
     await redisService.setMailboxWebhook(email, url);
     return res.status(200).json({ success: true, data: { url } });
   } catch (error) {
-    logger.error('QA setWebhook error', error);
-    return next(error);
+    return handleControllerError(res, next, 'QA setWebhook error', error);
   }
 };
 
 const deleteMailbox = async (req, res, next) => {
   try {
     const { email } = req.params;
+    await assertMailboxOwner(email, req.apiLicense);
     await redisService.deactivateMailbox(email);
     return res.status(200).json({ success: true });
   } catch (error) {
-    logger.error('QA deleteMailbox error', error);
-    return next(error);
+    return handleControllerError(res, next, 'QA deleteMailbox error', error);
   }
 };
 

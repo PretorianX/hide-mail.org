@@ -862,5 +862,90 @@ describe('Official Hide Mail MCP Server (mcpController & mcpService)', () => {
 
       expect(lines.join('')).toContain('"id":99');
     });
+
+    it('rejects cross-tenant QA mailbox access via MCP for another API or Suite key', async () => {
+      // Owner creates mailbox using keys.api
+      const createMbRes = createRes();
+      await mcpController.handlePost(
+        {
+          headers: { 'x-api-key': keys.api },
+          body: {
+            jsonrpc: '2.0',
+            id: 201,
+            method: 'tools/call',
+            params: {
+              name: 'hide_mail_qa_create_mailbox',
+              arguments: { localPart: 'tenant-a', domain: 'hide-mail.org' },
+            },
+          },
+        },
+        createMbRes,
+        (err) => { throw err; }
+      );
+      expect(createMbRes.body.result.isError).toBe(false);
+
+      await redisService.storeEmail('tenant-a@hide-mail.org', {
+        id: 'msg-tenant-a',
+        from: 'auth@example.test',
+        subject: 'Secret 123456',
+        text: 'Code 123456',
+        receivedAt: new Date().toISOString(),
+      });
+
+      const secondApiLicense = await licenseService.createLicense({
+        type: 'api',
+        plan: 'monthly',
+        orderReference: 'mcp-api-2',
+        ttlSeconds: 3600,
+      });
+      const secondApiKey = await licenseService.createApiKey(secondApiLicense.key);
+
+      for (const attackerKey of [secondApiKey, keys.suite]) {
+        for (const [toolName, args] of [
+          ['hide_mail_qa_list_messages', { address: 'tenant-a@hide-mail.org' }],
+          ['hide_mail_qa_get_message', { address: 'tenant-a@hide-mail.org', messageId: 'msg-tenant-a' }],
+          ['hide_mail_qa_clear_mailbox', { address: 'tenant-a@hide-mail.org' }],
+        ]) {
+          const res = createRes();
+          await mcpController.handlePost(
+            {
+              headers: { 'x-api-key': attackerKey },
+              body: {
+                jsonrpc: '2.0',
+                id: 202,
+                method: 'tools/call',
+                params: { name: toolName, arguments: args },
+              },
+            },
+            res,
+            (err) => { throw err; }
+          );
+          expect(res.body.result.isError).toBe(true);
+          expect(res.body.result.structuredContent.code).toBe('MAILBOX_FORBIDDEN');
+        }
+      }
+
+      // Site-address alias also rejected
+      const aliasRes = createRes();
+      await mcpController.handlePost(
+        {
+          headers: { 'x-api-key': secondApiKey },
+          body: {
+            jsonrpc: '2.0',
+            id: 203,
+            method: 'tools/call',
+            params: {
+              name: 'hide_mail_qa_list_messages',
+              arguments: { address: 'tenant-a.netflix@hide-mail.org' },
+            },
+          },
+        },
+        aliasRes,
+        (err) => { throw err; }
+      );
+      expect(aliasRes.body.result.isError).toBe(true);
+      expect(aliasRes.body.result.structuredContent.code).toBe('MAILBOX_FORBIDDEN');
+      expect(await redisService.isMailboxActive('tenant-a@hide-mail.org')).toBe(true);
+    });
   });
 });
