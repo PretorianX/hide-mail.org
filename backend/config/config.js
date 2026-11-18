@@ -64,6 +64,17 @@ const parsePositiveNumber = (raw, fallback, name) => {
   return parsed;
 };
 
+const parseTrustProxy = (value) => {
+  if (!value || !value.trim()) {
+    return ['loopback', 'linklocal', 'uniquelocal'];
+  }
+  const trimmed = value.trim();
+  if (trimmed === 'true') return true;
+  if (trimmed === 'false') return false;
+  if (/^\d+$/.test(trimmed)) return Number(trimmed);
+  return trimmed.split(',').map((s) => s.trim()).filter(Boolean);
+};
+
 // Final config with environment variables taking precedence
 // All time values are in seconds for consistency
 const config = {
@@ -79,6 +90,7 @@ const config = {
   // SMTP response code for unknown mailboxes (550=reject, 450=temp fail, 250=accept & drop)
   smtpUnknownMailboxCode: parseInt(process.env.SMTP_UNKNOWN_MAILBOX_CODE || 550),
   environment: process.env.NODE_ENV || 'development',
+  trustProxy: parseTrustProxy(process.env.TRUST_PROXY),
   apiTimeout: parseInt(process.env.API_TIMEOUT || fileConfig.api?.timeout || 5000),
 
   // keyEncryptionSecret is lazy: requiring this module must not take down inbox/API when

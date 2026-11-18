@@ -190,9 +190,9 @@ const requireProofOfWork = async (req, res, next) => {
  */
 const challengeHandler = async (req, res) => {
   try {
-    const clientIP = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || 
-                     req.ip || 
-                     req.connection?.remoteAddress || 
+    const clientIP = req.ip ||
+                     req.socket?.remoteAddress ||
+                     req.connection?.remoteAddress ||
                      'unknown';
     
     const challenge = await createChallenge(clientIP);

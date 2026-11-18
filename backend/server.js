@@ -28,6 +28,7 @@ const { randomUUID } = require('node:crypto');
 
 const app = express();
 app.disable('x-powered-by');
+app.set('trust proxy', config.trustProxy);
 const PORT = process.env.PORT || 3001;
 const SMTP_PORT = process.env.SMTP_PORT || 2525;
 

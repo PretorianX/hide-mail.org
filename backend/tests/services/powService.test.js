@@ -246,10 +246,11 @@ describe('PoW Service', () => {
       }));
     });
 
-    it('should use x-forwarded-for header for IP', async () => {
+    it('should use req.ip rather than raw x-forwarded-for header', async () => {
+      redisService.client.setex.mockClear();
       const req = {
-        headers: { 'x-forwarded-for': '203.0.113.50, 70.41.3.18' },
-        ip: '127.0.0.1',
+        headers: { 'x-forwarded-for': '198.51.100.99' },
+        ip: '203.0.113.50',
       };
       const res = {
         json: jest.fn(),
@@ -261,6 +262,8 @@ describe('PoW Service', () => {
       expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
         success: true,
       }));
+      const storedPayload = JSON.parse(redisService.client.setex.mock.calls[0][2]);
+      expect(storedPayload.clientIP).toBe('203.0.113.50');
     });
   });
 });
