@@ -310,10 +310,11 @@ const redisService = {
       if (emailData) {
         try {
           const parsedEmail = JSON.parse(emailData);
-          // Mark as read
-          parsedEmail.read = true;
-          // Update in Redis
-          await redis.set(emailKey, JSON.stringify(parsedEmail));
+          if (!parsedEmail.read) {
+            // Mark as read while preserving the existing Redis TTL
+            parsedEmail.read = true;
+            await redis.set(emailKey, JSON.stringify(parsedEmail), 'KEEPTTL');
+          }
           return parsedEmail;
         } catch (e) {
           logger.error(`Failed to parse email data: ${e.message}`);
@@ -336,19 +337,19 @@ const redisService = {
    */
   async deleteEmail(email, id) {
     try {
-      const key = `${KEY_PREFIXES.EMAIL}${email}`;
-      const emails = await redis.lrange(key, 0, -1);
-      
-      for (const item of emails) {
-        const parsedEmail = JSON.parse(item);
-        if (parsedEmail.id === id) {
-          // Remove from Redis
-          await redis.lrem(key, 1, item);
-          logger.info(`Email deleted: ${id}`);
-          return true;
-        }
+      const listKey = `emails:${email}`;
+      const emailKey = `email:${email}:${id}`;
+      const removed = await redis.lrem(listKey, 0, id);
+      const existed = await redis.exists(emailKey);
+      if (existed) {
+        await redis.del(emailKey);
       }
-      
+
+      if (removed > 0 || existed) {
+        logger.info(`Email deleted: ${id}`);
+        return true;
+      }
+
       return false;
     } catch (error) {
       logger.error('Error deleting email from Redis:', error);
@@ -363,8 +364,12 @@ const redisService = {
    */
   async deleteAllEmails(email) {
     try {
-      const key = `${KEY_PREFIXES.EMAIL}${email}`;
-      await redis.del(key);
+      const listKey = `emails:${email}`;
+      const emailIds = await redis.lrange(listKey, 0, -1);
+      if (Array.isArray(emailIds) && emailIds.length > 0) {
+        await Promise.all(emailIds.map((id) => redis.del(`email:${email}:${id}`)));
+      }
+      await redis.del(listKey);
       logger.info(`All emails deleted for: ${sanitizeEmail(email)}`);
       return true;
     } catch (error) {

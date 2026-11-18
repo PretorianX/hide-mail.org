@@ -2,6 +2,7 @@
 class RedisMock {
   constructor() {
     this.data = {};
+    this.ttls = {};
     this.events = {};
   }
 
@@ -35,11 +36,15 @@ class RedisMock {
       return null;
     }
     this.data[key] = value;
+    if (!flags.includes('KEEPTTL')) {
+      delete this.ttls[key];
+    }
     return 'OK';
   }
 
   async setex(key, seconds, value) {
     this.data[key] = value;
+    this.ttls[key] = seconds;
     return 'OK';
   }
 
@@ -59,6 +64,7 @@ class RedisMock {
 
   async del(key) {
     delete this.data[key];
+    delete this.ttls[key];
     return 1;
   }
 
@@ -68,13 +74,17 @@ class RedisMock {
 
   async expire(key, seconds) {
     if (this.data[key]) {
+      this.ttls[key] = seconds;
       return 1;
     }
     return 0;
   }
 
   async ttl(key) {
-    return this.data[key] ? 3600 : -2; // Return 1 hour if key exists
+    if (!Object.prototype.hasOwnProperty.call(this.data, key)) {
+      return -2;
+    }
+    return Object.prototype.hasOwnProperty.call(this.ttls, key) ? this.ttls[key] : -1;
   }
 
   async keys(pattern) {
@@ -102,6 +112,43 @@ class RedisMock {
     const list = Array.isArray(this.data[key]) ? this.data[key] : [];
     const end = stop === -1 ? list.length : stop + 1;
     return list.slice(start, end);
+  }
+
+  async lrem(key, count, value) {
+    const list = this.data[key];
+    if (!Array.isArray(list)) {
+      return 0;
+    }
+    let removed = 0;
+    if (count === 0) {
+      this.data[key] = list.filter((item) => {
+        if (item === value) {
+          removed += 1;
+          return false;
+        }
+        return true;
+      });
+    } else if (count > 0) {
+      this.data[key] = list.filter((item) => {
+        if (item === value && removed < count) {
+          removed += 1;
+          return false;
+        }
+        return true;
+      });
+    } else {
+      const limit = Math.abs(count);
+      const next = [];
+      for (let i = list.length - 1; i >= 0; i -= 1) {
+        if (list[i] === value && removed < limit) {
+          removed += 1;
+        } else {
+          next.unshift(list[i]);
+        }
+      }
+      this.data[key] = next;
+    }
+    return removed;
   }
 
   async hset(key, field, value) {
