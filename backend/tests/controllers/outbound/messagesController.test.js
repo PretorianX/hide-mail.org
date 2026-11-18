@@ -162,7 +162,9 @@ describe('Outbound Messages / Account HTTP', () => {
       expect(stored).toMatchObject({
         subject: 'Welcome',
         from: { name: 'Acme', email: 'billing@mail.example.com' },
-        envelopeFrom: `b-${res.body.id}@hm-bounce.mail.example.com`,
+        envelopeFrom: expect.stringMatching(
+          new RegExp(`^b-${res.body.id}\\.[A-Za-z0-9_-]{22}@hm-bounce\\.mail\\.example\\.com$`)
+        ),
         clientIp: '203.0.113.55',
         sendKeyName: 'prod',
       });
