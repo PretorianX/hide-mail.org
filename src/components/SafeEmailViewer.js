@@ -67,15 +67,13 @@ const SafeEmailViewer = ({ htmlContent, textContent, className }) => {
   // Create a ref for the iframe
   const iframeRef = React.useRef(null);
   
-  // Log the content received by the component
+  // Log content metadata only in development (never log message previews in production)
   React.useEffect(() => {
-    console.log('SafeEmailViewer received:');
-    console.log('- HTML content length:', (htmlContent || '').length);
-    console.log('- Text content length:', (textContent || '').length);
-    console.log('- HTML content preview:', (htmlContent || '').substring(0, 100));
-    console.log('- Text content preview:', (textContent || '').substring(0, 100));
-    
-    // Check for common issues
+    if (process.env.NODE_ENV !== 'development') return;
+    console.log('SafeEmailViewer received:', {
+      htmlLength: (htmlContent || '').length,
+      textLength: (textContent || '').length,
+    });
     if (!htmlContent && !textContent) {
       console.warn('SafeEmailViewer: No content received (both HTML and text are empty)');
     } else if (htmlContent && htmlContent.includes('Content-Type:')) {

@@ -101,11 +101,8 @@ const EmailModal = ({ message, isOpen, onClose, tempMailbox }) => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (isOpen && message) {
-      // Log the message data to help with debugging
-      console.log('Email modal opened with message:', message);
-      console.log('Message contains html:', !!message.html);
-      console.log('Message contains text:', !!message.text);
+    if (isOpen && message && process.env.NODE_ENV === 'development') {
+      console.log('Email modal opened, hasHtml:', !!message.html, 'hasText:', !!message.text);
     }
   }, [isOpen, message]);
 

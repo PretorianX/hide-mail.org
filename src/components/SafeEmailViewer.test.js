@@ -91,4 +91,21 @@ describe('SafeEmailViewer', () => {
     const container = document.querySelector('.custom-class');
     expect(container).toBeInTheDocument();
   });
-}); 
+
+  test('does not log message content to console in non-development builds', () => {
+    const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const secretBody = 'TOP_SECRET_OTP_123456';
+    try {
+      render(<SafeEmailViewer htmlContent={`<p>${secretBody}</p>`} textContent={secretBody} />);
+      const allLogged = [...logSpy.mock.calls, ...warnSpy.mock.calls]
+        .flat()
+        .map(String)
+        .join(' ');
+      expect(allLogged).not.toContain(secretBody);
+    } finally {
+      logSpy.mockRestore();
+      warnSpy.mockRestore();
+    }
+  });
+});

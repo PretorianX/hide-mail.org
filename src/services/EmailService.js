@@ -427,21 +427,15 @@ class EmailService {
       const { parseMultipartMessage } = await import('./messageParser');
       
       // Check if the message has a raw property
-      if (messageData.raw) {
-        console.log('Raw message found, length:', messageData.raw.length);
-        console.log('Raw message preview:', messageData.raw.substring(0, 500));
-      } else {
-        console.log('No raw message found in the response');
-      }
-      
-      // Check if the message has a body property
-      if (messageData.body) {
-        console.log('Body found, length:', messageData.body.length);
-        console.log('Body preview:', messageData.body.substring(0, 500));
-        
-        // Check if the body contains HTML tags
-        const hasHtmlTags = /<html|<body|<div|<p|<table|<a|<img|<br|<h[1-6]|<!DOCTYPE html/i.test(messageData.body);
-        console.log('Body contains HTML tags:', hasHtmlTags);
+      if (process.env.NODE_ENV === 'development') {
+        if (messageData.raw) {
+          console.log('Raw message found, length:', messageData.raw.length);
+        } else {
+          console.log('No raw message found in the response');
+        }
+        if (messageData.body) {
+          console.log('Body found, length:', messageData.body.length);
+        }
       }
       
       // If the message has a raw property, parse it
