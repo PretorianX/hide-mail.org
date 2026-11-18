@@ -48,9 +48,12 @@ const isOriginAllowed = (origin, allowedOrigins) => {
     // Wildcard subdomain match (e.g., *.example.com)
     if (allowed.startsWith('*.')) {
       const baseDomain = allowed.slice(2);
-      return normalizedOrigin.endsWith(baseDomain) || 
-             normalizedOrigin === `https://${baseDomain}` ||
-             normalizedOrigin === `http://${baseDomain}`;
+      try {
+        const { hostname } = new URL(normalizedOrigin);
+        return hostname === baseDomain || hostname.endsWith(`.${baseDomain}`);
+      } catch {
+        return false;
+      }
     }
     
     return false;

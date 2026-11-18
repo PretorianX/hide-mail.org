@@ -51,12 +51,9 @@ const createTransporter = () => {
     };
   }
 
-  // For internal Docker network communication (e.g., to Postfix),
-  // we need to handle self-signed certificates
-  // In production, Postfix uses self-signed certs for internal STARTTLS
-  if (!config.smtp.secure) {
+  // Only relax TLS cert verification when explicitly opted in for internal self-signed relays
+  if (!config.smtp.secure && process.env.SMTP_ALLOW_SELF_SIGNED === 'true') {
     transportConfig.tls = {
-      // Accept self-signed certificates (safe for internal Docker network)
       rejectUnauthorized: false,
     };
   }

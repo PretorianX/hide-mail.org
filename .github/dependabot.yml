@@ -44,6 +44,23 @@ updates:
       development-deps:
         dependency-type: development
 
+  - package-ecosystem: npm
+    directory: /portal
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: UTC
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - javascript
+    groups:
+      production-deps:
+        dependency-type: production
+      development-deps:
+        dependency-type: development
+
   - package-ecosystem: github-actions
     directory: /
     schedule:

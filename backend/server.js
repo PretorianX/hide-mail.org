@@ -24,7 +24,7 @@ const adminRoutes = require('./routes/admin');
 const outboundRoutes = require('./routes/outbound');
 const billingController = require('./controllers/billingController');
 const attachLicense = require('./middleware/attachLicense');
-const { createOriginVerifier, parseAllowedOrigins } = require('./services/originVerifier');
+const { createOriginVerifier, parseAllowedOrigins, isOriginAllowed } = require('./services/originVerifier');
 const { randomUUID } = require('node:crypto');
 
 const app = express();
@@ -72,19 +72,12 @@ const corsOptions = {
     const normalizedOrigin = origin.toLowerCase();
     
     // Check configured origins
-    const isAllowedOrigin = allowedOrigins.some(allowed => {
-      if (allowed === normalizedOrigin) return true;
-      if (allowed.startsWith('*.')) {
-        const baseDomain = allowed.slice(2);
-        return normalizedOrigin.endsWith(baseDomain);
-      }
-      return false;
-    });
+    const allowed = isOriginAllowed(normalizedOrigin, allowedOrigins);
     
     // Allow development origins
     const isDevOrigin = isDev && devOrigins.includes(normalizedOrigin);
     
-    if (isAllowedOrigin || isDevOrigin) {
+    if (allowed || isDevOrigin) {
       callback(null, true);
     } else {
       logger.warn(`CORS blocked origin: ${origin}`);

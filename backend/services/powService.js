@@ -119,9 +119,17 @@ const verifySolution = async (challenge, nonce) => {
     return { valid: false, error: 'Challenge already used' };
   }
   
-  // Get challenge data from Redis
+  // Atomically consume challenge data from Redis so concurrent requests cannot reuse it
   const key = `${POW_CONFIG.keyPrefix}${challenge}`;
-  const challengeDataStr = await redisService.client.get(key);
+  let challengeDataStr;
+  if (typeof redisService.client.getdel === 'function') {
+    challengeDataStr = await redisService.client.getdel(key);
+  } else {
+    challengeDataStr = await redisService.client.get(key);
+    if (challengeDataStr) {
+      await redisService.client.del(key);
+    }
+  }
   
   if (!challengeDataStr) {
     logger.warn(`PoW: Challenge not found or expired: ${sanitizeForLog(challenge.substring(0, 16))}...`);
@@ -132,7 +140,6 @@ const verifySolution = async (challenge, nonce) => {
   
   // Check expiration
   if (Date.now() > challengeData.expiresAt) {
-    await redisService.client.del(key);
     return { valid: false, error: 'Challenge expired' };
   }
   
@@ -146,9 +153,6 @@ const verifySolution = async (challenge, nonce) => {
   
   // Mark challenge as used (prevent replay attacks)
   await redisService.client.setex(usedKey, POW_CONFIG.usedTTL, '1');
-  
-  // Delete the challenge
-  await redisService.client.del(key);
   
   logger.info(`PoW: Valid solution from ${challengeData.clientIP}`);
   
