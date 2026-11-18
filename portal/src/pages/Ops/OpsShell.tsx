@@ -9,6 +9,7 @@ import {
   IconButton,
   MenuIcon,
   NavRail,
+  SendIcon,
   SettingsIcon,
   SideMenu,
   UserIcon,
@@ -17,7 +18,10 @@ import {
 } from '@/design-system';
 import { adminLogout } from '@/api/admin';
 
-const NAV = [{ id: '/ops/keys', label: 'Licences', icon: <UserIcon size={18} /> }] as const;
+const NAV = [
+  { id: '/ops/keys', label: 'Licences', icon: <UserIcon size={18} /> },
+  { id: '/ops/activity', label: 'Activity', icon: <SendIcon size={18} /> },
+] as const;
 
 const Brand = styled.div`
   display: flex;

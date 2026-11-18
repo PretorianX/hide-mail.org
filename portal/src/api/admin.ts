@@ -94,3 +94,28 @@ export async function deleteAdminLicense(id: string): Promise<void> {
     })
   );
 }
+
+export type AdminActivityMessage = {
+  id: string;
+  accountId: string;
+  accountLabel: string | null;
+  domain: string;
+  recipient: string;
+  reference: string | null;
+  subject?: string | null;
+  from?: { name: string | null; email: string } | null;
+  envelopeFrom?: string | null;
+  clientIp?: string | null;
+  sendKeyName?: string | null;
+  status: string;
+  createdAt: number;
+  lastEventAt: number | null;
+  lastResponse: string | null;
+};
+
+export async function listAdminActivity(limit = 200): Promise<AdminActivityMessage[]> {
+  const body = await json<{ success: boolean; messages: AdminActivityMessage[] }>(
+    await fetch(`/api/admin/activity?limit=${limit}`, { credentials: 'include' })
+  );
+  return body.messages;
+}
