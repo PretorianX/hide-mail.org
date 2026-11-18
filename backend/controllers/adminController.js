@@ -1,5 +1,6 @@
 const adminSession = require('../services/adminSession');
 const adminLicenseService = require('../services/adminLicenseService');
+const adminActivityService = require('../services/adminActivityService');
 const logger = require('../utils/logger');
 const { sanitizeForLog } = require('../utils/sanitize');
 
@@ -105,6 +106,27 @@ const listTypes = async (_req, res) => {
   });
 };
 
+const listActivity = async (req, res, next) => {
+  try {
+    const rawLimit = req.query?.limit;
+    const limit = rawLimit === undefined ? undefined : Number(rawLimit);
+    if (rawLimit !== undefined && (!Number.isFinite(limit) || limit < 1)) {
+      return res.status(400).json({
+        success: false,
+        error: 'limit must be a positive integer',
+        code: 'INVALID_LIMIT',
+      });
+    }
+    const messages = await adminActivityService.listActivity({
+      limit: limit === undefined ? adminActivityService.DEFAULT_LIMIT : limit,
+    });
+    return res.status(200).json({ success: true, messages });
+  } catch (error) {
+    logger.error('admin listActivity failed');
+    return next(error);
+  }
+};
+
 module.exports = {
   login,
   logout,
@@ -113,4 +135,5 @@ module.exports = {
   createLicense,
   deleteLicense,
   listTypes,
+  listActivity,
 };

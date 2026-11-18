@@ -18,5 +18,6 @@ router.delete(
   requireAdminSession,
   adminController.deleteLicense
 );
+router.get('/activity', apiRateLimiter.default, requireAdminSession, adminController.listActivity);
 
 module.exports = router;
