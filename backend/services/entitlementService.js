@@ -19,6 +19,7 @@ const inboxFree = (active) => ({
   premiumDomains: false,
   apiAccess: false,
   gradeApi: false,
+  outboundApi: false,
   ...toolFlags(active),
   forwardingLimit: config.forwarding.freeLimit,
   mailboxTtlSeconds: config.emailExpirationSeconds,
@@ -36,6 +37,7 @@ const paidEntitlements = (planType) => ({
   premiumDomains: true,
   apiAccess: planType === 'api' || planType === 'suite',
   gradeApi: planType === 'suite',
+  outboundApi: false,
   senderApi: planType === 'suite',
   reportsApi: planType === 'suite',
   bounceApi: planType === 'suite',
@@ -47,7 +49,15 @@ const paidEntitlements = (planType) => ({
   planType,
 });
 
+const proEntitlements = () => paidEntitlements('pro');
+const apiEntitlements = () => paidEntitlements('api');
 const suiteEntitlements = () => paidEntitlements('suite');
+
+const outboundEntitlements = () => ({
+  ...inboxFree(null),
+  outboundApi: true,
+  planType: 'outbound',
+});
 
 const gradeEntitlements = () => ({
   ...inboxFree(null),
@@ -80,29 +90,25 @@ const tlsEntitlements = () => ({
   planType: 'tls',
 });
 
+const ENTITLEMENT_BUILDERS = {
+  pro: proEntitlements,
+  api: apiEntitlements,
+  suite: suiteEntitlements,
+  outbound: outboundEntitlements,
+  grade: gradeEntitlements,
+  sender: senderEntitlements,
+  reports: reportsEntitlements,
+  bounce: bounceEntitlements,
+  complaint: complaintEntitlements,
+  tls: tlsEntitlements,
+};
+
 const getEntitlements = (license) => {
   if (!licenseService.isActive(license)) {
     return freeEntitlements();
   }
-  if (planTypeOf(license) === 'grade') {
-    return gradeEntitlements();
-  }
-  if (planTypeOf(license) === 'sender') {
-    return senderEntitlements();
-  }
-  if (planTypeOf(license) === 'reports') {
-    return reportsEntitlements();
-  }
-  if (planTypeOf(license) === 'bounce') {
-    return bounceEntitlements();
-  }
-  if (planTypeOf(license) === 'complaint') {
-    return complaintEntitlements();
-  }
-  if (planTypeOf(license) === 'tls') {
-    return tlsEntitlements();
-  }
-  return paidEntitlements(planTypeOf(license));
+  const builder = ENTITLEMENT_BUILDERS[planTypeOf(license)];
+  return builder ? builder() : freeEntitlements();
 };
 
 /**
@@ -112,9 +118,10 @@ const getEntitlements = (license) => {
  */
 const describeTiers = () => ({
   free: freeEntitlements(),
-  pro: paidEntitlements('pro'),
-  api: paidEntitlements('api'),
+  pro: proEntitlements(),
+  api: apiEntitlements(),
   suite: suiteEntitlements(),
+  outbound: outboundEntitlements(),
   grade: gradeEntitlements(),
   sender: senderEntitlements(),
   reports: reportsEntitlements(),
