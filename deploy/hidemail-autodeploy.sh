@@ -20,9 +20,54 @@ PORTAL_URL=${PORTAL_URL:-http://127.0.0.1:3001/admin/portal/}
 
 HEALTH_ATTEMPTS=${HEALTH_ATTEMPTS:-30}
 HEALTH_INTERVAL=${HEALTH_INTERVAL:-2}
+DEPLOY_MANIFEST=${DEPLOY_MANIFEST:-}
+REQUIRE_DIGEST=${REQUIRE_DIGEST:-0}
+COSIGN_PUBLIC_KEY=${COSIGN_PUBLIC_KEY:-}
+LAST_GOOD_FILE=${LAST_GOOD_FILE:-${COMPOSE_DIR}/.last-good-images.env}
 SERVICES=(backend frontend portal)
 
 cd "$COMPOSE_DIR"
+
+load_manifest() {
+  local manifest="$1"
+  if [ ! -f "$manifest" ]; then
+    echo "Deploy manifest not found: $manifest" >&2
+    exit 1
+  fi
+  # Only allow explicit image variables from the controlled manifest.
+  while IFS='=' read -r key val; do
+    case "$key" in
+      BACKEND_IMAGE|FRONTEND_IMAGE|PORTAL_IMAGE)
+        val="${val%\"}"
+        val="${val#\"}"
+        export "${key}=${val}"
+        ;;
+    esac
+  done < "$manifest"
+}
+
+verify_digest_ref() {
+  local name="$1"
+  local ref="$2"
+  if [[ ! "$ref" =~ @sha256:[a-f0-9]{64}$ ]]; then
+    echo "Refusing mutable image ref for ${name}: ${ref} (expected @sha256:<64-hex>)" >&2
+    exit 1
+  fi
+  if [ -n "$COSIGN_PUBLIC_KEY" ]; then
+    cosign verify --key "$COSIGN_PUBLIC_KEY" "$ref" > /dev/null
+  fi
+}
+
+if [ -n "$DEPLOY_MANIFEST" ]; then
+  load_manifest "$DEPLOY_MANIFEST"
+  REQUIRE_DIGEST=1
+fi
+
+if [ "$REQUIRE_DIGEST" = "1" ]; then
+  verify_digest_ref "backend" "${BACKEND_IMAGE:-}"
+  verify_digest_ref "frontend" "${FRONTEND_IMAGE:-}"
+  verify_digest_ref "portal" "${PORTAL_IMAGE:-}"
+fi
 
 # The image a service is running right now, which is what a pull leaves untouched until the
 # container is recreated. Reported as "none" while a service is down, so a stopped container reads
@@ -74,6 +119,10 @@ for attempt in $(seq 1 "$HEALTH_ATTEMPTS"); do
   if healthy; then
     echo "Health check passed after ${attempt} attempt(s)."
     if [ "$deployed" = yes ]; then
+      printf 'BACKEND_IMAGE=%s\nFRONTEND_IMAGE=%s\nPORTAL_IMAGE=%s\n' \
+        "${BACKEND_IMAGE:-ghcr.io/pretorianx/hide-mail.org/backend:latest}" \
+        "${FRONTEND_IMAGE:-ghcr.io/pretorianx/hide-mail.org/frontend:latest}" \
+        "${PORTAL_IMAGE:-ghcr.io/pretorianx/hide-mail.org/portal:latest}" > "$LAST_GOOD_FILE"
       docker image prune --force --filter 'until=168h' > /dev/null
     fi
     exit 0

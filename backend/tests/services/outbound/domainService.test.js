@@ -368,4 +368,102 @@ describe('outbound domainService', () => {
       expect(await domainService.removeDomain({ accountId, domain: 'nope.example.com' })).toBe(false);
     });
   });
+
+  describe('anti-squatting: expiry, license expiration, quota, and operator release/transfer', () => {
+    it('sets a TTL on pending domain metadata and allows takeover after pending expiry', async () => {
+      const squatter = await accountService.createAccount({ label: 'Squatter', days: 30 });
+      const owner = await accountService.createAccount({ label: 'Owner', days: 30 });
+      const setexSpy = jest.spyOn(redisService.client, 'setex');
+
+      jest.useFakeTimers({ now: 1_700_000_000_000 });
+      try {
+        await domainService.addDomain({ accountId: squatter.accountId, domain: 'legit.example.com' });
+        const metaSetex = setexSpy.mock.calls.find(([k]) => k === 'outbound:domain:meta:legit.example.com');
+        expect(metaSetex).toBeTruthy();
+        expect(metaSetex[1]).toBe(7 * DAY_SECONDS);
+
+        // Before expiry, legitimate owner is still blocked
+        await expect(
+          domainService.addDomain({ accountId: owner.accountId, domain: 'legit.example.com' })
+        ).rejects.toMatchObject({ code: 'DOMAIN_TAKEN' });
+
+        // Advance past pending TTL (7 days)
+        jest.setSystemTime(1_700_000_000_000 + 7 * DAY_SECONDS * 1000 + 1000);
+
+        const taken = await domainService.addDomain({
+          accountId: owner.accountId,
+          domain: 'legit.example.com',
+        });
+        expect(taken.state).toBe('pending');
+        const meta = JSON.parse(await redisService.client.get('outbound:domain:meta:legit.example.com'));
+        expect(meta.accountId).toBe(owner.accountId);
+      } finally {
+        jest.useRealTimers();
+        setexSpy.mockRestore();
+      }
+    });
+
+    it('releases domain claim when owning license expires so another account can claim it', async () => {
+      jest.useFakeTimers({ now: 1_700_000_000_000 });
+      try {
+        const squatter = await accountService.createAccount({ label: 'Short', days: 1 });
+        await domainService.addDomain({ accountId: squatter.accountId, domain: 'reclaim.example.com' });
+
+        // Advance 2 days so squatter's 1-day license is expired
+        jest.setSystemTime(1_700_000_000_000 + 2 * DAY_SECONDS * 1000);
+        const owner = await accountService.createAccount({ label: 'Owner', days: 30 });
+
+        const result = await domainService.addDomain({
+          accountId: owner.accountId,
+          domain: 'reclaim.example.com',
+        });
+        expect(result.domain).toBe('reclaim.example.com');
+        const meta = JSON.parse(await redisService.client.get('outbound:domain:meta:reclaim.example.com'));
+        expect(meta.accountId).toBe(owner.accountId);
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('enforces per-account domain quota', async () => {
+      const config = require('../../../config/config');
+      const originalMax = config.outbound.maxDomainsPerAccount;
+      config.outbound.maxDomainsPerAccount = 2;
+
+      try {
+        const { accountId } = await accountService.createAccount({ label: 'Acme', days: 30 });
+        await domainService.addDomain({ accountId, domain: 'd1.example.com' });
+        await domainService.addDomain({ accountId, domain: 'd2.example.com' });
+
+        // Idempotent re-add of existing domain still works
+        await expect(domainService.addDomain({ accountId, domain: 'd1.example.com' })).resolves.toMatchObject({
+          domain: 'd1.example.com',
+        });
+
+        // 3rd distinct domain is rejected with DOMAIN_QUOTA_EXCEEDED
+        await expect(
+          domainService.addDomain({ accountId, domain: 'd3.example.com' })
+        ).rejects.toMatchObject({ code: 'DOMAIN_QUOTA_EXCEEDED' });
+      } finally {
+        config.outbound.maxDomainsPerAccount = originalMax;
+      }
+    });
+
+    it('operator releaseDomain and transferDomain update ownership and indices', async () => {
+      const first = await accountService.createAccount({ label: 'First', days: 30 });
+      const second = await accountService.createAccount({ label: 'Second', days: 30 });
+
+      await domainService.addDomain({ accountId: first.accountId, domain: 'xfer.example.com' });
+      await domainService.transferDomain({ domain: 'xfer.example.com', toAccountId: second.accountId });
+
+      expect(await redisService.client.smembers(`outbound:account:${first.accountId}:domains`)).toEqual([]);
+      expect(await redisService.client.smembers(`outbound:account:${second.accountId}:domains`)).toEqual([
+        'xfer.example.com',
+      ]);
+
+      await domainService.releaseDomain({ domain: 'xfer.example.com' });
+      expect(await redisService.client.get('outbound:domain:meta:xfer.example.com')).toBeNull();
+      expect(await redisService.client.smembers(`outbound:account:${second.accountId}:domains`)).toEqual([]);
+    });
+  });
 });
