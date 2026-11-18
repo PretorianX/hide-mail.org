@@ -150,4 +150,44 @@ describe('SafeEmailViewer', () => {
     const optInWrite = writes[writes.length - 1];
     expect(optInWrite).toContain('https://tracker.example/pixel.gif');
   });
+
+  test('blocks remote content on the very first write when switching emails after opting in', () => {
+    DOMPurify.sanitize.mockImplementation((html) => html);
+    const writes = [];
+    Object.defineProperty(HTMLIFrameElement.prototype, 'contentDocument', {
+      configurable: true,
+      get: function() {
+        return {
+          open: jest.fn(),
+          write: jest.fn((html) => writes.push(html)),
+          close: jest.fn(),
+          body: { scrollHeight: 500, offsetHeight: 500 },
+          documentElement: { clientHeight: 500, scrollHeight: 500, offsetHeight: 500 },
+          getElementsByTagName: jest.fn().mockReturnValue([]),
+        };
+      },
+    });
+
+    const emailA = '<p>Email A</p><img src="https://tracker.example/a-pixel.gif" alt="a" />';
+    const emailB = '<p>Email B</p><img src="https://tracker.example/b-pixel.gif" alt="b" />';
+
+    const { rerender } = render(<SafeEmailViewer htmlContent={emailA} />);
+    expect(writes.length).toBeGreaterThan(0);
+    expect(writes[writes.length - 1]).not.toContain('https://tracker.example/a-pixel.gif');
+
+    // Opt in for Email A
+    fireEvent.click(screen.getByRole('button', { name: /load remote content/i }));
+    expect(writes[writes.length - 1]).toContain('https://tracker.example/a-pixel.gif');
+
+    // Switch to Email B on the same mounted component
+    const writesBeforeSwitch = writes.length;
+    rerender(<SafeEmailViewer htmlContent={emailB} />);
+
+    expect(writes.length).toBeGreaterThan(writesBeforeSwitch);
+    const firstWriteForB = writes[writesBeforeSwitch];
+    expect(firstWriteForB).toContain('Email B');
+    expect(firstWriteForB).not.toContain('https://tracker.example/b-pixel.gif');
+    expect(firstWriteForB).toContain('Content-Security-Policy');
+    expect(screen.getByRole('button', { name: /load remote content/i })).toBeInTheDocument();
+  });
 });

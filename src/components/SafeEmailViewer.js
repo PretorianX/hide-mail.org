@@ -138,13 +138,14 @@ function blockRemoteHtmlContent(html) {
 const SafeEmailViewer = ({ htmlContent, textContent, className }) => {
   // Create a ref for the iframe
   const iframeRef = React.useRef(null);
-  const [allowRemoteContent, setAllowRemoteContent] = React.useState(false);
+  const [remoteOptInHtml, setRemoteOptInHtml] = React.useState(null);
+  const allowRemoteContent = Boolean(htmlContent) && remoteOptInHtml === htmlContent;
   const [hasBlockedRemote, setHasBlockedRemote] = React.useState(false);
 
-  // Reset remote content opt-in whenever a different email is rendered
+  // Reset blocked-content indicator and clear stale opt-in whenever a different email is rendered
   React.useEffect(() => {
-    setAllowRemoteContent(false);
     setHasBlockedRemote(false);
+    setRemoteOptInHtml((prev) => (prev === htmlContent ? prev : null));
   }, [htmlContent]);
   
   // Log content metadata only in development (never log message previews in production)
@@ -306,7 +307,7 @@ const SafeEmailViewer = ({ htmlContent, textContent, className }) => {
       {htmlContent && hasBlockedRemote && !allowRemoteContent && (
         <RemoteBanner role="status">
           <span>Remote images and external styles are blocked to protect your privacy.</span>
-          <RemoteButton type="button" onClick={() => setAllowRemoteContent(true)}>
+          <RemoteButton type="button" onClick={() => setRemoteOptInHtml(htmlContent)}>
             Load remote content
           </RemoteButton>
         </RemoteBanner>
