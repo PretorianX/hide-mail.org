@@ -346,7 +346,7 @@ const redisService = {
       }
 
       if (removed > 0 || existed) {
-        logger.info(`Email deleted: ${sanitizeMessageId(id)}`);
+        logger.info(`Email deleted: ${sanitizeMessageId(String(id).replace(/[\r\n]/g, ''))}`);
         return true;
       }
 

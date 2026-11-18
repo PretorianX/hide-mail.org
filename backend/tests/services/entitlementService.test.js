@@ -252,4 +252,17 @@ describe('entitlementService', () => {
     expect(entitlements.forwardingLimit).toBe(2);
     expect(entitlements.mailboxTtlOptions).toEqual([]);
   });
+
+  it('does not dispatch Object.prototype names as entitlement builders', () => {
+    const free = entitlementService.getEntitlements(null);
+    for (const type of ['__proto__', 'constructor', 'toString', 'valueOf', 'hasOwnProperty']) {
+      const entitlements = entitlementService.getEntitlements({
+        type,
+        status: 'active',
+        expiresAt: Date.now() + 60_000,
+      });
+      expect(entitlements).toEqual(free);
+      expect(entitlements.planType).toBe('free');
+    }
+  });
 });

@@ -90,25 +90,34 @@ const tlsEntitlements = () => ({
   planType: 'tls',
 });
 
-const ENTITLEMENT_BUILDERS = new Map([
-  ['pro', proEntitlements],
-  ['api', apiEntitlements],
-  ['suite', suiteEntitlements],
-  ['outbound', outboundEntitlements],
-  ['grade', gradeEntitlements],
-  ['sender', senderEntitlements],
-  ['reports', reportsEntitlements],
-  ['bounce', bounceEntitlements],
-  ['complaint', complaintEntitlements],
-  ['tls', tlsEntitlements],
-]);
-
 const getEntitlements = (license) => {
   if (!licenseService.isActive(license)) {
     return freeEntitlements();
   }
-  const builder = ENTITLEMENT_BUILDERS.get(planTypeOf(license));
-  return builder ? builder() : freeEntitlements();
+  switch (planTypeOf(license)) {
+    case 'pro':
+      return proEntitlements();
+    case 'api':
+      return apiEntitlements();
+    case 'suite':
+      return suiteEntitlements();
+    case 'outbound':
+      return outboundEntitlements();
+    case 'grade':
+      return gradeEntitlements();
+    case 'sender':
+      return senderEntitlements();
+    case 'reports':
+      return reportsEntitlements();
+    case 'bounce':
+      return bounceEntitlements();
+    case 'complaint':
+      return complaintEntitlements();
+    case 'tls':
+      return tlsEntitlements();
+    default:
+      return freeEntitlements();
+  }
 };
 
 /**
