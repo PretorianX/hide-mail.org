@@ -61,12 +61,18 @@ export const isCookieCategoryAllowed = (category) => {
  */
 export const initializeAdSenseWithConsent = () => {
   if (isCookieCategoryAllowed('advertising')) {
+    if (typeof window.__loadAdSenseIfConsented === 'function') {
+      window.__loadAdSenseIfConsented();
+    }
     // Initialize AdSense
     (window.adsbygoogle = window.adsbygoogle || []).push({});
   } else {
-    // Disable AdSense
-    window.adsbygoogle = window.adsbygoogle || [];
-    window.adsbygoogle.requestNonPersonalizedAds = 1;
+    if (typeof window.__disableAdSense === 'function') {
+      window.__disableAdSense();
+    } else {
+      window.adsbygoogle = window.adsbygoogle || [];
+      window.adsbygoogle.requestNonPersonalizedAds = 1;
+    }
   }
 };
 
@@ -77,9 +83,11 @@ export const initializeAdSenseWithConsent = () => {
  */
 export const initializeAnalyticsWithConsent = () => {
   if (isCookieCategoryAllowed('analytics')) {
-    // Initialize analytics (e.g., Google Analytics)
-    // This is a placeholder for actual analytics initialization
-    console.log('Analytics initialized with consent');
+    if (typeof window.__enableAnalyticsConsent === 'function') {
+      window.__enableAnalyticsConsent();
+    }
+  } else if (typeof window.__disableAnalyticsConsent === 'function') {
+    window.__disableAnalyticsConsent();
   }
 };
 

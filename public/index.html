@@ -19,14 +19,52 @@
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
     <title>Hide Mail</title>
     
-    <!-- Google Analytics - Only included in production -->
+    <!-- Google Analytics - Consent-gated, only included in production -->
     <% if (process.env.NODE_ENV === 'production') { %>
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-46KBN1JF5T"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', 'G-46KBN1JF5T');
+      window['ga-disable-G-46KBN1JF5T'] = true;
+      gtag('consent', 'default', {
+        analytics_storage: 'denied',
+        ad_storage: 'denied',
+        ad_user_data: 'denied',
+        ad_personalization: 'denied'
+      });
+
+      (function() {
+        var GA_ID = 'G-46KBN1JF5T';
+        function hasAnalyticsConsent() {
+          try {
+            if (window.localStorage.getItem('cookieConsentGiven') !== 'true') return false;
+            var prefs = JSON.parse(window.localStorage.getItem('cookiePreferences') || '{}');
+            return prefs && prefs.analytics === true;
+          } catch (e) {
+            return false;
+          }
+        }
+        function loadGtag() {
+          if (document.querySelector('script[src*="googletagmanager.com/gtag/js"]')) return;
+          var s = document.createElement('script');
+          s.async = true;
+          s.src = 'https://www.googletagmanager.com/gtag/js?id=' + GA_ID;
+          document.head.appendChild(s);
+          gtag('js', new Date());
+          gtag('config', GA_ID);
+        }
+        window.__enableAnalyticsConsent = function() {
+          window['ga-disable-' + GA_ID] = false;
+          gtag('consent', 'update', { analytics_storage: 'granted' });
+          loadGtag();
+        };
+        window.__disableAnalyticsConsent = function() {
+          window['ga-disable-' + GA_ID] = true;
+          gtag('consent', 'update', { analytics_storage: 'denied' });
+        };
+        if (hasAnalyticsConsent()) {
+          window.__enableAnalyticsConsent();
+        }
+      })();
     </script>
     <% } %>
     

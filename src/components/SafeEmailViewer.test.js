@@ -1,5 +1,6 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
+import DOMPurify from 'dompurify';
 import SafeEmailViewer from './SafeEmailViewer';
 
 // Mock DOMPurify
@@ -107,5 +108,46 @@ describe('SafeEmailViewer', () => {
       logSpy.mockRestore();
       warnSpy.mockRestore();
     }
+  });
+
+  test('blocks remote images, style tags, and CSS url() by default until user opts in', () => {
+    DOMPurify.sanitize.mockImplementation((html) => html);
+    const writes = [];
+    Object.defineProperty(HTMLIFrameElement.prototype, 'contentDocument', {
+      configurable: true,
+      get: function() {
+        return {
+          open: jest.fn(),
+          write: jest.fn((html) => writes.push(html)),
+          close: jest.fn(),
+          body: { scrollHeight: 500, offsetHeight: 500 },
+          documentElement: { clientHeight: 500, scrollHeight: 500, offsetHeight: 500 },
+          getElementsByTagName: jest.fn().mockReturnValue([]),
+        };
+      },
+    });
+
+    const htmlWithTracker =
+      '<style>@import url("https://tracker.example/a.css");</style>' +
+      '<div style="background: url(https://tracker.example/bg.png)">' +
+      '<img src="https://tracker.example/pixel.gif" alt="pixel" />' +
+      '<img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==" alt="inline" />' +
+      '</div>';
+
+    render(<SafeEmailViewer htmlContent={htmlWithTracker} />);
+
+    expect(writes.length).toBeGreaterThan(0);
+    const initialWrite = writes[writes.length - 1];
+    expect(initialWrite).not.toContain('https://tracker.example/pixel.gif');
+    expect(initialWrite).not.toContain('https://tracker.example/bg.png');
+    expect(initialWrite).not.toContain('https://tracker.example/a.css');
+    expect(initialWrite).toContain('data:image/gif;base64');
+    expect(initialWrite).toContain("Content-Security-Policy");
+
+    const loadButton = screen.getByRole('button', { name: /load remote content/i });
+    fireEvent.click(loadButton);
+
+    const optInWrite = writes[writes.length - 1];
+    expect(optInWrite).toContain('https://tracker.example/pixel.gif');
   });
 });

@@ -34,9 +34,21 @@
     }
   }
 
+  function hasAdvertisingConsent() {
+    try {
+      if (window.localStorage.getItem('cookieConsentGiven') !== 'true') {
+        return false;
+      }
+      var prefs = JSON.parse(window.localStorage.getItem('cookiePreferences') || '{}');
+      return Boolean(prefs && prefs.advertising === true);
+    } catch (error) {
+      return false;
+    }
+  }
+
   // Function to inject the correct AdSense script
   function injectAdSenseScript() {
-    if (hasLicenseKey()) {
+    if (hasLicenseKey() || !hasAdvertisingConsent()) {
       return;
     }
 
@@ -68,6 +80,18 @@
     }
   }
   
+  window.__loadAdSenseIfConsented = injectAdSenseScript;
+  window.__disableAdSense = function() {
+    window.adsbygoogle = window.adsbygoogle || [];
+    window.adsbygoogle.requestNonPersonalizedAds = 1;
+    var existingScripts = document.querySelectorAll('script[src*="adsbygoogle.js"]');
+    existingScripts.forEach(function(script) {
+      if (script.parentNode) {
+        script.parentNode.removeChild(script);
+      }
+    });
+  };
+
   // Check if runtime config is already available
   if (window.__RUNTIME_CONFIG__) {
     injectAdSenseScript();
