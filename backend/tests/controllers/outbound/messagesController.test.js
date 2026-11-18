@@ -21,6 +21,7 @@ const { verifyDomain } = require('../../../services/outbound/domainVerifier');
 const outboundRoutes = require('../../../routes/outbound');
 
 const app = express();
+app.set('trust proxy', ['loopback', 'linklocal', 'uniquelocal']);
 app.use(express.json());
 app.use('/api/outbound', outboundRoutes);
 
