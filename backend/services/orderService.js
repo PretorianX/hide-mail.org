@@ -7,7 +7,8 @@ const ORDER_TTL_SECONDS = 7 * 24 * 60 * 60;
 const HANDOFF_PREFIX = 'order_handoff:';
 const HANDOFF_TTL_SECONDS = 5 * 60;
 const CALLBACK_EVENT_PREFIX = 'billing:wfp:event:';
-const CALLBACK_EVENT_TTL_SECONDS = 90 * 24 * 60 * 60;
+const CALLBACK_EVENT_TTL_SECONDS = 400 * 24 * 60 * 60;
+const CALLBACK_DATE_PREFIX = 'billing:wfp:callback_date:';
 const CALLBACK_LOCK_PREFIX = 'billing:lock:';
 
 const persist = async (order) => {
@@ -73,15 +74,39 @@ const markOrderPaid = async (orderId, licenseKey, extra = {}) => {
  * checkout never stored or that has since expired, and inventing one would leave a pending order
  * behind for the metrics collector to count.
  */
-const markCallbackApplied = async (orderId, processingDate) => {
-  const order = await getOrder(orderId);
-  if (!order) {
+const getCallbackAppliedDate = async (orderId) => {
+  if (!orderId) {
     return null;
   }
+  const raw = await redisService.client.get(`${CALLBACK_DATE_PREFIX}${orderId}`);
+  if (raw === null || raw === undefined) {
+    return null;
+  }
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) ? parsed : null;
+};
 
-  const applied = order.lastCallbackProcessingDate;
+const markCallbackApplied = async (orderId, processingDate) => {
+  const persistedDate = await getCallbackAppliedDate(orderId);
+  const order = await getOrder(orderId);
+  const applied =
+    typeof order?.lastCallbackProcessingDate === 'number'
+      ? Math.max(order.lastCallbackProcessingDate, persistedDate ?? -Infinity)
+      : persistedDate;
+
   if (typeof applied === 'number' && processingDate <= applied) {
     return order;
+  }
+
+  await redisService.client.set(
+    `${CALLBACK_DATE_PREFIX}${orderId}`,
+    String(processingDate),
+    'EX',
+    CALLBACK_EVENT_TTL_SECONDS
+  );
+
+  if (!order) {
+    return null;
   }
 
   order.lastCallbackProcessingDate = processingDate;
@@ -192,10 +217,12 @@ const releaseCallbackLock = async (lock) => {
 };
 
 module.exports = {
+  CALLBACK_EVENT_TTL_SECONDS,
   createOrder,
   getOrder,
   markOrderPaid,
   markCallbackApplied,
+  getCallbackAppliedDate,
   createHandoffToken,
   resolveHandoffToken,
   consumeHandoffToken,

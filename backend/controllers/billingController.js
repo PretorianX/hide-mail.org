@@ -7,6 +7,8 @@ const { v4: uuidv4 } = require('uuid');
 const config = require('../config/config');
 const logger = require('../utils/logger');
 const { sanitizeForLog } = require('../utils/sanitize');
+
+const sanitizeLogValue = (v) => String(v ?? '').replace(/[\r\n]/g, '');
 const wayforpayService = require('../services/wayforpayService');
 const licenseService = require('../services/licenseService');
 const orderService = require('../services/orderService');
@@ -156,7 +158,7 @@ const validateRenewalPayment = async ({ existing, orderReference, recToken, amou
   const expectedCurrency = existing.currency || config.billing.currency;
   if (currency !== expectedCurrency) {
     metrics.billingWebhookEventsTotal.inc({ result: 'amount_mismatch' });
-    logger.warn(`WayForPay renewal currency mismatch order=${sanitizeForLog(orderReference)}`);
+    logger.warn(`WayForPay renewal currency mismatch order=${sanitizeLogValue(orderReference)}`);
     return false;
   }
 
@@ -167,7 +169,7 @@ const validateRenewalPayment = async ({ existing, orderReference, recToken, amou
   }
   if (expectedAmount !== undefined && expectedAmount !== null && Number(amount) !== Number(expectedAmount)) {
     metrics.billingWebhookEventsTotal.inc({ result: 'amount_mismatch' });
-    logger.warn(`WayForPay renewal amount mismatch order=${sanitizeForLog(orderReference)}`);
+    logger.warn(`WayForPay renewal amount mismatch order=${sanitizeLogValue(orderReference)}`);
     return false;
   }
 
@@ -187,7 +189,7 @@ const validateRenewalPayment = async ({ existing, orderReference, recToken, amou
       recTokenOk;
     if (!statusOk) {
       metrics.billingWebhookEventsTotal.inc({ result: 'verification_failed' });
-      logger.warn(`WayForPay recurring verification failed order=${sanitizeForLog(orderReference)}`);
+      logger.warn(`WayForPay recurring verification failed order=${sanitizeLogValue(orderReference)}`);
       return false;
     }
   }
@@ -224,12 +226,12 @@ const activateLicense = async ({ orderReference, recToken, amount, currency }) =
   const order = await orderService.getOrder(orderReference);
   if (!order) {
     metrics.billingWebhookEventsTotal.inc({ result: 'unknown_order' });
-    logger.warn(`WayForPay webhook for unknown order=${sanitizeForLog(orderReference)}`);
+    logger.warn(`WayForPay webhook for unknown order=${sanitizeLogValue(orderReference)}`);
     return;
   }
   if (Number(amount) !== Number(order.amount) || currency !== order.currency) {
     metrics.billingWebhookEventsTotal.inc({ result: 'amount_mismatch' });
-    logger.warn(`WayForPay webhook amount mismatch order=${sanitizeForLog(orderReference)}`);
+    logger.warn(`WayForPay webhook amount mismatch order=${sanitizeLogValue(orderReference)}`);
     return;
   }
 
@@ -269,7 +271,10 @@ const activateLicense = async ({ orderReference, recToken, amount, currency }) =
  */
 const isSupersededCallback = async (orderReference, processingDate) => {
   const order = await orderService.getOrder(orderReference);
-  const applied = order?.lastCallbackProcessingDate;
+  const applied =
+    typeof order?.lastCallbackProcessingDate === 'number'
+      ? order.lastCallbackProcessingDate
+      : await orderService.getCallbackAppliedDate?.(orderReference);
   if (typeof applied !== 'number') {
     return false;
   }
@@ -295,7 +300,7 @@ const webhook = async (req, res, next) => {
 
     if (!config.wayforpay.merchantAccount || callback.merchantAccount !== config.wayforpay.merchantAccount) {
       metrics.billingWebhookEventsTotal.inc({ result: 'merchant_mismatch' });
-      logger.warn(`WayForPay webhook merchant mismatch order=${sanitizeForLog(callback.orderReference)}`);
+      logger.warn(`WayForPay webhook merchant mismatch order=${sanitizeLogValue(callback.orderReference)}`);
       return res.status(400).json({ error: 'Invalid merchantAccount' });
     }
 
@@ -313,7 +318,7 @@ const webhook = async (req, res, next) => {
     } catch (error) {
       metrics.billingWebhookEventsTotal.inc({ result: 'unsupported_status' });
       logger.warn(
-        `WayForPay webhook unsupported status=${sanitizeForLog(callback.transactionStatus)}`
+        `WayForPay webhook unsupported status=${sanitizeLogValue(callback.transactionStatus)}`
       );
       return res.status(400).json({ error: 'Unsupported transactionStatus' });
     }
@@ -330,7 +335,7 @@ const webhook = async (req, res, next) => {
       claimed = await orderService.claimCallbackEvent(fingerprint);
       if (!claimed || (await isSupersededCallback(orderReference, callback.processingDate))) {
         metrics.billingWebhookEventsTotal.inc({ result: 'superseded' });
-        logger.warn(`WayForPay webhook superseded order=${sanitizeForLog(orderReference)}`);
+        logger.warn(`WayForPay webhook superseded order=${sanitizeLogValue(orderReference)}`);
         return res.status(200).json(
           wayforpayService.acknowledgeWebhook(
             orderReference,

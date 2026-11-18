@@ -131,6 +131,51 @@ describe('orderService', () => {
       expect(await orderService.claimCallbackEvent(fp)).toBe(true);
     });
 
+    it('retains yearly replay protection beyond 90 days (400-day event and callback date TTLs)', async () => {
+      const fourHundredDays = 400 * 24 * 60 * 60;
+      expect(orderService.CALLBACK_EVENT_TTL_SECONDS).toBe(fourHundredDays);
+      expect(orderService.CALLBACK_EVENT_TTL_SECONDS).toBeGreaterThan(366 * 24 * 60 * 60);
+
+      const setSpy = jest.spyOn(redisService.client, 'set');
+      try {
+        const fp = orderService.callbackEventFingerprint({
+          merchantSignature: 'YEARLY-SIG',
+          orderReference: 'pro-yearly-replay-1',
+          transactionStatus: 'Approved',
+        });
+        expect(await orderService.claimCallbackEvent(fp)).toBe(true);
+        expect(setSpy).toHaveBeenCalledWith(
+          `billing:wfp:event:${fp}`,
+          '1',
+          'EX',
+          fourHundredDays,
+          'NX'
+        );
+
+        await orderService.createOrder({
+          id: 'pro-yearly-replay-1',
+          plan: 'yearly',
+          type: 'pro',
+          amount: 1079,
+          currency: 'UAH',
+        });
+        await orderService.markCallbackApplied('pro-yearly-replay-1', 1786994135);
+        expect(setSpy).toHaveBeenCalledWith(
+          'billing:wfp:callback_date:pro-yearly-replay-1',
+          '1786994135',
+          'EX',
+          fourHundredDays
+        );
+
+        // Simulate 7-day order document expiration; callback processing date remains for 400 days
+        await redisService.client.del('order:pro-yearly-replay-1');
+        expect(await orderService.getOrder('pro-yearly-replay-1')).toBeNull();
+        expect(await orderService.getCallbackAppliedDate('pro-yearly-replay-1')).toBe(1786994135);
+      } finally {
+        setSpy.mockRestore();
+      }
+    });
+
     it('serializes concurrent lock acquisitions on the same orderReference', async () => {
       const order = [];
       const worker = async (id) => {
