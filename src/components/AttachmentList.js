@@ -38,6 +38,10 @@ const AttachmentList = ({ attachments, mailbox, messageId }) => {
               data-testid={`attachment-download-${attachment.index}`}
               href={EmailService.attachmentUrl(mailbox, messageId, attachment.index)}
               download={attachment.filename}
+              onClick={(event) => {
+                event.preventDefault();
+                EmailService.downloadAttachment(mailbox, messageId, attachment.index, attachment.filename);
+              }}
             >
               Download
             </a>

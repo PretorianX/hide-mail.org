@@ -204,6 +204,12 @@ const redisService = {
         // Also refresh known mailbox TTL with grace period
         const knownExpiration = expirationSeconds + getMailboxCleanupGraceSeconds();
         await redis.expire(knownKey, knownExpiration);
+
+        // Refresh mailbox metadata (including capability token hash) TTL
+        const metaKey = `mailbox_meta:${String(email).toLowerCase()}`;
+        if (await redis.exists(metaKey)) {
+          await redis.expire(metaKey, expirationSeconds);
+        }
         
         logger.info(`Mailbox refreshed: ${sanitizeEmail(email)}`);
         return true;
@@ -386,8 +392,10 @@ const redisService = {
       const exists = await redis.exists(key);
       
       if (exists) {
-        // Delete the key to deactivate
+        // Delete the key to deactivate and invalidate mailbox metadata/capability
+        const metaKey = `mailbox_meta:${String(email).toLowerCase()}`;
         await redis.del(key);
+        await redis.del(metaKey);
         logger.info(`Mailbox deactivated: ${sanitizeEmail(email)}`);
       } else {
         logger.warn(`Attempted to deactivate non-existent mailbox: ${sanitizeEmail(email)}`);
