@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import ComplaintService from '../services/ComplaintService';
 import ComplaintOffer from './ComplaintOffer';
+import { encodeCsv } from '../utils/csv';
 import './Complaints.css';
 
 /**
@@ -135,10 +136,6 @@ const Complaints = () => {
       messageId: report.originalMessage?.messageId || null,
       arrivalDate: report.arrivalDate || report.receivedDate || null,
     };
-    const escapeCsv = (val) => {
-      const str = val == null ? '' : String(val);
-      return /[",\n\r]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
-    };
     const headers = ['email', 'action', 'reason', 'domain', 'source_ip', 'message_id', 'arrival_date'];
     const row = [
       rec.email,
@@ -148,8 +145,8 @@ const Complaints = () => {
       rec.sourceIp,
       rec.messageId,
       rec.arrivalDate,
-    ].map(escapeCsv);
-    const csv = `${headers.join(',')}\n${row.join(',')}\n`;
+    ];
+    const csv = `${encodeCsv(headers, [row])}\n`;
     if (typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function') {
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);

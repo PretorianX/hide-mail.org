@@ -54,6 +54,24 @@ describe('outbound suppressionService', () => {
     expect(csv).toBe(`email,reason,added_at\nto@example.org,hard_bounce,${list[0].addedAt}`);
   });
 
+  it('CSV export escapes RFC 4180 delimiters and neutralizes formula prefixes', async () => {
+    await suppressionService.addSuppression({
+      accountId: 'a1',
+      email: '=cmd|"/C calc"!A0',
+      reason: 'hard_bounce, "550"\nnext',
+    });
+    await suppressionService.addSuppression({
+      accountId: 'a1',
+      email: '@SUM(1+1)',
+      reason: '=2+5',
+    });
+    const csv = await suppressionService.exportSuppressionsCsv({ accountId: 'a1' });
+    const lines = csv.split('\n');
+    expect(lines[0]).toBe('email,reason,added_at');
+    expect(csv).toContain(`"'=cmd|""/c calc""!a0","hard_bounce, ""550""\nnext",`);
+    expect(csv).toContain(`'@sum(1+1),'=2+5,`);
+  });
+
   it('scopes suppression per account', async () => {
     await suppressionService.addSuppression({
       accountId: 'a1',

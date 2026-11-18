@@ -243,4 +243,43 @@ describe('DMARC Reports page', () => {
       archiveBase64: expect.any(String),
     }));
   });
+
+  test('neutralizes formula injection in exported DMARC CSV', async () => {
+    const writeText = jest.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, { clipboard: { writeText } });
+
+    ReportsService.read.mockResolvedValue({
+      ...mixedReport,
+      sources: [
+        {
+          sourceIp: '198.51.100.4',
+          provider: '=cmd|"/C calc"!A0',
+          ptrHost: '@SUM(1+1)',
+          count: 2,
+          sharePercent: 20,
+          disposition: 'quarantine',
+          aligned: false,
+          dkim: 'fail',
+          spf: 'fail',
+          headerFrom: '=2+5',
+          envelopeFrom: '+evil,domain',
+        },
+      ],
+    });
+    renderReports();
+
+    fireEvent.change(screen.getByLabelText('Aggregate report'), {
+      target: { value: '<feedback><report_metadata/></feedback>' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Read this report' }));
+    await screen.findByTestId('reports-result');
+
+    fireEvent.click(screen.getByTestId('reports-export-csv'));
+
+    const exported = writeText.mock.calls[0][0];
+    expect(exported).toContain(`"'=cmd|""/C calc""!A0"`);
+    expect(exported).toContain(`'@SUM(1+1)`);
+    expect(exported).toContain(`'=2+5`);
+    expect(exported).toContain(`"'+evil,domain"`);
+  });
 });

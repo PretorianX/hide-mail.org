@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import ReportsService from '../services/ReportsService';
 import ReportsOffer from './ReportsOffer';
+import { encodeCsv } from '../utils/csv';
 import './Reports.css';
 
 const MAX_UPLOAD_BYTES = 262144;
@@ -76,17 +77,20 @@ const SAMPLE_DMARC_XML = [
   '</feedback>',
 ].join('\n');
 
-const escapeCsvField = (value) => {
-  if (value === null || value === undefined) return '';
-  const text = String(value);
-  if (/[",\r\n]/.test(text)) {
-    return `"${text.replace(/"/g, '""')}"`;
-  }
-  return text;
-};
-
 export const buildSourcesCsv = (report) => {
-  const header = 'source_ip,provider,ptr_host,count,share_percent,disposition,aligned,dkim,spf,header_from,envelope_from';
+  const headers = [
+    'source_ip',
+    'provider',
+    'ptr_host',
+    'count',
+    'share_percent',
+    'disposition',
+    'aligned',
+    'dkim',
+    'spf',
+    'header_from',
+    'envelope_from',
+  ];
   const rows = (report?.sources || []).map((source) => [
     source.sourceIp || '',
     source.provider || '',
@@ -99,8 +103,8 @@ export const buildSourcesCsv = (report) => {
     source.spf || '',
     source.headerFrom || '',
     source.envelopeFrom || '',
-  ].map(escapeCsvField).join(','));
-  return [header, ...rows].join('\n');
+  ]);
+  return encodeCsv(headers, rows);
 };
 
 const readFileAsText = (file) => new Promise((resolve, reject) => {
