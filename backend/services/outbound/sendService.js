@@ -120,6 +120,68 @@ const buildDkimOption = (meta) => {
   };
 };
 
+const computeRequestHash = (payload) =>
+  crypto
+    .createHash('sha256')
+    .update(
+      JSON.stringify({
+        from: payload.from ?? null,
+        to: payload.to ?? null,
+        subject: payload.subject ?? null,
+        text: payload.text ?? null,
+        html: payload.html ?? null,
+        replyTo: payload.replyTo ?? null,
+        attachments: payload.attachments ?? null,
+        reference: payload.reference ?? null,
+      })
+    )
+    .digest('hex');
+
+const handleExistingReplay = async ({
+  deps,
+  accountId,
+  idempotencyKey,
+  requestHash,
+  existing,
+}) => {
+  if (!existing) {
+    throw new SendError(
+      'IDEMPOTENCY_IN_FLIGHT',
+      'A request with this Idempotency-Key is already in progress'
+    );
+  }
+  if (existing.requestHash && existing.requestHash !== requestHash) {
+    throw new SendError(
+      'IDEMPOTENCY_CONFLICT',
+      'Idempotency-Key was already used with a different request payload'
+    );
+  }
+  if (existing.state === 'pending') {
+    // Reconcile if relay + createMessage succeeded before storeReplay failed.
+    if (existing.messageId && typeof deps.messageStore.getMessage === 'function') {
+      const persisted = await deps.messageStore.getMessage(existing.messageId);
+      if (persisted) {
+        const reconciledBody = { id: existing.messageId, status: 'queued' };
+        await deps.messageStore
+          .storeReplay({
+            accountId,
+            idempotencyKey,
+            statusCode: 202,
+            body: reconciledBody,
+            requestHash,
+          })
+          .catch(() => {});
+        return reconciledBody;
+      }
+    }
+    throw new SendError(
+      'IDEMPOTENCY_IN_FLIGHT',
+      'A request with this Idempotency-Key is already in progress'
+    );
+  }
+  return existing.body;
+};
+
 const sendMessage = async (payload, overrides = {}) => {
   const deps = resolveDeps(overrides);
   const {
@@ -137,168 +199,198 @@ const sendMessage = async (payload, overrides = {}) => {
     sendKeyName = null,
   } = payload;
 
-  if (idempotencyKey) {
-    const replay = await deps.messageStore.getReplay({ accountId, idempotencyKey });
-    if (replay) {
-      return replay.body;
-    }
-  }
-
-  const domainHint = extractDomain(from?.email) || '_unknown';
-
-  const rate = await deps.accountRateLimiter.checkAndIncrement(accountId);
-  if (!rate.allowed) {
-    await rejectAndThrow(
-      deps.metricsStore,
-      domainHint,
-      new SendError('RATE_LIMITED', 'Account send rate limit exceeded', {
-        retryAfterSeconds: rate.retryAfterSeconds,
-        limit: rate.limit,
-      })
-    );
-  }
-
-  const domain = extractDomain(from?.email);
-  if (!domain) {
-    await rejectAndThrow(
-      deps.metricsStore,
-      '_unknown',
-      new SendError('DOMAIN_NOT_VERIFIED', 'From address domain is missing or invalid')
-    );
-  }
-
-  const meta = await deps.domainService.getDomainMeta(domain);
-  if (!meta || meta.accountId !== accountId || meta.state !== 'verified') {
-    await rejectAndThrow(
-      deps.metricsStore,
-      domain,
-      new SendError('DOMAIN_NOT_VERIFIED', `Domain ${domain} is not verified for sending`)
-    );
-  }
-  if (meta.suspended) {
-    await rejectAndThrow(
-      deps.metricsStore,
-      domain,
-      new SendError('DOMAIN_SUSPENDED', `Domain ${domain} is suspended`)
-    );
-  }
-
-  if (!isValidRecipient(to)) {
-    await rejectAndThrow(
-      deps.metricsStore,
-      domain,
-      new SendError('INVALID_RECIPIENT', 'Recipient address is invalid')
-    );
-  }
-
-  if (await deps.suppressionService.isSuppressed({ accountId, email: to })) {
-    await rejectAndThrow(
-      deps.metricsStore,
-      domain,
-      new SendError('RECIPIENT_SUPPRESSED', 'Recipient is on the suppression list')
-    );
-  }
-
-  const cap = await deps.capService.checkAndIncrement(domain);
-  if (!cap.allowed) {
-    await rejectAndThrow(
-      deps.metricsStore,
-      domain,
-      new SendError('DAILY_LIMIT_REACHED', 'Daily send limit reached', {
-        resetAt: cap.resetAt,
-        remaining: 0,
-      })
-    );
-  }
-
-  const sizeBytes = estimateMessageBytes({ text, html, attachments });
-  if (sizeBytes > config.outbound.maxMessageBytes) {
-    await deps.capService.releaseIncrement(domain);
-    throw new SendError('MESSAGE_TOO_LARGE', 'Message exceeds OUTBOUND_MAX_MESSAGE_BYTES');
-  }
-
   const messageId = crypto.randomUUID();
-  const envelopeFrom = `b-${messageId}@hm-bounce.${domain}`;
-
-  let dkim;
-  try {
-    dkim = buildDkimOption({ ...meta, domain });
-  } catch (error) {
-    await deps.capService.releaseIncrement(domain);
-    if (error instanceof SendError) {
-      throw error;
-    }
-    throw new SendError('DOMAIN_NOT_VERIFIED', 'Domain signing key could not be loaded', {
-      cause: error,
-    });
-  }
-
-  try {
-    await deps.mimeTransport.sendMail({
-      from: {
-        name: from?.name || undefined,
-        address: from.email,
-      },
-      to,
-      subject: subject || '',
-      text: text || undefined,
-      html: html || undefined,
-      replyTo: replyTo || undefined,
-      attachments: (attachments || []).map((a) => ({
-        filename: a.filename,
-        contentType: a.contentType,
-        content: a.content ? Buffer.from(a.content, 'base64') : undefined,
-      })),
-      envelope: {
-        from: envelopeFrom,
-        to: [to],
-      },
-      dkim,
-    });
-  } catch (error) {
-    await deps.capService.releaseIncrement(domain);
-    throw new SendError('RELAY_UNAVAILABLE', 'Postfix refused or could not accept the message', {
-      cause: error,
-    });
-  }
-
-  await deps.messageStore.createMessage({
-    id: messageId,
-    accountId,
-    domain,
-    recipient: to,
-    reference: reference ?? null,
-    subject: subject || null,
-    from: from?.email
-      ? { name: from.name || null, email: from.email }
-      : null,
-    envelopeFrom,
-    clientIp: clientIp || null,
-    sendKeyName: sendKeyName || null,
-  });
-
-  await deps.metricsStore.incrAccepted(domain);
-  // No ZoneMTA delivery hooks: Postfix accept is the terminal "delivered" signal.
-  // Late DSN bounces still supersede via bounceMailback → eventConsumer.
-  await deps.messageStore.updateStatus({
-    id: messageId,
-    status: 'delivered',
-    response: 'accepted by postfix',
-  });
-  await deps.metricsStore.incrDelivered(domain, messageId);
-
-  const body = { id: messageId, status: 'queued' };
+  let requestHash;
 
   if (idempotencyKey) {
-    await deps.messageStore.storeReplay({
+    requestHash = computeRequestHash(payload);
+    const reservation = await deps.messageStore.reserveReplay({
       accountId,
       idempotencyKey,
-      statusCode: 202,
-      body,
+      requestHash,
+      messageId,
     });
+    if (!reservation.reserved) {
+      return handleExistingReplay({
+        deps,
+        accountId,
+        idempotencyKey,
+        requestHash,
+        existing: reservation.existing,
+      });
+    }
   }
 
-  return body;
+  let relayAccepted = false;
+  try {
+    const domainHint = extractDomain(from?.email) || '_unknown';
+
+    const rate = await deps.accountRateLimiter.checkAndIncrement(accountId);
+    if (!rate.allowed) {
+      await rejectAndThrow(
+        deps.metricsStore,
+        domainHint,
+        new SendError('RATE_LIMITED', 'Account send rate limit exceeded', {
+          retryAfterSeconds: rate.retryAfterSeconds,
+          limit: rate.limit,
+        })
+      );
+    }
+
+    const domain = extractDomain(from?.email);
+    if (!domain) {
+      await rejectAndThrow(
+        deps.metricsStore,
+        '_unknown',
+        new SendError('DOMAIN_NOT_VERIFIED', 'From address domain is missing or invalid')
+      );
+    }
+
+    const meta = await deps.domainService.getDomainMeta(domain);
+    if (!meta || meta.accountId !== accountId || meta.state !== 'verified') {
+      await rejectAndThrow(
+        deps.metricsStore,
+        domain,
+        new SendError('DOMAIN_NOT_VERIFIED', `Domain ${domain} is not verified for sending`)
+      );
+    }
+    if (meta.suspended) {
+      await rejectAndThrow(
+        deps.metricsStore,
+        domain,
+        new SendError('DOMAIN_SUSPENDED', `Domain ${domain} is suspended`)
+      );
+    }
+
+    if (!isValidRecipient(to)) {
+      await rejectAndThrow(
+        deps.metricsStore,
+        domain,
+        new SendError('INVALID_RECIPIENT', 'Recipient address is invalid')
+      );
+    }
+
+    if (await deps.suppressionService.isSuppressed({ accountId, email: to })) {
+      await rejectAndThrow(
+        deps.metricsStore,
+        domain,
+        new SendError('RECIPIENT_SUPPRESSED', 'Recipient is on the suppression list')
+      );
+    }
+
+    const cap = await deps.capService.checkAndIncrement(domain);
+    if (!cap.allowed) {
+      await rejectAndThrow(
+        deps.metricsStore,
+        domain,
+        new SendError('DAILY_LIMIT_REACHED', 'Daily send limit reached', {
+          resetAt: cap.resetAt,
+          remaining: 0,
+        })
+      );
+    }
+
+    const sizeBytes = estimateMessageBytes({ text, html, attachments });
+    if (sizeBytes > config.outbound.maxMessageBytes) {
+      await deps.capService.releaseIncrement(domain);
+      throw new SendError('MESSAGE_TOO_LARGE', 'Message exceeds OUTBOUND_MAX_MESSAGE_BYTES');
+    }
+
+    const envelopeFrom = `b-${messageId}@hm-bounce.${domain}`;
+
+    let dkim;
+    try {
+      dkim = buildDkimOption({ ...meta, domain });
+    } catch (error) {
+      await deps.capService.releaseIncrement(domain);
+      if (error instanceof SendError) {
+        throw error;
+      }
+      throw new SendError('DOMAIN_NOT_VERIFIED', 'Domain signing key could not be loaded', {
+        cause: error,
+      });
+    }
+
+    try {
+      await deps.mimeTransport.sendMail({
+        from: {
+          name: from?.name || undefined,
+          address: from.email,
+        },
+        to,
+        subject: subject || '',
+        text: text || undefined,
+        html: html || undefined,
+        replyTo: replyTo || undefined,
+        attachments: (attachments || []).map((a) => ({
+          filename: a.filename,
+          contentType: a.contentType,
+          content: a.content ? Buffer.from(a.content, 'base64') : undefined,
+        })),
+        envelope: {
+          from: envelopeFrom,
+          to: [to],
+        },
+        dkim,
+      });
+    } catch (error) {
+      await deps.capService.releaseIncrement(domain);
+      throw new SendError('RELAY_UNAVAILABLE', 'Postfix refused or could not accept the message', {
+        cause: error,
+      });
+    }
+
+    relayAccepted = true;
+
+    await deps.messageStore.createMessage({
+      id: messageId,
+      accountId,
+      domain,
+      recipient: to,
+      reference: reference ?? null,
+      subject: subject || null,
+      from: from?.email
+        ? { name: from.name || null, email: from.email }
+        : null,
+      envelopeFrom,
+      clientIp: clientIp || null,
+      sendKeyName: sendKeyName || null,
+    });
+
+    await deps.metricsStore.incrAccepted(domain);
+    // No ZoneMTA delivery hooks: Postfix accept is the terminal "delivered" signal.
+    // Late DSN bounces still supersede via bounceMailback → eventConsumer.
+    await deps.messageStore.updateStatus({
+      id: messageId,
+      status: 'delivered',
+      response: 'accepted by postfix',
+    });
+    await deps.metricsStore.incrDelivered(domain, messageId);
+
+    const body = { id: messageId, status: 'queued' };
+
+    if (idempotencyKey) {
+      await deps.messageStore.storeReplay({
+        accountId,
+        idempotencyKey,
+        statusCode: 202,
+        body,
+        requestHash,
+      });
+    }
+
+    return body;
+  } catch (error) {
+    // Only release the idempotency reservation if the relay did NOT accept the message.
+    // If relayAccepted is true and Redis failed afterwards, keeping the pending record
+    // prevents a client retry from sending a duplicate message.
+    if (idempotencyKey && !relayAccepted && typeof deps.messageStore.releaseReplay === 'function') {
+      await deps.messageStore
+        .releaseReplay({ accountId, idempotencyKey, messageId })
+        .catch(() => {});
+    }
+    throw error;
+  }
 };
 
 const getMessageForAccount = async ({ accountId, id }, overrides = {}) => {

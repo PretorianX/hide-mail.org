@@ -96,12 +96,46 @@ const getReplay = async ({ accountId, idempotencyKey: key }) => {
   return raw ? JSON.parse(raw) : null;
 };
 
-const storeReplay = async ({ accountId, idempotencyKey: key, statusCode, body }) => {
+/**
+ * Atomically reserve an idempotency key with SET ... EX ... NX before any side effects.
+ * Returns { reserved: true } on first claim, or { reserved: false, existing } if already claimed.
+ */
+const reserveReplay = async ({ accountId, idempotencyKey: key, requestHash, messageId }) => {
   const ttlSeconds = Math.max(1, Math.ceil(config.outbound.idempotencyTtlSeconds));
+  const redisKey = idempotencyKey(accountId, key);
+  const payload = JSON.stringify({
+    state: 'pending',
+    requestHash,
+    messageId,
+    createdAt: Date.now(),
+  });
+
+  const result = await redisService.client.set(redisKey, payload, 'EX', ttlSeconds, 'NX');
+  if (result === 'OK') {
+    return { reserved: true };
+  }
+
+  const existing = await getReplay({ accountId, idempotencyKey: key });
+  return { reserved: false, existing };
+};
+
+const releaseReplay = async ({ accountId, idempotencyKey: key, messageId }) => {
+  const existing = await getReplay({ accountId, idempotencyKey: key });
+  if (existing && existing.state === 'pending' && existing.messageId === messageId) {
+    await redisService.client.del(idempotencyKey(accountId, key));
+  }
+};
+
+const storeReplay = async ({ accountId, idempotencyKey: key, statusCode, body, requestHash }) => {
+  const ttlSeconds = Math.max(1, Math.ceil(config.outbound.idempotencyTtlSeconds));
+  const record =
+    requestHash !== undefined
+      ? { state: 'completed', requestHash, statusCode, body }
+      : { statusCode, body };
   await redisService.client.setex(
     idempotencyKey(accountId, key),
     ttlSeconds,
-    JSON.stringify({ statusCode, body })
+    JSON.stringify(record)
   );
 };
 
@@ -111,6 +145,8 @@ module.exports = {
   updateStatus,
   listRecentMessages,
   getReplay,
+  reserveReplay,
+  releaseReplay,
   storeReplay,
   accountMessagesKey,
 };

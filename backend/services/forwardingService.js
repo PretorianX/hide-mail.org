@@ -111,10 +111,14 @@ const requestOTP = async (tempMailbox, destinationEmail) => {
     throw new Error('Invalid email address format');
   }
 
-  // SECURITY: Prevent forwarding to the same service domains (anti-spam relay)
-  const destinationDomain = destinationEmail.split('@')[1].toLowerCase();
-  const serviceDomains = config.validDomains.map(d => d.toLowerCase());
-  if (serviceDomains.includes(destinationDomain)) {
+  // SECURITY: Prevent forwarding to the same service domains (valid + premium) to stop relay loops
+  const destinationDomain = destinationEmail.split('@')[1].trim().toLowerCase();
+  const serviceDomains = new Set(
+    [...(config.validDomains || []), ...(config.premiumDomains || [])]
+      .map((d) => String(d || '').trim().toLowerCase())
+      .filter(Boolean)
+  );
+  if (serviceDomains.has(destinationDomain)) {
     logger.warn(`Forwarding Service: Blocked forwarding to service domain: ${destinationDomain}`);
     throw new Error('Cannot forward to temporary email addresses. Please use a permanent email address.');
   }
@@ -191,6 +195,13 @@ const forwardingLimitForMailbox = async (tempMailbox) => {
   return entitlementService.getEntitlements(license).forwardingLimit;
 };
 
+const ROLLBACK_ERROR_CODES = new Set([
+  'SMTP_NOT_CONFIGURED',
+  'SMTP_CONNECTION_FAILED',
+  'SMTP_AUTH_FAILED',
+  'SMTP_TEMPORARY_FAILURE',
+]);
+
 /**
  * Forward a specific email to the validated destination
  * @param {string} tempMailbox - Temporary mailbox
@@ -206,24 +217,29 @@ const forwardEmail = async (tempMailbox, messageId) => {
     throw error;
   }
 
-  const forwardingLimit = await forwardingLimitForMailbox(tempMailbox);
-  await rateLimiter.enforceRateLimit(tempMailbox, forwardingLimit);
-
-  // Get the email from Redis
+  // Get the email from Redis before consuming a forwarding slot
   const email = await redisService.getEmailById(tempMailbox, messageId);
   if (!email) {
     throw new Error('Email not found');
   }
 
+  const forwardingLimit = await forwardingLimitForMailbox(tempMailbox);
+  await rateLimiter.reserveForwardSlot(tempMailbox, forwardingLimit);
+
   // Apply SRS rewriting
   let srsFrom;
-  if (srsService.isConfigured()) {
-    const rewritten = srsService.rewriteForForwarding(email);
-    srsFrom = rewritten.srsFrom;
-  } else {
-    // Fallback: use SMTP_FROM_EMAIL if SRS not configured
-    srsFrom = config.smtp.fromEmail;
-    logger.warn('Forwarding Service: SRS not configured, using SMTP_FROM_EMAIL');
+  try {
+    if (srsService.isConfigured()) {
+      const rewritten = srsService.rewriteForForwarding(email);
+      srsFrom = rewritten.srsFrom;
+    } else {
+      // Fallback: use SMTP_FROM_EMAIL if SRS not configured
+      srsFrom = config.smtp.fromEmail;
+      logger.warn('Forwarding Service: SRS not configured, using SMTP_FROM_EMAIL');
+    }
+  } catch (error) {
+    await rateLimiter.releaseForwardSlot(tempMailbox).catch(() => {});
+    throw error;
   }
 
   // Forward the email
@@ -235,9 +251,6 @@ const forwardEmail = async (tempMailbox, messageId) => {
       tempMailbox,
     });
 
-    // Increment rate limit counter ONLY after successful forward
-    await rateLimiter.incrementForwardCount(tempMailbox);
-
     metrics.forwardingEmailsTotal.inc({ result: 'success' });
     logger.info(`Forwarding Service: Email ${sanitizeMessageId(messageId)} forwarded to ${sanitizeEmail(destination.destinationEmail)}`);
 
@@ -248,11 +261,16 @@ const forwardEmail = async (tempMailbox, messageId) => {
       destinationEmail: destination.destinationEmail,
     };
   } catch (error) {
+    const errorCode = getSmtpErrorCode(error);
+    if (ROLLBACK_ERROR_CODES.has(errorCode)) {
+      await rateLimiter.releaseForwardSlot(tempMailbox).catch(() => {});
+    }
+
     metrics.forwardingEmailsTotal.inc({ result: 'failed' });
     logger.error('Forwarding Service: Failed to forward email', error);
     
     const forwardError = new Error(getSmtpErrorMessage(error));
-    forwardError.code = getSmtpErrorCode(error);
+    forwardError.code = errorCode;
     forwardError.originalError = error.message;
     throw forwardError;
   }
