@@ -74,13 +74,17 @@ const isAccountLicenseActive = async (accountId) => {
   return Boolean(license && licenseService.isActive(license));
 };
 
+const isPendingExpired = (existing) =>
+  Boolean(
+    existing &&
+      existing.state === 'pending' &&
+      typeof existing.createdAt === 'number' &&
+      Date.now() - existing.createdAt >= pendingDomainTtlSeconds() * 1000
+  );
+
 const isClaimExpiredOrUnlicensed = async (existing) => {
   if (!existing) return true;
-  if (
-    existing.state === 'pending' &&
-    typeof existing.createdAt === 'number' &&
-    Date.now() - existing.createdAt >= pendingDomainTtlSeconds() * 1000
-  ) {
+  if (isPendingExpired(existing)) {
     return true;
   }
   if (existing.accountId && !(await isAccountLicenseActive(existing.accountId))) {
@@ -303,7 +307,7 @@ const listDomains = async ({ accountId }) => {
   const results = await Promise.all(
     domains.map(async (domain) => {
       const meta = await readMeta(domain);
-      if (!meta || (await isClaimExpiredOrUnlicensed(meta))) {
+      if (!meta || isPendingExpired(meta)) {
         await redisService.client.srem(accountDomainsKey(accountId), domain);
         if (meta) {
           await cleanupStaleClaim(domain, meta);
