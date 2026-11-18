@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const redisService = require('./redisService');
 const { v4: uuidv4 } = require('uuid');
 
@@ -5,6 +6,9 @@ const ORDER_PREFIX = 'order:';
 const ORDER_TTL_SECONDS = 7 * 24 * 60 * 60;
 const HANDOFF_PREFIX = 'order_handoff:';
 const HANDOFF_TTL_SECONDS = 5 * 60;
+const CALLBACK_EVENT_PREFIX = 'billing:wfp:event:';
+const CALLBACK_EVENT_TTL_SECONDS = 90 * 24 * 60 * 60;
+const CALLBACK_LOCK_PREFIX = 'billing:lock:';
 
 const persist = async (order) => {
   await redisService.client.set(`${ORDER_PREFIX}${order.id}`, JSON.stringify(order));
@@ -112,6 +116,81 @@ const consumeHandoffToken = async (token) => {
   return result || null;
 };
 
+const callbackEventFingerprint = (callback) => {
+  const sig = String(callback?.merchantSignature || '').toLowerCase();
+  const orderRef = String(callback?.orderReference || '');
+  const status = String(callback?.transactionStatus || '');
+  return crypto.createHash('sha256').update(`${sig}|${orderRef}|${status}`).digest('hex');
+};
+
+const claimCallbackEvent = async (fingerprint, ttlSeconds = CALLBACK_EVENT_TTL_SECONDS) => {
+  const key = `${CALLBACK_EVENT_PREFIX}${fingerprint}`;
+  const res = await redisService.client.set(key, '1', 'EX', ttlSeconds, 'NX');
+  return res === 'OK';
+};
+
+const releaseCallbackEvent = async (fingerprint) => {
+  if (!fingerprint) {
+    return;
+  }
+  await redisService.client.del(`${CALLBACK_EVENT_PREFIX}${fingerprint}`);
+};
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const acquireSingleLock = async (key, token, ttlSeconds) => {
+  const res = await redisService.client.set(key, token, 'EX', ttlSeconds, 'NX');
+  return res === 'OK';
+};
+
+const releaseSingleLock = async (key, token) => {
+  const current = await redisService.client.get(key);
+  if (current === token) {
+    await redisService.client.del(key);
+  }
+};
+
+const acquireCallbackLock = async ({ orderReference, recToken }, ttlSeconds = 15, timeoutMs = 2000) => {
+  const keys = [`${CALLBACK_LOCK_PREFIX}order:${orderReference}`];
+  if (recToken && typeof recToken === 'string') {
+    keys.push(`${CALLBACK_LOCK_PREFIX}rectoken:${recToken}`);
+  }
+  const token = uuidv4();
+  const deadline = Date.now() + timeoutMs;
+
+  while (true) {
+    const acquired = [];
+    let allAcquired = true;
+    for (const key of keys) {
+      if (await acquireSingleLock(key, token, ttlSeconds)) {
+        acquired.push(key);
+      } else {
+        allAcquired = false;
+        break;
+      }
+    }
+    if (allAcquired) {
+      return { keys: acquired, token };
+    }
+    for (const key of acquired) {
+      await releaseSingleLock(key, token);
+    }
+    if (Date.now() >= deadline) {
+      return null;
+    }
+    await sleep(15);
+  }
+};
+
+const releaseCallbackLock = async (lock) => {
+  if (!lock || !Array.isArray(lock.keys)) {
+    return;
+  }
+  for (const key of lock.keys) {
+    await releaseSingleLock(key, lock.token);
+  }
+};
+
 module.exports = {
   createOrder,
   getOrder,
@@ -120,4 +199,9 @@ module.exports = {
   createHandoffToken,
   resolveHandoffToken,
   consumeHandoffToken,
+  callbackEventFingerprint,
+  claimCallbackEvent,
+  releaseCallbackEvent,
+  acquireCallbackLock,
+  releaseCallbackLock,
 };

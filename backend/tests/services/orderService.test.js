@@ -116,4 +116,32 @@ describe('orderService', () => {
       expect(await orderService.getOrder('pro-monthly-never-existed')).toBeNull();
     });
   });
+
+  describe('callback serialization and event fingerprint', () => {
+    it('claims an event fingerprint once and rejects duplicates', async () => {
+      const fp = orderService.callbackEventFingerprint({
+        merchantSignature: 'ABCD',
+        orderReference: 'ord-1',
+        transactionStatus: 'Approved',
+      });
+      expect(await orderService.claimCallbackEvent(fp)).toBe(true);
+      expect(await orderService.claimCallbackEvent(fp)).toBe(false);
+
+      await orderService.releaseCallbackEvent(fp);
+      expect(await orderService.claimCallbackEvent(fp)).toBe(true);
+    });
+
+    it('serializes concurrent lock acquisitions on the same orderReference', async () => {
+      const order = [];
+      const worker = async (id) => {
+        const lock = await orderService.acquireCallbackLock({ orderReference: 'ord-lock', recToken: 'rec-1' });
+        order.push(`start-${id}`);
+        await new Promise((r) => setTimeout(r, 20));
+        order.push(`end-${id}`);
+        await orderService.releaseCallbackLock(lock);
+      };
+      await Promise.all([worker(1), worker(2)]);
+      expect(order).toEqual(['start-1', 'end-1', 'start-2', 'end-2']);
+    });
+  });
 });

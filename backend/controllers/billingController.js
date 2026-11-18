@@ -152,18 +152,71 @@ const recordSale = ({ type, plan, amount }) => {
   metrics.billingRevenueTotal.inc({ currency: config.billing.currency, type, plan }, Number(amount));
 };
 
+const validateRenewalPayment = async ({ existing, orderReference, recToken, amount, currency }) => {
+  const expectedCurrency = existing.currency || config.billing.currency;
+  if (currency !== expectedCurrency) {
+    metrics.billingWebhookEventsTotal.inc({ result: 'amount_mismatch' });
+    logger.warn(`WayForPay renewal currency mismatch order=${sanitizeForLog(orderReference)}`);
+    return false;
+  }
+
+  let expectedAmount = existing.amount;
+  if (expectedAmount === undefined || expectedAmount === null) {
+    const origOrder = await orderService.getOrder(existing.orderReference);
+    expectedAmount = origOrder?.amount;
+  }
+  if (expectedAmount !== undefined && expectedAmount !== null && Number(amount) !== Number(expectedAmount)) {
+    metrics.billingWebhookEventsTotal.inc({ result: 'amount_mismatch' });
+    logger.warn(`WayForPay renewal amount mismatch order=${sanitizeForLog(orderReference)}`);
+    return false;
+  }
+
+  const isUnseenRecurring =
+    orderReference !== existing.orderReference && !(await orderService.getOrder(orderReference));
+  if (isUnseenRecurring) {
+    const verified = await wayforpayService.checkTransactionStatus(orderReference);
+    const merchantOk =
+      !verified?.merchantAccount || verified.merchantAccount === config.wayforpay.merchantAccount;
+    const recTokenOk = !verified?.recToken || !recToken || verified.recToken === recToken;
+    const statusOk =
+      verified &&
+      verified.transactionStatus === 'Approved' &&
+      merchantOk &&
+      Number(verified.amount) === Number(amount) &&
+      verified.currency === currency &&
+      recTokenOk;
+    if (!statusOk) {
+      metrics.billingWebhookEventsTotal.inc({ result: 'verification_failed' });
+      logger.warn(`WayForPay recurring verification failed order=${sanitizeForLog(orderReference)}`);
+      return false;
+    }
+  }
+
+  return true;
+};
+
 const activateLicense = async ({ orderReference, recToken, amount, currency }) => {
   const existing = (await licenseService.findByRecToken(recToken))
     || (await licenseService.findByOrderReference(orderReference));
 
   if (existing) {
+    const validRenewal = await validateRenewalPayment({
+      existing,
+      orderReference,
+      recToken,
+      amount,
+      currency,
+    });
+    if (!validRenewal) {
+      return;
+    }
     const license = await licenseService.renewByPayment({
       orderReference,
       recToken,
       ttlSeconds: licenseTtlForPlan(existing.plan),
     });
     await orderService.markOrderPaid(orderReference, license.key);
-    recordSale({ type: existing.type, plan: existing.plan, amount });
+    recordSale({ type: existing.type, plan: existing.plan, amount: existing.amount ?? amount });
     metrics.billingWebhookEventsTotal.inc({ result: 'license_renewed' });
     return;
   }
@@ -186,6 +239,8 @@ const activateLicense = async ({ orderReference, recToken, amount, currency }) =
     orderReference,
     recToken,
     ttlSeconds: licenseTtlForPlan(order.plan),
+    amount: order.amount,
+    currency: order.currency,
   });
 
   const extra = {};
@@ -208,14 +263,20 @@ const activateLicense = async ({ orderReference, recToken, amount, currency }) =
  * left to say. Re-delivering the same date has to count as superseded too: the licence a duplicate
  * would find by orderReference sends it down the renewal branch, extending the licence by another
  * period and booking the sale a second time.
+ *
+ * Once an order has recorded a processingDate, a subsequent callback missing processingDate is
+ * also treated as superseded so stripping the unsigned field cannot bypass ordering.
  */
 const isSupersededCallback = async (orderReference, processingDate) => {
-  if (typeof processingDate !== 'number') {
-    return false;
-  }
   const order = await orderService.getOrder(orderReference);
   const applied = order?.lastCallbackProcessingDate;
-  return typeof applied === 'number' && processingDate <= applied;
+  if (typeof applied !== 'number') {
+    return false;
+  }
+  if (typeof processingDate !== 'number') {
+    return true;
+  }
+  return processingDate <= applied;
 };
 
 const webhook = async (req, res, next) => {
@@ -232,6 +293,20 @@ const webhook = async (req, res, next) => {
       return res.status(400).json({ error: 'Invalid merchantSignature' });
     }
 
+    if (!config.wayforpay.merchantAccount || callback.merchantAccount !== config.wayforpay.merchantAccount) {
+      metrics.billingWebhookEventsTotal.inc({ result: 'merchant_mismatch' });
+      logger.warn(`WayForPay webhook merchant mismatch order=${sanitizeForLog(callback.orderReference)}`);
+      return res.status(400).json({ error: 'Invalid merchantAccount' });
+    }
+
+    if (
+      callback.processingDate !== undefined &&
+      (!Number.isFinite(callback.processingDate) || callback.processingDate <= 0)
+    ) {
+      metrics.billingWebhookEventsTotal.inc({ result: 'invalid_processing_date' });
+      return res.status(400).json({ error: 'Invalid processingDate' });
+    }
+
     let action;
     try {
       action = wayforpayService.classifyTransactionStatus(callback.transactionStatus);
@@ -244,38 +319,54 @@ const webhook = async (req, res, next) => {
     }
 
     const { orderReference, recToken } = callback;
+    const lock = await orderService.acquireCallbackLock({ orderReference, recToken });
+    if (!lock) {
+      return res.status(503).json({ error: 'Order busy, retry' });
+    }
 
-    if (await isSupersededCallback(orderReference, callback.processingDate)) {
-      metrics.billingWebhookEventsTotal.inc({ result: 'superseded' });
-      logger.warn(`WayForPay webhook superseded order=${sanitizeForLog(orderReference)}`);
-      return res.status(200).json(
-        wayforpayService.acknowledgeWebhook(
+    const fingerprint = orderService.callbackEventFingerprint(callback);
+    let claimed = false;
+    try {
+      claimed = await orderService.claimCallbackEvent(fingerprint);
+      if (!claimed || (await isSupersededCallback(orderReference, callback.processingDate))) {
+        metrics.billingWebhookEventsTotal.inc({ result: 'superseded' });
+        logger.warn(`WayForPay webhook superseded order=${sanitizeForLog(orderReference)}`);
+        return res.status(200).json(
+          wayforpayService.acknowledgeWebhook(
+            orderReference,
+            Math.floor(Date.now() / 1000),
+            config.wayforpay.secretKey
+          )
+        );
+      }
+
+      if (action === 'activate') {
+        await activateLicense({
           orderReference,
-          Math.floor(Date.now() / 1000),
-          config.wayforpay.secretKey
-        )
-      );
-    }
+          recToken,
+          amount: callback.amount,
+          currency: callback.currency,
+        });
+      } else if (action === 'revoke') {
+        const revoked = await licenseService.revokeByPayment({ orderReference, recToken });
+        metrics.billingWebhookEventsTotal.inc({
+          result: revoked ? 'license_revoked' : 'revoke_no_license',
+        });
+      } else {
+        // ignore: Declined / Expired / in-progress — payment is not a completed sale
+        metrics.billingWebhookEventsTotal.inc({ result: 'ignored' });
+      }
 
-    if (action === 'activate') {
-      await activateLicense({
-        orderReference,
-        recToken,
-        amount: callback.amount,
-        currency: callback.currency,
-      });
-    } else if (action === 'revoke') {
-      const revoked = await licenseService.revokeByPayment({ orderReference, recToken });
-      metrics.billingWebhookEventsTotal.inc({
-        result: revoked ? 'license_revoked' : 'revoke_no_license',
-      });
-    } else {
-      // ignore: Declined / Expired / in-progress — payment is not a completed sale
-      metrics.billingWebhookEventsTotal.inc({ result: 'ignored' });
-    }
-
-    if (typeof callback.processingDate === 'number') {
-      await orderService.markCallbackApplied(orderReference, callback.processingDate);
+      if (typeof callback.processingDate === 'number') {
+        await orderService.markCallbackApplied(orderReference, callback.processingDate);
+      }
+    } catch (err) {
+      if (claimed) {
+        await orderService.releaseCallbackEvent(fingerprint);
+      }
+      throw err;
+    } finally {
+      await orderService.releaseCallbackLock(lock);
     }
 
     const ack = wayforpayService.acknowledgeWebhook(

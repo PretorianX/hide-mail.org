@@ -9,6 +9,8 @@ const crypto = require('crypto');
 const config = require('../config/config');
 
 const PAYMENT_URL = 'https://secure.wayforpay.com/pay';
+const WAYFORPAY_API_URL = 'https://api.wayforpay.com/api';
+const CHECK_STATUS_TIMEOUT_MS = 8000;
 
 // WayForPay POSTs the payer back to returnUrl, and static hosting answers a POST with 405, so
 // the customer returns through the API, which redirects the browser on to the Pro page.
@@ -222,6 +224,31 @@ const acknowledgeWebhook = (orderReference, time, secretKey) => ({
   signature: hmacMd5(secretKey, `${orderReference};accept;${time}`),
 });
 
+const checkTransactionStatus = async (orderReference) => {
+  const merchantAccount = config.wayforpay.merchantAccount;
+  const secretKey = config.wayforpay.secretKey;
+  if (!merchantAccount || !secretKey) {
+    throw new Error('WayForPay merchant is not configured');
+  }
+  const merchantSignature = hmacMd5(secretKey, `${merchantAccount};${orderReference}`);
+  const response = await fetch(WAYFORPAY_API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      apiVersion: 1,
+      transactionType: 'CHECK_STATUS',
+      merchantAccount,
+      orderReference,
+      merchantSignature,
+    }),
+    signal: AbortSignal.timeout(CHECK_STATUS_TIMEOUT_MS),
+  });
+  if (!response.ok) {
+    throw new Error(`CHECK_STATUS HTTP ${response.status}`);
+  }
+  return response.json();
+};
+
 module.exports = {
   hmacMd5,
   resolveProduct,
@@ -231,5 +258,6 @@ module.exports = {
   buildCheckoutPayload,
   classifyTransactionStatus,
   acknowledgeWebhook,
+  checkTransactionStatus,
   PAYMENT_URL,
 };

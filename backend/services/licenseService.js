@@ -78,7 +78,7 @@ const API_KEY_TYPES = new Set(['api', 'grade', 'sender', 'reports', 'bounce', 'c
 
 const canIssueApiKey = (type) => API_KEY_TYPES.has(type);
 
-const createLicense = async ({ type, plan, orderReference, recToken, ttlSeconds }) => {
+const createLicense = async ({ type, plan, orderReference, recToken, ttlSeconds, amount, currency }) => {
   if (!LICENSE_TYPES.has(type)) {
     throw new Error(`Unknown license type: ${type}`);
   }
@@ -97,6 +97,12 @@ const createLicense = async ({ type, plan, orderReference, recToken, ttlSeconds 
     createdAt: now,
     expiresAt: now + ttlSeconds * 1000,
   };
+  if (amount !== undefined && amount !== null) {
+    license.amount = Number(amount);
+  }
+  if (currency) {
+    license.currency = currency;
+  }
 
   await persistLicense(license, ttlSeconds);
   metrics.licensesCreatedTotal.inc({ type, plan });
