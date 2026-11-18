@@ -20,12 +20,12 @@ const decodeWebhookJson = (req, res, next) => {
   try {
     parsed = JSON.parse(req.body);
   } catch (error) {
-    res.status(400).json({ error: 'JSON body required' });
+    res.status(400).json({ success: false, error: 'JSON body required', code: 'INVALID_JSON' });
     return;
   }
 
   if (!parsed || typeof parsed !== 'object') {
-    res.status(400).json({ error: 'JSON body required' });
+    res.status(400).json({ success: false, error: 'JSON body required', code: 'INVALID_JSON' });
     return;
   }
 
