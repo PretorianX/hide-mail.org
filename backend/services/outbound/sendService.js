@@ -163,7 +163,7 @@ const handleExistingReplay = async ({
     // Reconcile if relay + createMessage succeeded before storeReplay failed.
     if (existing.messageId && typeof deps.messageStore.getMessage === 'function') {
       const persisted = await deps.messageStore.getMessage(existing.messageId);
-      if (persisted) {
+      if (persisted && persisted.status === 'queued') {
         const reconciledBody = { id: existing.messageId, status: 'queued' };
         await deps.messageStore
           .storeReplay({

@@ -123,7 +123,7 @@ export function ActivityDetailDrawer({ message, onClose }: Props) {
             <Label>Status</Label>
             <Value>{statusBadge(message.status)}</Value>
           </Field>
-          {message.status === 'suppressed' || message.status === 'bounced' ? (
+          {message.status === 'suppressed' ? (
             <Field>
               <Label>Suppression</Label>
               <Value>
