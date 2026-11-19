@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const redisService = require('../services/redisService');
 const config = require('../config/config');
 const logger = require('../utils/logger');
@@ -5,6 +6,7 @@ const metrics = require('../services/metricsService');
 const entitlementService = require('../services/entitlementService');
 const { resolveActiveRecipient } = require('../services/recipientResolver');
 const attachmentService = require('../services/attachmentService');
+const { generateMailboxToken, hashMailboxToken } = require('../services/mailboxTokenService');
 
 const ALIAS_PATTERN = /^[a-z0-9](?:[a-z0-9._-]{0,62}[a-z0-9])?$/;
 
@@ -179,13 +181,27 @@ const emailController = {
    */
   async registerMailbox(req, res, next) {
     try {
-      const { email, alias, customAlias, ttlSeconds, mailboxTtlSeconds } = req.body;
+      const {
+        email: requestedEmail,
+        domain: requestedDomain,
+        alias,
+        customAlias,
+        ttlSeconds,
+        mailboxTtlSeconds,
+      } = req.body;
       const entitlements = req.entitlements || entitlementService.getEntitlements(req.license);
       const wantsAlias = Boolean(alias || customAlias);
-      
-      if (!email || !email.includes('@')) {
+
+      let email = requestedEmail;
+      if (!email && !wantsAlias && requestedDomain && typeof requestedDomain === 'string') {
+        const localPart = crypto.randomBytes(12).toString('hex');
+        email = `${localPart}@${requestedDomain.trim().toLowerCase()}`;
+      }
+
+      if (!email || typeof email !== 'string' || !email.includes('@')) {
         return res.status(400).json({ error: 'Invalid email address' });
       }
+      email = email.trim().toLowerCase();
 
       if (wantsAlias) {
         if (!entitlements.customAlias) {
@@ -229,19 +245,23 @@ const emailController = {
         req.license,
         Number(ttlSeconds || mailboxTtlSeconds)
       );
-      await redisService.registerMailbox(email, expirationSeconds);
+      const mailboxToken = generateMailboxToken();
+      const meta = {
+        tokenHash: hashMailboxToken(mailboxToken),
+      };
       if (req.license) {
-        await redisService.setMailboxMeta(email, {
-          licenseKey: req.license.key,
-          alias: wantsAlias,
-        }, expirationSeconds);
+        meta.licenseKey = req.license.key;
+        meta.alias = wantsAlias;
       }
+
+      await redisService.registerMailbox(email, expirationSeconds);
+      await redisService.setMailboxMeta(email, meta, expirationSeconds);
       metrics.mailboxesRegisteredTotal.inc();
       
       res.status(200).json({
         success: true,
         message: 'Mailbox registered successfully',
-        data: { email, ttlSeconds: expirationSeconds }
+        data: { email, ttlSeconds: expirationSeconds, mailboxToken }
       });
     } catch (error) {
       logger.error('Error in registerMailbox controller:', error);
@@ -254,11 +274,12 @@ const emailController = {
    */
   async refreshMailbox(req, res, next) {
     try {
-      const { email, ttlSeconds } = req.body;
+      const { email: rawEmail, ttlSeconds } = req.body;
       
-      if (!email || !email.includes('@')) {
+      if (!rawEmail || typeof rawEmail !== 'string' || !rawEmail.includes('@')) {
         return res.status(400).json({ error: 'Invalid email address' });
       }
+      const email = rawEmail.trim().toLowerCase();
 
       const remainingSeconds = await redisService.getMailboxTtl(email);
       const expirationSeconds = entitlementService.resolveRefreshTtl(
@@ -289,11 +310,12 @@ const emailController = {
    */
   async deactivateMailbox(req, res, next) {
     try {
-      const { email } = req.body;
+      const { email: rawEmail } = req.body;
       
-      if (!email || !email.includes('@')) {
+      if (!rawEmail || typeof rawEmail !== 'string' || !rawEmail.includes('@')) {
         return res.status(400).json({ error: 'Invalid email address' });
       }
+      const email = rawEmail.trim().toLowerCase();
       
       await redisService.deactivateMailbox(email);
       metrics.mailboxesDeactivatedTotal.inc();

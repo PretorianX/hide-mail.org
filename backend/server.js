@@ -85,7 +85,7 @@ const corsOptions = {
     }
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'X-License-Key', 'X-Api-Key'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'X-License-Key', 'X-Api-Key', 'X-Mailbox-Token'],
   exposedHeaders: ['Content-Length', 'Content-Type', 'Content-Disposition', 'X-RateLimit-Limit', 'X-RateLimit-Remaining', 'X-RateLimit-Reset'],
   credentials: true,
   preflightContinue: false,

@@ -20,6 +20,12 @@ const config = require('../config/config');
 const apiRateLimiter = require('../services/apiRateLimiter');
 const powService = require('../services/powService');
 const attachLicense = require('../middleware/attachLicense');
+const requireMailboxToken = require('../middleware/requireMailboxToken');
+
+const fromParamEmail = requireMailboxToken((req) => req.params?.email);
+const fromQueryEmail = requireMailboxToken((req) => req.query?.email);
+const fromBodyEmail = requireMailboxToken((req) => req.body?.email);
+const fromBodyTempMailbox = requireMailboxToken((req) => req.body?.tempMailbox);
 
 const router = express.Router();
 
@@ -32,16 +38,17 @@ const isDevelopment = () => config.environment === 'development';
 // ============================================================================
 router.get('/challenge', apiRateLimiter.default, powService.challengeHandler);
 
-// Email routes (with rate limiting)
-router.get('/emails/:email', apiRateLimiter.emailFetch, emailController.getEmails);
+// Email routes (with rate limiting and per-mailbox capability auth)
+router.get('/emails/:email', apiRateLimiter.emailFetch, fromParamEmail, emailController.getEmails);
 router.get(
   '/emails/:email/:id/attachments/:index',
   apiRateLimiter.emailFetch,
+  fromParamEmail,
   attachmentController.downloadAttachment
 );
-router.get('/emails/:email/:id', apiRateLimiter.emailFetch, emailController.getEmailById);
-router.delete('/emails/:email/:id', apiRateLimiter.default, emailController.deleteEmail);
-router.delete('/emails/:email', apiRateLimiter.default, emailController.deleteAllEmails);
+router.get('/emails/:email/:id', apiRateLimiter.emailFetch, fromParamEmail, emailController.getEmailById);
+router.delete('/emails/:email/:id', apiRateLimiter.default, fromParamEmail, emailController.deleteEmail);
+router.delete('/emails/:email', apiRateLimiter.default, fromParamEmail, emailController.deleteAllEmails);
 
 // Domain routes
 router.get('/domains', apiRateLimiter.default, attachLicense, emailController.getDomains);
@@ -62,11 +69,11 @@ router.post('/mailbox/register',
   attachLicense,
   emailController.registerMailbox
 );
-router.post('/mailbox/refresh', apiRateLimiter.mailboxRefresh, attachLicense, emailController.refreshMailbox);
-router.post('/mailbox/deactivate', apiRateLimiter.default, emailController.deactivateMailbox);
+router.post('/mailbox/refresh', apiRateLimiter.mailboxRefresh, fromBodyEmail, attachLicense, emailController.refreshMailbox);
+router.post('/mailbox/deactivate', apiRateLimiter.default, fromBodyEmail, emailController.deactivateMailbox);
 
 // Add the missing /messages endpoint (with rate limiting)
-router.get('/messages', apiRateLimiter.emailFetch, async (req, res) => {
+router.get('/messages', apiRateLimiter.emailFetch, fromQueryEmail, async (req, res) => {
   try {
     const { email } = req.query;
     
@@ -300,24 +307,24 @@ router.get('/debug/redis-keys', apiRateLimiter.default, async (req, res) => {
 // Request OTP for destination email validation (rate limited - critical for email sending)
 // POST /api/forwarding/request-otp
 // Body: { tempMailbox: "user@domain.com", destinationEmail: "real@email.com" }
-router.post('/forwarding/request-otp', apiRateLimiter.mailboxRegister, forwardingController.requestOTP);
+router.post('/forwarding/request-otp', apiRateLimiter.mailboxRegister, fromBodyTempMailbox, forwardingController.requestOTP);
 
 // Verify OTP and activate forwarding
 // POST /api/forwarding/verify-otp
 // Body: { tempMailbox: "user@domain.com", destinationEmail: "real@email.com", otp: "123456" }
-router.post('/forwarding/verify-otp', apiRateLimiter.default, forwardingController.verifyOTP);
+router.post('/forwarding/verify-otp', apiRateLimiter.default, fromBodyTempMailbox, forwardingController.verifyOTP);
 
 // Forward a specific message to validated destination (rate limited)
 // POST /api/forwarding/forward/:email/:messageId
-router.post('/forwarding/forward/:email/:messageId', apiRateLimiter.default, attachLicense, forwardingController.forwardMessage);
+router.post('/forwarding/forward/:email/:messageId', apiRateLimiter.default, fromParamEmail, attachLicense, forwardingController.forwardMessage);
 
 // Get forwarding status (destination, rate limit, etc.)
 // GET /api/forwarding/status/:email
-router.get('/forwarding/status/:email', apiRateLimiter.default, forwardingController.getForwardingStatus);
+router.get('/forwarding/status/:email', apiRateLimiter.default, fromParamEmail, forwardingController.getForwardingStatus);
 
 // Clear forwarding configuration
 // DELETE /api/forwarding/:email
-router.delete('/forwarding/:email', apiRateLimiter.default, forwardingController.clearForwarding);
+router.delete('/forwarding/:email', apiRateLimiter.default, fromParamEmail, forwardingController.clearForwarding);
 
 router.use('/billing', billingRoutes);
 router.use('/qa', qaApiRoutes);

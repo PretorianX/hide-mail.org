@@ -15,7 +15,8 @@ const DEFAULT_LIFETIME_MINUTES = 30;
 const STORAGE_KEYS = {
   CURRENT_EMAIL: 'mailduck_current_email',
   EXPIRATION_TIME: 'mailduck_expiration_time',
-  MAILBOX_TTL: 'mailduck_mailbox_ttl'
+  MAILBOX_TTL: 'mailduck_mailbox_ttl',
+  MAILBOX_TOKEN: 'mailduck_mailbox_token'
 };
 
 class EmailService {
@@ -24,9 +25,22 @@ class EmailService {
   static initialized = false;
   static currentEmail = null;
   static expirationTime = null;
+  static mailboxToken = null;
   // Lifetime the mailbox was created with, replayed on refresh so a paid plan keeps the
   // duration its holder picked instead of dropping to the plan default.
   static mailboxTtlSeconds = null;
+
+  static mailboxHeaders(extra = {}) {
+    const headers = {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      ...extra,
+    };
+    if (this.mailboxToken) {
+      headers['X-Mailbox-Token'] = this.mailboxToken;
+    }
+    return headers;
+  }
 
   static licenseHeaders() {
     const headers = {
@@ -70,14 +84,16 @@ class EmailService {
     try {
       const savedEmail = localStorage.getItem(STORAGE_KEYS.CURRENT_EMAIL);
       const savedExpiration = localStorage.getItem(STORAGE_KEYS.EXPIRATION_TIME);
+      const savedToken = localStorage.getItem(STORAGE_KEYS.MAILBOX_TOKEN);
       
-      if (savedEmail && savedExpiration) {
+      if (savedEmail && savedExpiration && savedToken) {
         const expirationTime = new Date(savedExpiration);
         
         // Only restore if not expired
         if (expirationTime > new Date()) {
           this.currentEmail = savedEmail;
           this.expirationTime = expirationTime;
+          this.mailboxToken = savedToken;
           this.mailboxTtlSeconds = Number(localStorage.getItem(STORAGE_KEYS.MAILBOX_TTL)) || null;
           console.log(`Restored email from storage: ${this.currentEmail}`);
         } else {
@@ -85,6 +101,9 @@ class EmailService {
           // Clear storage since it's expired
           this.clearStorage();
         }
+      } else if (savedEmail || savedExpiration) {
+        // Pre-deploy mailbox without a capability token: clear so a fresh mailbox is registered.
+        this.clearStorage();
       }
     } catch (error) {
       console.error('Error loading from localStorage:', error);
@@ -99,6 +118,9 @@ class EmailService {
         if (this.mailboxTtlSeconds) {
           localStorage.setItem(STORAGE_KEYS.MAILBOX_TTL, String(this.mailboxTtlSeconds));
         }
+        if (this.mailboxToken) {
+          localStorage.setItem(STORAGE_KEYS.MAILBOX_TOKEN, this.mailboxToken);
+        }
       }
     } catch (error) {
       console.error('Error saving to localStorage:', error);
@@ -110,13 +132,39 @@ class EmailService {
       localStorage.removeItem(STORAGE_KEYS.CURRENT_EMAIL);
       localStorage.removeItem(STORAGE_KEYS.EXPIRATION_TIME);
       localStorage.removeItem(STORAGE_KEYS.MAILBOX_TTL);
+      localStorage.removeItem(STORAGE_KEYS.MAILBOX_TOKEN);
     } catch (error) {
       console.error('Error clearing localStorage:', error);
     }
   }
 
+  static clearMailboxState() {
+    this.clearStorage();
+    this.currentEmail = null;
+    this.expirationTime = null;
+    this.mailboxToken = null;
+    this.mailboxTtlSeconds = null;
+  }
+
   static getRandomElement(array) {
+    if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+      const buf = new Uint32Array(1);
+      crypto.getRandomValues(buf);
+      return array[buf[0] % array.length];
+    }
     return array[Math.floor(Math.random() * array.length)];
+  }
+
+  static randomHexSuffix(byteLength = 8) {
+    const bytes = new Uint8Array(byteLength);
+    if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+      crypto.getRandomValues(bytes);
+    } else {
+      for (let i = 0; i < byteLength; i += 1) {
+        bytes[i] = Math.floor(Math.random() * 256);
+      }
+    }
+    return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
   }
 
   static generateRandomLocalPart() {
@@ -180,8 +228,8 @@ class EmailService {
       }
     ];
     
-    // Generate the local part
-    let localPart = this.getRandomElement(formats)();
+    // Generate the local part with a cryptographic random suffix
+    let localPart = `${this.getRandomElement(formats)()}.${this.randomHexSuffix(8)}`;
     
     // Ensure the local part doesn't start or end with a period
     localPart = localPart.replace(/^\.|\.$/, '');
@@ -214,12 +262,11 @@ class EmailService {
       const pool = options.allowPremium
         ? [...this.domains, ...this.premiumDomains]
         : this.domains;
-      const localPart = options.alias || this.generateRandomLocalPart();
       const emailDomain = domain && pool.includes(domain)
         ? domain
         : this.getRandomElement(pool);
-
-      const newEmail = `${localPart}@${emailDomain}`;
+      const localPart = options.alias || null;
+      const requestedEmail = localPart ? `${localPart}@${emailDomain}` : undefined;
       
       // Solve PoW challenge before registering (prevents automated abuse)
       console.log('Solving PoW challenge...');
@@ -231,10 +278,11 @@ class EmailService {
       });
       console.log('PoW challenge solved');
       
-      // Register the new email with the backend (including PoW solution)
+      // Register the new email with the backend (including PoW solution).
+      // Non-alias local parts are generated server-side with crypto.randomBytes.
       const registerResponse = await axios.post(`${API_URL}/mailbox/register`,
         {
-          email: newEmail,
+          ...(requestedEmail ? { email: requestedEmail } : { domain: emailDomain }),
           pow,
           alias: options.alias,
           ttlSeconds: options.mailboxTtlSeconds,
@@ -242,16 +290,19 @@ class EmailService {
         { headers: this.licenseHeaders() }
       );
 
-      const ttlSeconds = registerResponse.data?.data?.ttlSeconds
+      const responseData = registerResponse.data?.data || {};
+      const registeredEmail = responseData.email || requestedEmail;
+      const ttlSeconds = responseData.ttlSeconds
         || DEFAULT_LIFETIME_MINUTES * 60;
       this.expirationTime = new Date(Date.now() + ttlSeconds * 1000);
       this.mailboxTtlSeconds = ttlSeconds;
+      this.mailboxToken = responseData.mailboxToken || null;
       
       // Save the new email
-      this.currentEmail = newEmail;
+      this.currentEmail = registeredEmail;
       this.saveToStorage();
       
-      return newEmail;
+      return registeredEmail;
     } catch (error) {
       console.error('Error generating email:', error);
       
@@ -277,23 +328,13 @@ class EmailService {
       // Call the backend to deactivate the mailbox
       await axios.post(`${API_URL}/mailbox/deactivate`, 
         { email: this.currentEmail },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          }
-        }
+        { headers: this.mailboxHeaders() }
       );
       console.log(`Deactivated email: ${this.currentEmail}`);
-      
-      // Clear storage
-      this.clearStorage();
-      
-      // Reset current email and expiration time
-      this.currentEmail = null;
-      this.expirationTime = null;
     } catch (error) {
       console.error('Error deactivating email:', error);
+    } finally {
+      this.clearMailboxState();
     }
   }
 
@@ -342,7 +383,7 @@ class EmailService {
     try {
       const response = await axios.post(`${API_URL}/mailbox/refresh`,
         { email: this.currentEmail, ttlSeconds: this.mailboxTtlSeconds },
-        { headers: this.licenseHeaders() }
+        { headers: this.mailboxHeaders(this.licenseHeaders()) }
       );
 
       const ttlSeconds = response.data?.data?.ttlSeconds;
@@ -357,6 +398,9 @@ class EmailService {
       console.log(`Refreshed expiration time for ${this.currentEmail}`);
       return true;
     } catch (error) {
+      if (error.response?.status === 401) {
+        this.clearMailboxState();
+      }
       console.error('Error refreshing expiration time:', error);
       return false;
     }
@@ -365,10 +409,7 @@ class EmailService {
   static async getMessages(email) {
     try {
       const response = await axios.get(`${API_URL}/emails/${email}`, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        }
+        headers: this.mailboxHeaders()
       });
       
       if (response.data.success) {
@@ -377,14 +418,16 @@ class EmailService {
       
       return [];
     } catch (error) {
+      if (error.response?.status === 401) {
+        this.clearMailboxState();
+      }
       console.error('Error fetching messages:', error);
       return [];
     }
   }
   
   /**
-   * Address of a stored attachment. The browser fetches it directly through an anchor, so the
-   * bytes never pass through React state.
+   * Address of a stored attachment.
    *
    * @param {string} mailbox - Temporary mailbox that received the message
    * @param {string} messageId - Message the attachment belongs to
@@ -396,12 +439,37 @@ class EmailService {
       + `/attachments/${encodeURIComponent(index)}`;
   }
 
+  /**
+   * Download an attachment using the mailbox capability header so the token never
+   * appears in URLs or browser history.
+   */
+  static async downloadAttachment(mailbox, messageId, index, filename = 'attachment') {
+    const response = await axios.get(this.attachmentUrl(mailbox, messageId, index), {
+      headers: this.mailboxHeaders(),
+      responseType: 'blob',
+    });
+    const blobUrl = URL.createObjectURL(response.data);
+    try {
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } finally {
+      URL.revokeObjectURL(blobUrl);
+    }
+  }
+
   static async getMessageDetails(email, messageId) {
     try {
       console.log(`Getting message details for email: ${email}, messageId: ${messageId}`);
       
       // Get detailed message from the backend API
-      const response = await axios.get(`${API_URL}/emails/${encodeURIComponent(email)}/${messageId}`);
+      const response = await axios.get(
+        `${API_URL}/emails/${encodeURIComponent(email)}/${messageId}`,
+        { headers: this.mailboxHeaders() }
+      );
       console.log('API response status:', response.status);
       console.log('API response data structure:', Object.keys(response.data));
       
@@ -553,7 +621,10 @@ class EmailService {
   static async deleteMessage(email, messageId) {
     try {
       // Delete message via the backend API
-      await axios.delete(`${API_URL}/emails/${encodeURIComponent(email)}/${messageId}`);
+      await axios.delete(
+        `${API_URL}/emails/${encodeURIComponent(email)}/${messageId}`,
+        { headers: this.mailboxHeaders() }
+      );
       return true;
     } catch (error) {
       console.error('Error deleting message:', error);
@@ -564,7 +635,10 @@ class EmailService {
   static async deleteAllMessages(email) {
     try {
       // Delete all messages for this email via the backend API
-      await axios.delete(`${API_URL}/emails/${encodeURIComponent(email)}`);
+      await axios.delete(
+        `${API_URL}/emails/${encodeURIComponent(email)}`,
+        { headers: this.mailboxHeaders() }
+      );
       return true;
     } catch (error) {
       console.error('Error deleting all messages:', error);
@@ -589,10 +663,7 @@ class EmailService {
         tempMailbox,
         destinationEmail,
       }, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        }
+        headers: this.mailboxHeaders()
       });
       
       return response.data;
@@ -619,10 +690,7 @@ class EmailService {
         destinationEmail,
         otp,
       }, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        }
+        headers: this.mailboxHeaders()
       });
       
       return response.data;
@@ -648,10 +716,7 @@ class EmailService {
         `${API_URL}/forwarding/forward/${encodeURIComponent(tempMailbox)}/${messageId}`,
         {},
         {
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          }
+          headers: this.mailboxHeaders()
         }
       );
       
@@ -679,10 +744,7 @@ class EmailService {
       const response = await axios.get(
         `${API_URL}/forwarding/status/${encodeURIComponent(tempMailbox)}`,
         {
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          }
+          headers: this.mailboxHeaders()
         }
       );
       
@@ -710,10 +772,7 @@ class EmailService {
       await axios.delete(
         `${API_URL}/forwarding/${encodeURIComponent(tempMailbox)}`,
         {
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          }
+          headers: this.mailboxHeaders()
         }
       );
       return true;

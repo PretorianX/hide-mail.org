@@ -341,4 +341,57 @@ describe('EmailService', () => {
         .toBe('/api/emails/john.doe%40tempmail.com/..%2F..%2Fdomains/attachments/0');
     });
   });
-}); 
+
+  describe('mailbox capability token', () => {
+    beforeEach(() => {
+      localStorage.clear();
+      EmailService.currentEmail = 'user@tempmail.com';
+      EmailService.expirationTime = new Date(Date.now() + 10 * 60 * 1000);
+      EmailService.mailboxToken = 'cap-secret-123';
+    });
+
+    test('sends X-Mailbox-Token header on getMessages and refreshExpirationTime', async () => {
+      axios.get.mockResolvedValue({ data: { success: true, data: [] } });
+      axios.post.mockResolvedValue({ data: { success: true, data: { ttlSeconds: 1800 } } });
+
+      await EmailService.getMessages('user@tempmail.com');
+      expect(axios.get).toHaveBeenCalledWith(
+        '/api/emails/user@tempmail.com',
+        expect.objectContaining({
+          headers: expect.objectContaining({ 'X-Mailbox-Token': 'cap-secret-123' }),
+        })
+      );
+
+      await EmailService.refreshExpirationTime();
+      expect(axios.post).toHaveBeenCalledWith(
+        expect.stringContaining('/mailbox/refresh'),
+        expect.anything(),
+        expect.objectContaining({
+          headers: expect.objectContaining({ 'X-Mailbox-Token': 'cap-secret-123' }),
+        })
+      );
+    });
+
+    test('clears pre-deploy storage that lacks a capability token', () => {
+      localStorage.setItem('mailduck_current_email', 'legacy@tempmail.com');
+      localStorage.setItem('mailduck_expiration_time', new Date(Date.now() + 60000).toISOString());
+      EmailService.currentEmail = null;
+      EmailService.mailboxToken = null;
+
+      EmailService.loadFromStorage();
+
+      expect(EmailService.currentEmail).toBeNull();
+      expect(localStorage.getItem('mailduck_current_email')).toBeFalsy();
+    });
+
+    test('clears mailbox state on 401 from getMessages', async () => {
+      axios.get.mockRejectedValue({ response: { status: 401 } });
+
+      const result = await EmailService.getMessages('user@tempmail.com');
+
+      expect(result).toEqual([]);
+      expect(EmailService.currentEmail).toBeNull();
+      expect(EmailService.mailboxToken).toBeNull();
+    });
+  });
+});
