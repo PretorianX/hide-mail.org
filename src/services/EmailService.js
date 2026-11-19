@@ -228,8 +228,8 @@ class EmailService {
       }
     ];
     
-    // Generate the local part with a cryptographic random suffix
-    let localPart = `${this.getRandomElement(formats)()}.${this.randomHexSuffix(8)}`;
+    // Generate the human-readable local part via faker (capability auth uses mailboxToken)
+    let localPart = this.getRandomElement(formats)();
     
     // Ensure the local part doesn't start or end with a period
     localPart = localPart.replace(/^\.|\.$/, '');
@@ -265,8 +265,8 @@ class EmailService {
       const emailDomain = domain && pool.includes(domain)
         ? domain
         : this.getRandomElement(pool);
-      const localPart = options.alias || null;
-      const requestedEmail = localPart ? `${localPart}@${emailDomain}` : undefined;
+      const localPart = options.alias || this.generateRandomLocalPart();
+      const requestedEmail = `${localPart}@${emailDomain}`;
       
       // Solve PoW challenge before registering (prevents automated abuse)
       console.log('Solving PoW challenge...');
@@ -279,10 +279,9 @@ class EmailService {
       console.log('PoW challenge solved');
       
       // Register the new email with the backend (including PoW solution).
-      // Non-alias local parts are generated server-side with crypto.randomBytes.
       const registerResponse = await axios.post(`${API_URL}/mailbox/register`,
         {
-          ...(requestedEmail ? { email: requestedEmail } : { domain: emailDomain }),
+          email: requestedEmail,
           pow,
           alias: options.alias,
           ttlSeconds: options.mailboxTtlSeconds,
