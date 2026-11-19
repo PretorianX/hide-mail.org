@@ -97,6 +97,9 @@ services:
       - OUTBOUND_RETURN_PATH_TARGET=${OUTBOUND_RETURN_PATH_TARGET:-rp.hide-mail.org}
       - OUTBOUND_SPF_INCLUDE=${OUTBOUND_SPF_INCLUDE:-_spf.hide-mail.org}
       - OUTBOUND_HELO_HOSTNAME=${OUTBOUND_HELO_HOSTNAME:-mail.hide-mail.org}
+      # postfix-http-api delivery tracing (compose network only; never host-publish :8025)
+      - POSTFIX_API_BASE_URL=${POSTFIX_API_BASE_URL:-http://postfix-relay:8025}
+      - POSTFIX_API_TOKEN=${POSTFIX_API_TOKEN:-}
       - ADMIN_EMAIL=${ADMIN_EMAIL:-}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
       - ADMIN_SESSION_SECRET=${ADMIN_SESSION_SECRET:-}
@@ -130,9 +133,10 @@ services:
   # Outbound Send DKIM-signs in the backend (per-domain keys in Redis) before submit;
   # Postfix only relays from mynetworks — no static ALLOWED_SENDER_DOMAINS list.
   # OpenDKIM here remains optional for product/Forward domains only.
-  # Image: https://github.com/bokysan/docker-postfix
+  # Image: boky/postfix drop-in with embedded postfix-http-api (delivery event feed).
+  # https://github.com/PretorianX/postfix-http-api
   postfix:
-    image: boky/postfix:v4.4.0
+    image: ${POSTFIX_IMAGE:-ghcr.io/pretorianx/postfix-http-api:boky-v4.4.0}
     environment:
       # Hostname for HELO/EHLO - should match your domain's PTR record
       - HOSTNAME=${POSTFIX_HOSTNAME:-mail.hide-mail.org}
@@ -156,8 +160,17 @@ services:
       - POSTFIX_transport_maps=regexp:/etc/postfix/transport
       # DKIM signing - mount keys to /etc/opendkim/keys or set DKIM_AUTOGENERATE=1
       - DKIM_SELECTOR=${DKIM_SELECTOR:-mail}
+      # postfix-api: listen on compose network only (do NOT publish host :8025)
+      - POSTFIXAPI_LISTEN=0.0.0.0:8025
+      - POSTFIXAPI_ALLOW_PLAINTEXT=true
+      - POSTFIXAPI_SUBJECT_IN_OUTPUT=false
+      - POSTFIXAPI_TOKEN_NAME=hide-mail
+      - POSTFIXAPI_TOKEN_SCOPES=read,write,content
+      # Same raw token as backend POSTFIX_API_TOKEN (hashed in-container at init)
+      - POSTFIXAPI_TOKEN=${POSTFIX_API_TOKEN:-}
     volumes:
       - postfix-spool:/var/spool/postfix
+      - postfix-data:/var/lib/postfix
       # Mount DKIM keys for signing (generate with: opendkim-genkey -s mail -d yourdomain.com)
       - ${DKIM_KEYS_PATH:-./dkim-keys}:/etc/opendkim/keys:ro
       - ./deploy/postfix/transport:/etc/postfix/transport:ro
@@ -192,6 +205,7 @@ services:
 volumes:
   redis-data:
   postfix-spool:
+  postfix-data:
 
 networks:
   internal:

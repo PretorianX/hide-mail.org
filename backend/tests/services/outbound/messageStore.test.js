@@ -64,6 +64,22 @@ describe('outbound messageStore', () => {
     it('returns null for an unknown id', async () => {
       await expect(messageStore.getMessage('missing')).resolves.toBeNull();
     });
+
+    it('indexes postfixQueueId for reverse lookup', async () => {
+      await messageStore.createMessage({
+        id: 'msg-qid',
+        accountId: 'acct-1',
+        domain: 'mail.example.com',
+        recipient: 'to@example.com',
+        reference: null,
+        postfixQueueId: 'C95E96B727',
+      });
+
+      const stored = await messageStore.getMessage('msg-qid');
+      expect(stored.postfixQueueId).toBe('C95E96B727');
+      await expect(messageStore.getMessageIdByPostfixQueueId('C95E96B727')).resolves.toBe('msg-qid');
+      await expect(messageStore.getMessageIdByPostfixQueueId('missing')).resolves.toBeNull();
+    });
   });
 
   describe('updateStatus', () => {

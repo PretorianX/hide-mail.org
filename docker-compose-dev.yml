@@ -98,6 +98,9 @@ services:
       - FORWARDING_FREE_LIMIT=${FORWARDING_FREE_LIMIT:-2}
       - FORWARDING_PRO_LIMIT=${FORWARDING_PRO_LIMIT:-100}
       - PADDLE_WEBHOOK_SECRET=${PADDLE_WEBHOOK_SECRET:-}
+      - POSTFIX_API_BASE_URL=${POSTFIX_API_BASE_URL:-http://postfix:8025}
+      - POSTFIX_API_TOKEN=${POSTFIX_API_TOKEN:-dev-postfix-api-token}
+      - OUTBOUND_KEY_ENCRYPTION_SECRET=${OUTBOUND_KEY_ENCRYPTION_SECRET:-dev-outbound-key-encryption-secret}
     depends_on:
       - redis
       - postfix
@@ -112,9 +115,9 @@ services:
 
   # Postfix - Outgoing SMTP relay
   # In dev mode, relays all emails to Mailpit for inspection
-  # Image: https://github.com/bokysan/docker-postfix
+  # Image: boky/postfix drop-in with postfix-http-api (compose-network :8025 only)
   postfix:
-    image: boky/postfix:v4.4.0
+    image: ${POSTFIX_IMAGE:-ghcr.io/pretorianx/postfix-http-api:boky-v4.4.0}
     environment:
       - HOSTNAME=${POSTFIX_HOSTNAME:-mail.hide-mail.org}
       # In dev mode, allow any sender since all mail goes to Mailpit anyway
@@ -128,10 +131,17 @@ services:
       - POSTFIX_transport_maps=regexp:/etc/postfix/transport
       # Relay all outgoing mail to Mailpit for inspection
       - RELAYHOST=mailpit:1025
+      - POSTFIXAPI_LISTEN=0.0.0.0:8025
+      - POSTFIXAPI_ALLOW_PLAINTEXT=true
+      - POSTFIXAPI_SUBJECT_IN_OUTPUT=false
+      - POSTFIXAPI_TOKEN_NAME=hide-mail-dev
+      - POSTFIXAPI_TOKEN_SCOPES=read,write,content
+      - POSTFIXAPI_TOKEN=${POSTFIX_API_TOKEN:-dev-postfix-api-token}
     depends_on:
       - mailpit
     volumes:
       - postfix-spool:/var/spool/postfix
+      - postfix-data:/var/lib/postfix
       - ./deploy/postfix/transport:/etc/postfix/transport:ro
     restart: unless-stopped
     networks:
@@ -179,6 +189,7 @@ volumes:
   redis-data:
   mailpit-data:
   postfix-spool:
+  postfix-data:
 
 networks:
   internal:

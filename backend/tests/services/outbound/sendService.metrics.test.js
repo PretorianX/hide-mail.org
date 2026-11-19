@@ -58,7 +58,7 @@ describe('outbound sendService metrics instrumentation', () => {
     redisService.client.data = {};
   });
 
-  it('increments accepted and delivered on successful send (Postfix accept)', async () => {
+  it('increments accepted but not delivered on successful Postfix accept', async () => {
     await sendService.sendMessage(
       basePayload(),
       okDeps({
@@ -72,8 +72,8 @@ describe('outbound sendService metrics instrumentation', () => {
     );
     const counters = await store.readCounters('mail.example.com');
     expect(counters.accepted).toBe(1);
-    expect(counters.delivered).toBe(1);
-    expect(counters.queued).toBe(0);
+    expect(counters.delivered).toBe(0);
+    expect(counters.queued).toBe(1);
   });
 
   it('maps rejection codes to rejected reasons', async () => {

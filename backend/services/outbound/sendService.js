@@ -16,6 +16,8 @@ const defaultAccountRateLimiter = require('./accountRateLimiter');
 const defaultMessageStore = require('./messageStore');
 const defaultSuppressionService = require('./suppressionService');
 const defaultMetricsStore = require('./outboundMetricsStore');
+const { parsePostfixQueueId } = require('./postfixQueueId');
+const logger = require('../../utils/logger');
 
 const REJECT_REASON_BY_CODE = {
   RATE_LIMITED: 'rate_limit',
@@ -317,8 +319,10 @@ const sendMessage = async (payload, overrides = {}) => {
       });
     }
 
+    const mimeMessageId = `<${messageId}@hm-send.hide-mail.org>`;
+    let relayInfo;
     try {
-      await deps.mimeTransport.sendMail({
+      relayInfo = await deps.mimeTransport.sendMail({
         from: {
           name: from?.name || undefined,
           address: from.email,
@@ -328,6 +332,7 @@ const sendMessage = async (payload, overrides = {}) => {
         text: text || undefined,
         html: html || undefined,
         replyTo: replyTo || undefined,
+        messageId: mimeMessageId,
         attachments: (attachments || []).map((a) => ({
           filename: a.filename,
           contentType: a.contentType,
@@ -348,6 +353,14 @@ const sendMessage = async (payload, overrides = {}) => {
 
     relayAccepted = true;
 
+    const postfixQueueId = parsePostfixQueueId(relayInfo?.response || '');
+    if (!postfixQueueId) {
+      logger.warn(
+        `Outbound send ${messageId}: Postfix accepted without parseable queue id` +
+          ` (response=${String(relayInfo?.response || '').slice(0, 200)})`
+      );
+    }
+
     await deps.messageStore.createMessage({
       id: messageId,
       accountId,
@@ -361,17 +374,12 @@ const sendMessage = async (payload, overrides = {}) => {
       envelopeFrom,
       clientIp: clientIp || null,
       sendKeyName: sendKeyName || null,
+      postfixQueueId,
+      status: 'queued',
     });
 
+    // Delivery status comes from postfix-api event bridge (or late bounce mailback).
     await deps.metricsStore.incrAccepted(domain);
-    // No ZoneMTA delivery hooks: Postfix accept is the terminal "delivered" signal.
-    // Late DSN bounces still supersede via bounceMailback → eventConsumer.
-    await deps.messageStore.updateStatus({
-      id: messageId,
-      status: 'delivered',
-      response: 'accepted by postfix',
-    });
-    await deps.metricsStore.incrDelivered(domain, messageId);
 
     const body = { id: messageId, status: 'queued' };
 

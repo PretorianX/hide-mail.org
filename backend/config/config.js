@@ -131,6 +131,15 @@ const config = {
       port: parseInt(process.env.SMTP_OUTGOING_PORT || '587', 10),
       secure: process.env.SMTP_SECURE === 'true',
     },
+    // postfix-http-api event bridge (compose-network only; never host-publish :8025).
+    postfixApi: {
+      baseUrl:
+        process.env.POSTFIX_API_BASE_URL ||
+        (process.env.NODE_ENV === 'development'
+          ? 'http://postfix:8025'
+          : 'http://postfix-relay:8025'),
+      token: process.env.POSTFIX_API_TOKEN || '',
+    },
   },
 
   // SMTP Configuration for Forward & Forget feature
