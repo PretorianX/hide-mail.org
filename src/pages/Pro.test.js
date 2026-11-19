@@ -1,5 +1,7 @@
 import React from 'react';
-import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
+import fs from 'fs';
+import path from 'path';
+import { render, screen, waitFor, fireEvent, within, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import Pro from './Pro';
 import { LicenseProvider } from '../context/LicenseContext';
@@ -399,5 +401,101 @@ describe('Pro page', () => {
     expect(snippet).toHaveTextContent('"mcpServers"');
     expect(snippet).toHaveTextContent('https://hide-mail.org/api/mcp');
     expect(snippet).toHaveTextContent('"X-API-Key": "hm_live_..."');
+  });
+
+  test('collects a handoff token from the URL fragment and strips it immediately', async () => {
+    window.history.replaceState({}, '', '/pro#handoffToken=token-frag');
+    LicenseService.fetchPaidOrder.mockResolvedValue({
+      licenseKey: 'HM-AAAA-BBBB-CCCC-DDDD',
+    });
+    LicenseService.restore.mockResolvedValue({
+      license: {
+        key: 'HM-AAAA-BBBB-CCCC-DDDD',
+        active: true,
+        type: 'pro',
+        remainingDays: 30,
+      },
+      entitlements: { ads: false },
+    });
+
+    renderPro();
+
+    await screen.findByRole('dialog', { name: /payment successful/i });
+    expect(LicenseService.fetchPaidOrder).toHaveBeenCalledWith('token-frag');
+    expect(window.location.href).not.toContain('token-frag');
+    expect(window.location.hash).toBe('');
+  });
+
+  test('never restores handoffToken into the URL when activation fails', async () => {
+    window.history.replaceState({}, '', '/pro#handoffToken=token-err');
+    LicenseService.fetchPaidOrder.mockResolvedValue({
+      licenseKey: 'HM-AAAA-BBBB-CCCC-DDDD',
+    });
+    LicenseService.restore.mockRejectedValue(new Error('Activation failed'));
+
+    renderPro();
+
+    expect(await screen.findByText(/activation failed/i)).toBeInTheDocument();
+    expect(window.location.href).not.toContain('handoffToken');
+    expect(window.location.href).not.toContain('token-err');
+  });
+
+  test('never restores handoffToken into the URL when payment polling times out', async () => {
+    jest.useFakeTimers();
+    try {
+      window.history.replaceState({}, '', '/pro#handoffToken=token-pending');
+      LicenseService.fetchPaidOrder.mockResolvedValue({ licenseKey: null });
+
+      renderPro();
+      expect(await screen.findByText(/confirming payment/i)).toBeInTheDocument();
+
+      for (let i = 0; i < 18; i += 1) {
+        // eslint-disable-next-line no-await-in-loop
+        await act(async () => {
+          jest.advanceTimersByTime(1100);
+          await Promise.resolve();
+          await Promise.resolve();
+        });
+      }
+
+      jest.useRealTimers();
+      expect(await screen.findByText(/payment is still confirming/i)).toBeInTheDocument();
+      expect(window.location.href).not.toContain('handoffToken');
+      expect(window.location.href).not.toContain('token-pending');
+      expect(sessionStorage.getItem('hidemail_handoff_token')).toBe('token-pending');
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  test('public/index.html strips handoffToken synchronously as the first head element before third-party scripts', () => {
+    const html = fs.readFileSync(path.resolve(__dirname, '../../public/index.html'), 'utf8');
+    const headMatch = html.match(/<head>([\s\S]*?)<\/head>/i);
+    expect(headMatch).toBeTruthy();
+    const headInner = headMatch[1].trim();
+    expect(headInner.startsWith('<script>')).toBe(true);
+
+    const firstScriptMatch = headInner.match(/^<script>([\s\S]*?)<\/script>/i);
+    expect(firstScriptMatch).toBeTruthy();
+    const inlineCode = firstScriptMatch[1];
+
+    const gtagPos = headInner.indexOf('googletagmanager.com/gtag/js');
+    expect(gtagPos).toBeGreaterThan(firstScriptMatch[0].length);
+
+    // Execute the inline head script against both fragment and query handoff URLs
+    window.history.replaceState({}, '', '/pro#handoffToken=secret-frag-123');
+    // eslint-disable-next-line no-new-func
+    new Function(inlineCode)();
+    expect(document.location.href).not.toContain('secret-frag-123');
+    expect(document.location.href).not.toContain('handoffToken');
+    expect(sessionStorage.getItem('hidemail_handoff_token')).toBe('secret-frag-123');
+
+    sessionStorage.clear();
+    window.history.replaceState({}, '', '/pro?handoffToken=secret-query-456');
+    // eslint-disable-next-line no-new-func
+    new Function(inlineCode)();
+    expect(document.location.href).not.toContain('secret-query-456');
+    expect(document.location.href).not.toContain('handoffToken');
+    expect(sessionStorage.getItem('hidemail_handoff_token')).toBe('secret-query-456');
   });
 });

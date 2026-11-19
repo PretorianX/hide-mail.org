@@ -63,6 +63,13 @@ jest.mock('../../services/orderService', () => ({
   createHandoffToken: jest.fn().mockResolvedValue('handoff-token-1'),
   resolveHandoffToken: jest.fn(),
   consumeHandoffToken: jest.fn(),
+  acquireCallbackLock: jest.fn().mockResolvedValue({ keys: ['lock:1'], token: 'tok-1' }),
+  releaseCallbackLock: jest.fn().mockResolvedValue(undefined),
+  callbackEventFingerprint: jest.fn(
+    (cb) => `${String(cb?.merchantSignature || '').toLowerCase()}|${cb?.orderReference}|${cb?.transactionStatus}`
+  ),
+  claimCallbackEvent: jest.fn().mockResolvedValue(true),
+  releaseCallbackEvent: jest.fn().mockResolvedValue(undefined),
 }));
 
 const billingController = require('../../controllers/billingController');
@@ -95,6 +102,16 @@ const mockNext = jest.fn();
 describe('billingController', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    orderService.getOrder.mockResolvedValue(null);
+    orderService.acquireCallbackLock.mockResolvedValue({ keys: ['lock:1'], token: 'tok-1' });
+    orderService.claimCallbackEvent.mockResolvedValue(true);
+    jest.spyOn(wayforpayService, 'checkTransactionStatus').mockResolvedValue({
+      transactionStatus: 'Approved',
+      merchantAccount: 'test_merchant',
+      amount: 149,
+      currency: 'UAH',
+      recToken: 'rec-abc',
+    });
     exchangeRateService.getRates.mockResolvedValue({
       rates: MOCK_RATES,
       ratesDate: 1519115604,
@@ -573,9 +590,7 @@ describe('billingController', () => {
         );
       });
 
-      it('still applies a callback that carries no processing date', async () => {
-        licenseService.findByRecToken.mockResolvedValue(null);
-        licenseService.findByOrderReference.mockResolvedValue(null);
+      it('rejects a callback missing processingDate when an earlier callback already recorded one', async () => {
         orderService.getOrder.mockResolvedValue({
           id: 'pro-monthly-replay',
           type: 'pro',
@@ -583,11 +598,6 @@ describe('billingController', () => {
           amount: 149,
           currency: 'UAH',
           lastCallbackProcessingDate: 1786994135,
-        });
-        licenseService.createLicense.mockResolvedValue({
-          key: 'HM-AAAA-BBBB-CCCC-DDDD',
-          type: 'pro',
-          plan: 'monthly',
         });
 
         const callback = approvedReplay(undefined);
@@ -597,9 +607,98 @@ describe('billingController', () => {
           process.env.WAYFORPAY_SECRET_KEY
         );
 
-        await billingController.webhook({ body: callback }, mockRes());
+        const res = mockRes();
+        await billingController.webhook({ body: callback }, res);
 
-        expect(licenseService.createLicense).toHaveBeenCalled();
+        expect(licenseService.createLicense).not.toHaveBeenCalled();
+        expect(licenseService.renewByPayment).not.toHaveBeenCalled();
+        expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ status: 'accept' }));
+      });
+
+      it('rejects a replay whose unsigned processingDate was bumped or stripped', async () => {
+        const claimed = new Set();
+        orderService.claimCallbackEvent.mockImplementation(async (fp) => {
+          if (claimed.has(fp)) {
+            return false;
+          }
+          claimed.add(fp);
+          return true;
+        });
+
+        licenseService.findByRecToken.mockResolvedValue(null);
+        licenseService.findByOrderReference.mockResolvedValue(null);
+        orderService.getOrder.mockResolvedValue({
+          id: 'pro-monthly-replay',
+          type: 'pro',
+          plan: 'monthly',
+          amount: 149,
+          currency: 'UAH',
+        });
+        licenseService.createLicense.mockResolvedValue({
+          key: 'HM-AAAA-BBBB-CCCC-DDDD',
+          type: 'pro',
+          plan: 'monthly',
+        });
+
+        const first = approvedReplay(1786994135);
+        await billingController.webhook({ body: first }, mockRes());
+
+        // Attacker bumps unsigned processingDate without re-signing
+        const bumped = { ...first, processingDate: 1799999999 };
+        await billingController.webhook({ body: bumped }, mockRes());
+
+        // Attacker strips unsigned processingDate without re-signing
+        const stripped = { ...first };
+        delete stripped.processingDate;
+        await billingController.webhook({ body: stripped }, mockRes());
+
+        expect(licenseService.createLicense).toHaveBeenCalledTimes(1);
+        expect(licenseService.renewByPayment).not.toHaveBeenCalled();
+      });
+
+      it('yields exactly one activation when duplicate callbacks arrive concurrently', async () => {
+        const locks = new Set();
+        const claimed = new Set();
+        orderService.acquireCallbackLock.mockImplementation(async ({ orderReference }) => {
+          while (locks.has(orderReference)) {
+            await new Promise((r) => setTimeout(r, 5));
+          }
+          locks.add(orderReference);
+          return { keys: [orderReference], token: 't' };
+        });
+        orderService.releaseCallbackLock.mockImplementation(async (lock) => {
+          lock.keys.forEach((k) => locks.delete(k));
+        });
+        orderService.claimCallbackEvent.mockImplementation(async (fp) => {
+          if (claimed.has(fp)) {
+            return false;
+          }
+          claimed.add(fp);
+          return true;
+        });
+
+        licenseService.findByRecToken.mockResolvedValue(null);
+        licenseService.findByOrderReference.mockResolvedValue(null);
+        orderService.getOrder.mockResolvedValue({
+          id: 'pro-monthly-replay',
+          type: 'pro',
+          plan: 'monthly',
+          amount: 149,
+          currency: 'UAH',
+        });
+        licenseService.createLicense.mockImplementation(async () => {
+          await new Promise((r) => setTimeout(r, 15));
+          return { key: 'HM-AAAA-BBBB-CCCC-DDDD', type: 'pro', plan: 'monthly' };
+        });
+
+        const cb = approvedReplay(1786994135);
+        await Promise.all([
+          billingController.webhook({ body: { ...cb } }, mockRes()),
+          billingController.webhook({ body: { ...cb } }, mockRes()),
+        ]);
+
+        expect(licenseService.createLicense).toHaveBeenCalledTimes(1);
+        expect(licenseService.renewByPayment).not.toHaveBeenCalled();
       });
 
       it('ignores a superseded Refunded replay instead of revoking again', async () => {
@@ -643,6 +742,67 @@ describe('billingController', () => {
       await billingController.webhook(req, res);
       expect(res.status).toHaveBeenCalledWith(400);
       expect(licenseService.createLicense).not.toHaveBeenCalled();
+    });
+
+    it('rejects a callback with a mismatched merchantAccount', async () => {
+      const callback = {
+        merchantAccount: 'other_merchant',
+        orderReference: 'pro-monthly-new',
+        amount: 149,
+        currency: 'UAH',
+        authCode: '541963',
+        cardPan: '41****8217',
+        transactionStatus: 'Approved',
+        reasonCode: '1100',
+      };
+      callback.merchantSignature = wayforpayService.signCallback(
+        callback,
+        process.env.WAYFORPAY_SECRET_KEY
+      );
+
+      const res = mockRes();
+      await billingController.webhook({ body: callback }, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(licenseService.createLicense).not.toHaveBeenCalled();
+    });
+
+    it('rejects renewal with wrong amount, currency, or failed WayForPay verification', async () => {
+      licenseService.findByRecToken.mockResolvedValue({
+        key: 'HM-AAAA-BBBB-CCCC-DDDD',
+        type: 'pro',
+        plan: 'monthly',
+        amount: 149,
+        currency: 'UAH',
+        orderReference: 'pro-monthly-orig',
+      });
+
+      // Wrong amount
+      await billingController.webhook(
+        { body: signedApproved({ orderReference: 'WFP-rec-1', recToken: 'rec-abc', amount: 1 }) },
+        mockRes()
+      );
+      expect(licenseService.renewByPayment).not.toHaveBeenCalled();
+
+      // Wrong currency
+      await billingController.webhook(
+        { body: signedApproved({ orderReference: 'WFP-rec-2', recToken: 'rec-abc', currency: 'USD' }) },
+        mockRes()
+      );
+      expect(licenseService.renewByPayment).not.toHaveBeenCalled();
+
+      // WayForPay CHECK_STATUS returns Declined
+      wayforpayService.checkTransactionStatus.mockResolvedValueOnce({
+        transactionStatus: 'Declined',
+        merchantAccount: 'test_merchant',
+        amount: 149,
+        currency: 'UAH',
+      });
+      await billingController.webhook(
+        { body: signedApproved({ orderReference: 'WFP-rec-3', recToken: 'rec-abc' }) },
+        mockRes()
+      );
+      expect(licenseService.renewByPayment).not.toHaveBeenCalled();
     });
 
     it('renews an existing license on a later regular payment with a new orderReference', async () => {
@@ -1047,11 +1207,20 @@ describe('billingController', () => {
         key: 'HM-A',
         type: 'pro',
         plan: 'monthly',
+        amount: 149,
+        currency: 'UAH',
       });
       licenseService.renewByPayment.mockResolvedValue({
         key: 'HM-A',
         type: 'pro',
         plan: 'monthly',
+      });
+      wayforpayService.checkTransactionStatus.mockResolvedValueOnce({
+        transactionStatus: 'Approved',
+        merchantAccount: 'test_merchant',
+        amount: 149,
+        currency: 'UAH',
+        recToken: 'rec-1',
       });
 
       await billingController.webhook({ body: signed({ recToken: 'rec-1' }) }, mockRes());

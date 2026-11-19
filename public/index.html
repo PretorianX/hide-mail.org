@@ -1,6 +1,24 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
+    <script>
+      (function () {
+        try {
+          var u = new URL(window.location.href);
+          var hp = new URLSearchParams(u.hash.replace(/^#/, ''));
+          var t = hp.get('handoffToken') || hp.get('handoff_token') || u.searchParams.get('handoffToken') || u.searchParams.get('handoff_token');
+          if (t) {
+            sessionStorage.setItem('hidemail_handoff_token', t);
+            hp.delete('handoffToken');
+            hp.delete('handoff_token');
+            u.searchParams.delete('handoffToken');
+            u.searchParams.delete('handoff_token');
+            var nh = hp.toString();
+            window.history.replaceState({}, '', u.pathname + u.search + (nh ? '#' + nh : ''));
+          }
+        } catch (e) {}
+      })();
+    </script>
     <meta charset="utf-8" />
     <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />

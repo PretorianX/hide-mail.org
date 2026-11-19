@@ -11,6 +11,7 @@ import {
   readStoredCurrency,
   storeCurrency,
 } from '../utils/planPricing';
+import { readHandoffToken, clearHandoffToken } from '../utils/handoffToken';
 import './Pro.css';
 
 const remainingDaysOf = (item) => {
@@ -25,7 +26,6 @@ const remainingDaysOf = (item) => {
 
 const HANDOFF_POLL_MS = 1000;
 const HANDOFF_POLL_ATTEMPTS = 18;
-const HANDOFF_STORAGE_KEY = 'hidemail_handoff_token';
 
 const MCP_SNIPPET = `{
   "mcpServers": {
@@ -37,20 +37,6 @@ const MCP_SNIPPET = `{
     }
   }
 }`;
-
-const readHandoffToken = () => {
-  const params = new URLSearchParams(window.location.search);
-  const fromUrl = params.get('handoffToken') || params.get('handoff_token');
-  if (fromUrl) {
-    sessionStorage.setItem(HANDOFF_STORAGE_KEY, fromUrl);
-    return fromUrl;
-  }
-  return sessionStorage.getItem(HANDOFF_STORAGE_KEY);
-};
-
-const clearHandoffToken = () => {
-  sessionStorage.removeItem(HANDOFF_STORAGE_KEY);
-};
 
 const sleep = (ms) => new Promise((resolve) => {
   setTimeout(resolve, ms);
@@ -126,17 +112,8 @@ const Pro = () => {
     if (!handoffToken) {
       return undefined;
     }
-    // The reference can hand out the license key, so keep it out of history, referrers and
-    // anything the ad scripts on the page report as the current URL.
-    window.history.replaceState({}, '', window.location.pathname);
     let cancelled = false;
     setConfirmingPayment(true);
-
-    const restoreHandoffInUrl = () => {
-      const newUrl = new URL(window.location.href);
-      newUrl.searchParams.set('handoffToken', handoffToken);
-      window.history.replaceState({}, '', newUrl.toString());
-    };
 
     (async () => {
       let paid = null;
@@ -175,13 +152,11 @@ const Pro = () => {
         } catch (err) {
           setConfirmingPayment(false);
           setError(err.message);
-          restoreHandoffInUrl();
         }
         return;
       }
       setConfirmingPayment(false);
       setError('Payment is still confirming. Refresh this page in a moment.');
-      restoreHandoffInUrl();
     })();
 
     return () => {
