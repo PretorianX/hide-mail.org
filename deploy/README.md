@@ -89,7 +89,8 @@ ZoneMTA/Mongo from compose, stop and remove those containers once on the host
 - Remaining go-live ops (sending IP/PTR, `rp.hide-mail.org` MX/SPF, Prometheus rules) are
   outside this script — see design spec §7.
 - Bounce NDRs: `deploy/postfix/transport` routes `b-*@hm-bounce.*` (and `b-*@rp.hide-mail.org`)
-  to `backend:2525` so Postfix does not hairpin to the host public IP. After changing that map,
-  recreate postfix (`docker compose up -d postfix`) and flush stuck deferred mail if needed
+  via built-in `smtp:[backend]:2525` so Postfix does not hairpin to the host public IP (and does
+  not need a custom `master.cf` transport). After changing that map, recreate postfix
+  (`docker compose up -d postfix`) and flush stuck deferred mail if needed
   (`docker compose exec postfix postsuper -r ALL`).
 

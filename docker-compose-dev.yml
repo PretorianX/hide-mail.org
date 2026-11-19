@@ -133,7 +133,6 @@ services:
     volumes:
       - postfix-spool:/var/spool/postfix
       - ./deploy/postfix/transport:/etc/postfix/transport:ro
-      - ./deploy/postfix/docker-init.d:/docker-init.d:ro
     restart: unless-stopped
     networks:
       - internal

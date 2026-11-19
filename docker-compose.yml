@@ -161,7 +161,6 @@ services:
       # Mount DKIM keys for signing (generate with: opendkim-genkey -s mail -d yourdomain.com)
       - ${DKIM_KEYS_PATH:-./dkim-keys}:/etc/opendkim/keys:ro
       - ./deploy/postfix/transport:/etc/postfix/transport:ro
-      - ./deploy/postfix/docker-init.d:/docker-init.d:ro
     restart: unless-stopped
     networks:
       mail:
