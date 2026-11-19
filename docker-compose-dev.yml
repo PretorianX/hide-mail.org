@@ -124,12 +124,16 @@ services:
       # Allow relaying from mynetworks to any destination (safe: all goes to Mailpit)
       - POSTFIX_smtpd_recipient_restrictions=permit_mynetworks,reject
       - POSTFIX_message_size_limit=26214400
+      # Local NDRs for b-*@hm-bounce.* → backend (transport_maps wins over RELAYHOST)
+      - POSTFIX_transport_maps=regexp:/etc/postfix/transport
       # Relay all outgoing mail to Mailpit for inspection
       - RELAYHOST=mailpit:1025
     depends_on:
       - mailpit
     volumes:
       - postfix-spool:/var/spool/postfix
+      - ./deploy/postfix/transport:/etc/postfix/transport:ro
+      - ./deploy/postfix/docker-init.d:/docker-init.d:ro
     restart: unless-stopped
     networks:
       - internal
