@@ -224,4 +224,34 @@ describe('Complaint Read page', () => {
     const blobArg = createObjectURL.mock.calls[0][0];
     expect(blobArg).toBeInstanceOf(Blob);
   });
+
+  test('neutralizes formula injection in exported complaint suppression CSV', async () => {
+    const writeText = jest.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, { clipboard: { writeText } });
+
+    ComplaintService.read.mockResolvedValue({
+      ...abuseReport,
+      suppressionRecord: {
+        email: '=cmd|"/C calc"!A0',
+        action: 'suppress',
+        reason: '@SUM(1+1)',
+        domain: '=2+5',
+        sourceIp: '-1+1',
+        messageId: '+msg',
+        arrivalDate: 'Wed, 26 Oct 2026',
+      },
+    });
+
+    renderComplaints();
+    fireEvent.change(screen.getByLabelText('Feedback report'), {
+      target: { value: 'Feedback-Type: abuse\nOriginal-Rcpt-To: <subscriber@example.net>' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Read this complaint' }));
+    await screen.findByTestId('complaint-result');
+
+    fireEvent.click(screen.getByTestId('complaint-export-csv'));
+
+    const exported = writeText.mock.calls[0][0];
+    expect(exported).toContain(`"'=cmd|""/C calc""!A0",suppress,'@SUM(1+1),'=2+5,'-1+1,'+msg,"Wed, 26 Oct 2026"`);
+  });
 });

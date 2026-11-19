@@ -64,6 +64,17 @@ const parsePositiveNumber = (raw, fallback, name) => {
   return parsed;
 };
 
+const parseTrustProxy = (value) => {
+  if (!value || !value.trim()) {
+    return ['loopback', 'linklocal', 'uniquelocal'];
+  }
+  const trimmed = value.trim();
+  if (trimmed === 'true') return true;
+  if (trimmed === 'false') return false;
+  if (/^\d+$/.test(trimmed)) return Number(trimmed);
+  return trimmed.split(',').map((s) => s.trim()).filter(Boolean);
+};
+
 // Final config with environment variables taking precedence
 // All time values are in seconds for consistency
 const config = {
@@ -90,6 +101,7 @@ const config = {
     maxStoredRawBodyBytes: parsePositiveNumber(process.env.SMTP_MAX_STORED_RAW_BODY_BYTES, 512 * 1024, 'SMTP_MAX_STORED_RAW_BODY_BYTES'),
   },
   environment: process.env.NODE_ENV || 'development',
+  trustProxy: parseTrustProxy(process.env.TRUST_PROXY),
   apiTimeout: parseInt(process.env.API_TIMEOUT || fileConfig.api?.timeout || 5000),
 
   // keyEncryptionSecret is lazy: requiring this module must not take down inbox/API when
@@ -103,6 +115,16 @@ const config = {
     idempotencyTtlSeconds: parsePositiveNumber(process.env.OUTBOUND_IDEMPOTENCY_TTL_SECONDS, 86400, 'OUTBOUND_IDEMPOTENCY_TTL_SECONDS'),
     maxMessageBytes: parsePositiveNumber(process.env.OUTBOUND_MAX_MESSAGE_BYTES, 10485760, 'OUTBOUND_MAX_MESSAGE_BYTES'),
     ratePerMinuteDefault: parsePositiveNumber(process.env.OUTBOUND_RATE_PER_MINUTE, 600, 'OUTBOUND_RATE_PER_MINUTE'),
+    pendingDomainTtlSeconds: parsePositiveNumber(
+      process.env.OUTBOUND_PENDING_DOMAIN_TTL_SECONDS,
+      7 * 24 * 60 * 60,
+      'OUTBOUND_PENDING_DOMAIN_TTL_SECONDS'
+    ),
+    maxDomainsPerAccount: parsePositiveNumber(
+      process.env.OUTBOUND_MAX_DOMAINS_PER_ACCOUNT,
+      20,
+      'OUTBOUND_MAX_DOMAINS_PER_ACCOUNT'
+    ),
     // Outbound Send submits through the same Postfix relay as Forward & Forget (no ZoneMTA/Mongo).
     relay: {
       host: process.env.SMTP_HOST || 'postfix',

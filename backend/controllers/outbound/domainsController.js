@@ -8,6 +8,7 @@ const logger = require('../../utils/logger');
 
 const DOMAIN_ERROR_STATUS = {
   DOMAIN_TAKEN: 409,
+  DOMAIN_QUOTA_EXCEEDED: 403,
   NOT_FOUND: 404,
 };
 

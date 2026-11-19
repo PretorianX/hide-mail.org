@@ -6,10 +6,6 @@ const sendService = require('../../services/outbound/sendService');
 const logger = require('../../utils/logger');
 
 const getClientIp = (req) => {
-  const forwarded = req.headers['x-forwarded-for'];
-  if (typeof forwarded === 'string' && forwarded.trim()) {
-    return forwarded.split(',')[0].trim();
-  }
   return req.ip || req.socket?.remoteAddress || null;
 };
 
@@ -21,6 +17,8 @@ const SEND_ERROR_STATUS = {
   RECIPIENT_SUPPRESSED: 422,
   DAILY_LIMIT_REACHED: 429,
   MESSAGE_TOO_LARGE: 413,
+  IDEMPOTENCY_CONFLICT: 409,
+  IDEMPOTENCY_IN_FLIGHT: 409,
   RELAY_UNAVAILABLE: 503,
   ZONEMTA_UNAVAILABLE: 503, // legacy alias
 };

@@ -5,7 +5,7 @@ const apiRateLimiter = require('../services/apiRateLimiter');
 
 const router = express.Router();
 
-router.post('/login', apiRateLimiter.default, adminController.login);
+router.post('/login', apiRateLimiter.adminLogin, adminController.login);
 router.post('/logout', apiRateLimiter.default, adminController.logout);
 
 router.get('/me', apiRateLimiter.default, requireAdminSession, adminController.me);

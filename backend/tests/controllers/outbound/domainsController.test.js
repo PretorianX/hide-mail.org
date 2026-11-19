@@ -199,4 +199,30 @@ describe('Outbound Domains HTTP', () => {
       expect(res.body.code).toBe('LICENSE_KEY_REQUIRED');
     });
   });
+
+  describe('rate limiting', () => {
+    it('rate-limits domain creation and DNS check requests with 429', async () => {
+      const account = await createOutboundAccount();
+      // Exhaust outboundDomainCheck (20/min)
+      await redisService.client.set('rate_limit:outboundDomainCheck:::ffff:127.0.0.1', '20');
+      await redisService.client.set('rate_limit:outboundDomainCheck:127.0.0.1', '20');
+
+      const checkRes = await request(app)
+        .post('/api/outbound/domains/example.com/check')
+        .set('X-License-Key', account.key)
+        .expect(429);
+      expect(checkRes.body.code).toBe('RATE_LIMIT_EXCEEDED');
+
+      // Exhaust outboundDomainCreate (30/hr)
+      await redisService.client.set('rate_limit:outboundDomainCreate:::ffff:127.0.0.1', '30');
+      await redisService.client.set('rate_limit:outboundDomainCreate:127.0.0.1', '30');
+
+      const createRes = await request(app)
+        .post('/api/outbound/domains')
+        .set('X-License-Key', account.key)
+        .send({ domain: 'ratelimit.example.com' })
+        .expect(429);
+      expect(createRes.body.code).toBe('RATE_LIMIT_EXCEEDED');
+    });
+  });
 });

@@ -49,15 +49,29 @@ const extractResolverAndOptions = (optionsOrResolver) => {
   };
 };
 
-const query = async (resolver, method, name) => {
+const query = async (resolver, method, name, timeoutMs = 5000) => {
+  let timer = null;
   try {
-    const records = await resolver[method](name);
+    const lookupPromise = Promise.resolve(resolver[method](name));
+    const timeoutPromise = new Promise((_, reject) => {
+      timer = setTimeout(() => {
+        const err = new Error('ETIMEOUT');
+        err.code = 'ETIMEOUT';
+        reject(err);
+      }, timeoutMs);
+      if (typeof timer.unref === 'function') {
+        timer.unref();
+      }
+    });
+    const records = await Promise.race([lookupPromise, timeoutPromise]);
     return { records: records || [] };
   } catch (error) {
     if (error && ABSENT.has(error.code)) {
       return { records: [], nxdomain: error.code === 'ENOTFOUND' };
     }
     throw new SenderCheckError('DNS_UNAVAILABLE', 'The DNS lookup did not answer. Try again.');
+  } finally {
+    if (timer) clearTimeout(timer);
   }
 };
 

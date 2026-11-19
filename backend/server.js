@@ -11,6 +11,7 @@ const metrics = require('./services/metricsService');
 const billingMetricsCollector = require('./services/billingMetricsCollector');
 const httpMetricsMiddleware = require('./middleware/httpMetrics');
 const { applyBodyParsers } = require('./middleware/bodyParsers');
+const { errorHandler } = require('./middleware/errorHandler');
 const config = require('./config/config');
 const logger = require('./utils/logger');
 const apiRoutes = require('./routes/api');
@@ -20,11 +21,12 @@ const adminRoutes = require('./routes/admin');
 const outboundRoutes = require('./routes/outbound');
 const billingController = require('./controllers/billingController');
 const attachLicense = require('./middleware/attachLicense');
-const { createOriginVerifier, parseAllowedOrigins } = require('./services/originVerifier');
+const { createOriginVerifier, parseAllowedOrigins, isOriginAllowed } = require('./services/originVerifier');
 const { randomUUID } = require('node:crypto');
 
 const app = express();
 app.disable('x-powered-by');
+app.set('trust proxy', config.trustProxy);
 const PORT = process.env.PORT || 3001;
 const SMTP_PORT = process.env.SMTP_PORT || 2525;
 
@@ -67,23 +69,19 @@ const corsOptions = {
     const normalizedOrigin = origin.toLowerCase();
     
     // Check configured origins
-    const isAllowedOrigin = allowedOrigins.some(allowed => {
-      if (allowed === normalizedOrigin) return true;
-      if (allowed.startsWith('*.')) {
-        const baseDomain = allowed.slice(2);
-        return normalizedOrigin.endsWith(baseDomain);
-      }
-      return false;
-    });
+    const allowed = isOriginAllowed(normalizedOrigin, allowedOrigins);
     
     // Allow development origins
     const isDevOrigin = isDev && devOrigins.includes(normalizedOrigin);
     
-    if (isAllowedOrigin || isDevOrigin) {
+    if (allowed || isDevOrigin) {
       callback(null, true);
     } else {
       logger.warn(`CORS blocked origin: ${origin}`);
-      callback(new Error('CORS not allowed'));
+      const err = new Error('CORS not allowed');
+      err.status = 403;
+      err.code = 'ORIGIN_NOT_ALLOWED';
+      callback(err);
     }
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -136,16 +134,7 @@ app.get('/health', (req, res) => {
 });
 
 // Error handling middleware
-app.use((err, req, res, next) => {
-  logger.error(`Error [${req.correlationId}]: ${err.message}`);
-  const isProduction = config.environment === 'production';
-  res.status(err.status || 500).json({
-    error: {
-      message: isProduction ? 'Internal Server Error' : (err.message || 'Internal Server Error'),
-      correlationId: req.correlationId,
-    },
-  });
-});
+app.use(errorHandler);
 
 // Start Express server
 const server = app.listen(PORT, () => {

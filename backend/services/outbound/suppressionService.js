@@ -5,6 +5,7 @@
  */
 
 const redisService = require('../redisService');
+const { encodeCsv } = require('../../utils/csv');
 
 const suppressionKey = (accountId) => `outbound:suppression:${accountId}`;
 
@@ -39,11 +40,10 @@ const listSuppressions = async ({ accountId }) => {
 
 const exportSuppressionsCsv = async ({ accountId }) => {
   const rows = await listSuppressions({ accountId });
-  const lines = ['email,reason,added_at'];
-  for (const row of rows) {
-    lines.push(`${row.email},${row.reason},${row.addedAt}`);
-  }
-  return lines.join('\n');
+  return encodeCsv(
+    ['email', 'reason', 'added_at'],
+    rows.map((row) => [row.email, row.reason, row.addedAt])
+  );
 };
 
 module.exports = {

@@ -1,11 +1,13 @@
 services:
   frontend:
-    image: ghcr.io/pretorianx/hide-mail.org/frontend:latest
+    image: ${FRONTEND_IMAGE:-ghcr.io/pretorianx/hide-mail.org/frontend:latest}
     ports:
-      - "3001:80"
+      - "127.0.0.1:3001:80"
     depends_on:
       - backend
       - portal
+    networks:
+      - edge
     environment:
       - VALID_DOMAINS=${VALID_DOMAINS}
       - EMAIL_EXPIRATION_SECONDS=${EMAIL_EXPIRATION_SECONDS:-1800}
@@ -30,9 +32,9 @@ services:
     restart: unless-stopped
 
   backend:
-    image: ghcr.io/pretorianx/hide-mail.org/backend:latest
+    image: ${BACKEND_IMAGE:-ghcr.io/pretorianx/hide-mail.org/backend:latest}
     ports:
-      - "3002:3001"
+      - "127.0.0.1:3002:3001"
       - "25:2525"
       - "127.0.0.1:9001:9001"
     environment:
@@ -50,7 +52,7 @@ services:
       - ALLOWED_ORIGINS=https://hide-mail.org,https://www.hide-mail.org
 
       # Forward & Forget - Outgoing SMTP configuration (connects to Postfix relay)
-      - SMTP_HOST=${SMTP_HOST:-postfix}
+      - SMTP_HOST=${SMTP_HOST:-postfix-relay}
       - SMTP_OUTGOING_PORT=${SMTP_OUTGOING_PORT:-587}
       - SMTP_USER=${SMTP_USER:-}
       - SMTP_PASS=${SMTP_PASS:-}
@@ -107,10 +109,12 @@ services:
       - ./backend/logs:/app/logs
     networks:
       - internal
+      - mail
+      - edge
       - default
 
   portal:
-    image: ghcr.io/pretorianx/hide-mail.org/portal:latest
+    image: ${PORTAL_IMAGE:-ghcr.io/pretorianx/hide-mail.org/portal:latest}
     build:
       context: ./portal
       dockerfile: Dockerfile
@@ -120,7 +124,7 @@ services:
       - backend
     restart: unless-stopped
     networks:
-      - default
+      - edge
 
   # Postfix - Outgoing SMTP relay for Forward & Forget and Outbound Send.
   # Outbound Send DKIM-signs in the backend (per-domain keys in Redis) before submit;
@@ -140,7 +144,7 @@ services:
       - RELAYHOST=
       # Accept connections from internal Docker network only
       - POSTFIX_myhostname=${POSTFIX_HOSTNAME:-mail.hide-mail.org}
-      - POSTFIX_mynetworks=10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 127.0.0.0/8
+      - POSTFIX_mynetworks=172.28.0.0/24 127.0.0.0/8
       # Allow relaying from mynetworks to any destination
       - POSTFIX_smtpd_recipient_restrictions=permit_mynetworks,reject
       # Message size limit (25MB)
@@ -156,8 +160,10 @@ services:
       - ${DKIM_KEYS_PATH:-./dkim-keys}:/etc/opendkim/keys:ro
     restart: unless-stopped
     networks:
-      - internal
-      - default  # Required for external DNS resolution and outbound SMTP
+      mail:
+        aliases:
+          - postfix-relay
+      default:  # Required for external DNS resolution and outbound SMTP
 
   redis:
     image: redis:8-alpine
@@ -188,5 +194,13 @@ networks:
   internal:
     driver: bridge
     internal: true
+  mail:
+    driver: bridge
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.28.0.0/24
+  edge:
+    driver: bridge
   default:
     driver: bridge

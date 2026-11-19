@@ -18,6 +18,8 @@ const USAGE = `Usage:
   outbound-admin.js domain limit --domain <name> --unlimited
   outbound-admin.js domain suspend --domain <name>
   outbound-admin.js domain resume --domain <name>
+  outbound-admin.js domain release --domain <name>
+  outbound-admin.js domain transfer --domain <name> --account <id>
 `;
 
 const parseArgs = (argv) => {
@@ -112,6 +114,19 @@ const commands = {
     const domain = requireFlag(flags, 'domain');
     await domainService.setSuspended({ domain, suspended: false });
     process.stdout.write(`Domain ${domain} resumed\n`);
+  },
+
+  'domain release': async (flags) => {
+    const domain = requireFlag(flags, 'domain');
+    const result = await domainService.releaseDomain({ domain });
+    process.stdout.write(`Domain ${result.domain} released (was owned by ${result.previousAccountId})\n`);
+  },
+
+  'domain transfer': async (flags) => {
+    const domain = requireFlag(flags, 'domain');
+    const toAccountId = requireFlag(flags, 'account');
+    const result = await domainService.transferDomain({ domain, toAccountId });
+    process.stdout.write(`Domain ${result.domain} transferred from ${result.fromAccountId} to ${result.toAccountId}\n`);
   },
 };
 
