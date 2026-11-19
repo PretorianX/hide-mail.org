@@ -17,6 +17,7 @@ const bounceReadService = require('./bounceReadService');
 const complaintReadService = require('./complaintReadService');
 const tlsReportService = require('./tlsReportService');
 const { resolveActiveRecipient } = require('./recipientResolver');
+const { assertMailboxOwner } = require('./mailboxAuth');
 
 const PROTOCOL_VERSION = '2024-11-05';
 const SERVER_INFO = {
@@ -665,6 +666,7 @@ const executeTool = async (name, args = {}, license) => {
       if (!address) {
         throw new McpInvalidParamsError('address is required');
       }
+      await assertMailboxOwner(address, license);
       const active = await redisService.isMailboxActive(address);
       if (!active) {
         const err = new Error('Mailbox not found');
@@ -719,6 +721,7 @@ const executeTool = async (name, args = {}, license) => {
       if (!address || !messageId) {
         throw new McpInvalidParamsError('address and messageId are required');
       }
+      await assertMailboxOwner(address, license);
       const message = await redisService.getEmailById(address, messageId);
       if (!message) {
         const err = new Error('Message not found');
@@ -737,6 +740,7 @@ const executeTool = async (name, args = {}, license) => {
       if (!address) {
         throw new McpInvalidParamsError('address is required');
       }
+      await assertMailboxOwner(address, license);
       await redisService.deleteAllEmails(address);
       await redisService.deactivateMailbox(address);
       return {

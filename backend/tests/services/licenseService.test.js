@@ -62,6 +62,47 @@ describe('licenseService', () => {
       expect(resolved.remainingDays).toBe(30);
       expireSpy.mockRestore();
     });
+
+    it('revokes prior API keys immediately when replacing an API key', async () => {
+      const { requireApiKey } = require('../../middleware/apiKeyAuth');
+      const license = await licenseService.createLicense({
+        type: 'api',
+        plan: 'monthly',
+        orderReference: 'api-rotate-1',
+        ttlSeconds: 3600,
+      });
+
+      const firstKey = await licenseService.createApiKey(license.key);
+      expect(await licenseService.validateApiKey(firstKey)).not.toBeNull();
+
+      const secondKey = await licenseService.createApiKey(license.key);
+      expect(secondKey).not.toBe(firstKey);
+
+      // Old key is immediately invalid and returns 401 via requireApiKey
+      expect(await licenseService.validateApiKey(firstKey)).toBeNull();
+      const oldRes = {
+        statusCode: 200,
+        body: null,
+        status(code) { this.statusCode = code; return this; },
+        json(payload) { this.body = payload; return this; },
+      };
+      const oldNext = jest.fn();
+      await requireApiKey({ headers: { authorization: `Bearer ${firstKey}` } }, oldRes, oldNext);
+      expect(oldRes.statusCode).toBe(401);
+      expect(oldRes.body.code).toBe('API_KEY_INVALID');
+      expect(oldNext).not.toHaveBeenCalled();
+
+      // New key is valid and passes requireApiKey
+      const newRes = {
+        statusCode: 200,
+        body: null,
+        status(code) { this.statusCode = code; return this; },
+        json(payload) { this.body = payload; return this; },
+      };
+      const newNext = jest.fn();
+      await requireApiKey({ headers: { authorization: `Bearer ${secondKey}` } }, newRes, newNext);
+      expect(newNext).toHaveBeenCalled();
+    });
   });
 
   describe('validateLicense', () => {

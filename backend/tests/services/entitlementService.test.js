@@ -216,4 +216,53 @@ describe('entitlementService', () => {
     expect(entitlementService.resolveMailboxTtl(license, 999)).toBe(86400);
     expect(entitlementService.resolveMailboxTtl(null, 86400)).toBe(1800);
   });
+
+  it('gives outbound licenses free inbox entitlements plus outboundApi only', () => {
+    const outboundLicense = {
+      type: 'outbound',
+      status: 'active',
+      expiresAt: Date.now() + 60_000,
+    };
+
+    const entitlements = entitlementService.getEntitlements(outboundLicense);
+
+    expect(entitlements.planType).toBe('outbound');
+    expect(entitlements.outboundApi).toBe(true);
+    expect(entitlements.ads).toBe(true);
+    expect(entitlements.customAlias).toBe(false);
+    expect(entitlements.premiumDomains).toBe(false);
+    expect(entitlements.apiAccess).toBe(false);
+    expect(entitlements.forwardingLimit).toBe(2);
+    expect(entitlements.mailboxTtlSeconds).toBe(1800);
+    expect(entitlements.mailboxTtlOptions).toEqual([]);
+    expect(entitlementService.resolveMailboxTtl(outboundLicense, 86400)).toBe(1800);
+  });
+
+  it('fails closed to free entitlements for unknown active license types', () => {
+    const entitlements = entitlementService.getEntitlements({
+      type: 'unknown-future-tier',
+      status: 'active',
+      expiresAt: Date.now() + 60_000,
+    });
+
+    expect(entitlements.planType).toBe('free');
+    expect(entitlements.ads).toBe(true);
+    expect(entitlements.customAlias).toBe(false);
+    expect(entitlements.premiumDomains).toBe(false);
+    expect(entitlements.forwardingLimit).toBe(2);
+    expect(entitlements.mailboxTtlOptions).toEqual([]);
+  });
+
+  it('does not dispatch Object.prototype names as entitlement builders', () => {
+    const free = entitlementService.getEntitlements(null);
+    for (const type of ['__proto__', 'constructor', 'toString', 'valueOf', 'hasOwnProperty']) {
+      const entitlements = entitlementService.getEntitlements({
+        type,
+        status: 'active',
+        expiresAt: Date.now() + 60_000,
+      });
+      expect(entitlements).toEqual(free);
+      expect(entitlements.planType).toBe('free');
+    }
+  });
 });

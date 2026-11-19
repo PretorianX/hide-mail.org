@@ -14,6 +14,7 @@ const LICENSE_PREFIX = 'license:';
 const ORDER_PREFIX = 'billing:order:';
 const RECTOKEN_PREFIX = 'billing:rectoken:';
 const API_KEY_PREFIX = 'api_key:';
+const API_KEY_INDEX_PREFIX = 'license:api_keys:';
 
 const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
@@ -211,11 +212,21 @@ const renewByPayment = async ({ orderReference, recToken, ttlSeconds }) => {
   return existing;
 };
 
+const revokeApiKeysForLicense = async (licenseKey) => {
+  const indexKey = `${API_KEY_INDEX_PREFIX}${licenseKey}`;
+  const priorKeys = await redisService.client.smembers(indexKey);
+  if (priorKeys && priorKeys.length > 0) {
+    await Promise.all(priorKeys.map((k) => redisService.client.del(`${API_KEY_PREFIX}${k}`)));
+  }
+  await redisService.client.del(indexKey);
+};
+
 const revokeLicense = async (key) => {
   const license = await getLicense(key);
   if (!license) {
     return false;
   }
+  await revokeApiKeysForLicense(license.key);
   await redisService.client.del(`${LICENSE_PREFIX}${key}`);
   if (license.orderReference) {
     await redisService.client.del(`${ORDER_PREFIX}${license.orderReference}`);
@@ -241,6 +252,7 @@ const createApiKey = async (licenseKey) => {
   if (!isActive(license) || !API_KEY_TYPES.has(license.type)) {
     throw new Error('API keys can only be issued for an active QA, Mail Grade, Sender Check, DMARC Reports, Bounce Read, or Complaint Read license');
   }
+  await revokeApiKeysForLicense(license.key);
   const apiKey = generateApiKey();
   const licenseRemainingSeconds = Math.max(1, Math.ceil((license.expiresAt - Date.now()) / 1000));
   const ttlSeconds = Math.min(config.billing.apiKeyTtlSeconds, licenseRemainingSeconds);
@@ -254,6 +266,9 @@ const createApiKey = async (licenseKey) => {
     }),
     ttlSeconds
   );
+  const indexKey = `${API_KEY_INDEX_PREFIX}${license.key}`;
+  await redisService.client.sadd(indexKey, apiKey);
+  await redisService.client.expire(indexKey, licenseRemainingSeconds);
   return apiKey;
 };
 
