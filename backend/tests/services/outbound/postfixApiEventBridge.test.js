@@ -12,6 +12,7 @@ const {
   start,
   CURSOR_KEY,
   STREAM,
+  _resetWipeWarnCooldown,
 } = require('../../../services/outbound/postfixApiEventBridge');
 
 const createCapturingRedis = () => {
@@ -40,6 +41,7 @@ const createCapturingRedis = () => {
 describe('postfixApiEventBridge', () => {
   beforeEach(() => {
     redisService.client.data = {};
+    _resetWipeWarnCooldown();
   });
 
   describe('mapPostfixApiEventType', () => {
@@ -273,12 +275,20 @@ describe('postfixApiEventBridge', () => {
       expect(redis.events).toHaveLength(0);
     });
 
-    it('warns when empty page and cursor is ahead (possible SQLite wipe)', async () => {
+    it('stays quiet on empty page when caught up (feed max id >= cursor)', async () => {
       const redis = createCapturingRedis();
-      await redis.set(CURSOR_KEY, '99');
+      await redis.set(CURSOR_KEY, '2');
       const warnSpy = jest.spyOn(logger, 'warn').mockImplementation(() => {});
       const apiClient = {
-        getEvents: jest.fn().mockResolvedValue({ events: [] }),
+        getEvents: jest
+          .fn()
+          .mockResolvedValueOnce({ events: [] }) // after=2 — idle
+          .mockResolvedValueOnce({
+            events: [
+              { id: 1, event: 'processed', queue_id: 'a' },
+              { id: 2, event: 'delivered', queue_id: 'a' },
+            ],
+          }), // after=0 probe
       };
 
       try {
@@ -287,10 +297,36 @@ describe('postfixApiEventBridge', () => {
           redisClient: redis,
           messageStore,
         });
-        expect(result.cursor).toBe(99);
-        expect(await redis.get(CURSOR_KEY)).toBe('99');
+        expect(result.cursor).toBe(2);
+        expect(await redis.get(CURSOR_KEY)).toBe('2');
+        expect(warnSpy).not.toHaveBeenCalled();
+        expect(apiClient.getEvents).toHaveBeenNthCalledWith(1, { after: 2, limit: 100 });
+        expect(apiClient.getEvents).toHaveBeenNthCalledWith(2, { after: 0, limit: 1000 });
+      } finally {
+        warnSpy.mockRestore();
+      }
+    });
+
+    it('warns when cursor is ahead of feed max id (SQLite wipe / reset)', async () => {
+      const redis = createCapturingRedis();
+      await redis.set(CURSOR_KEY, '99');
+      const warnSpy = jest.spyOn(logger, 'warn').mockImplementation(() => {});
+      const apiClient = {
+        getEvents: jest
+          .fn()
+          .mockResolvedValueOnce({ events: [] })
+          .mockResolvedValueOnce({
+            events: [
+              { id: 1, event: 'processed', queue_id: 'a' },
+              { id: 3, event: 'delivered', queue_id: 'b' },
+            ],
+          }),
+      };
+
+      try {
+        await pollOnce({ apiClient, redisClient: redis, messageStore });
         expect(warnSpy).toHaveBeenCalledWith(
-          expect.stringContaining('empty page with cursor=99')
+          expect.stringContaining('cursor=99 ahead of feed max id=3')
         );
       } finally {
         warnSpy.mockRestore();

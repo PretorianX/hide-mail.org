@@ -11,6 +11,49 @@ const { createPostfixApiClient } = require('./postfixApiClient');
 const STREAM = 'outbound:events';
 const CURSOR_KEY = 'outbound:postfix-api:events-cursor';
 const EMPTY_BACKOFF_MS = 1500;
+const WIPE_PROBE_LIMIT = 1000;
+const WIPE_WARN_COOLDOWN_MS = 5 * 60 * 1000;
+
+let lastWipeWarnAt = 0;
+
+const maxEventId = (events) => {
+  let max = 0;
+  for (const event of events) {
+    const id = Number(event?.id);
+    if (Number.isFinite(id) && id > max) {
+      max = id;
+    }
+  }
+  return max;
+};
+
+/**
+ * Empty after=cursor is normal when caught up. Only warn when Redis cursor is
+ * strictly ahead of the highest event id still in postfix-api (SQLite wipe/reset).
+ */
+const maybeWarnCursorAheadOfFeed = async ({ apiClient, previousCursor }) => {
+  if (previousCursor <= 0) {
+    return;
+  }
+  const now = Date.now();
+  if (now - lastWipeWarnAt < WIPE_WARN_COOLDOWN_MS) {
+    return;
+  }
+
+  const probe = await apiClient.getEvents({ after: 0, limit: WIPE_PROBE_LIMIT });
+  const feed = Array.isArray(probe?.events) ? probe.events : Array.isArray(probe) ? probe : [];
+  const feedMax = maxEventId(feed);
+
+  if (feedMax >= previousCursor) {
+    return; // caught up / idle
+  }
+
+  lastWipeWarnAt = now;
+  logger.warn(
+    `postfix-api event bridge: cursor=${previousCursor} ahead of feed max id=${feedMax}; ` +
+      `if SQLite was wiped, clear Redis key ${CURSOR_KEY}`
+  );
+};
 
 const mapPostfixApiEventType = (eventName) => {
   switch (String(eventName || '').toLowerCase()) {
@@ -120,10 +163,7 @@ const pollOnce = async ({
   const events = Array.isArray(payload?.events) ? payload.events : Array.isArray(payload) ? payload : [];
 
   if (events.length === 0 && previousCursor > 0) {
-    logger.warn(
-      `postfix-api event bridge: empty page with cursor=${previousCursor}; ` +
-        `if SQLite was wiped, clear Redis key ${CURSOR_KEY}`
-    );
+    await maybeWarnCursorAheadOfFeed({ apiClient, previousCursor });
   }
 
   return processEventBatch({
@@ -194,4 +234,8 @@ module.exports = {
   processEventBatch,
   pollOnce,
   start,
+  // test helpers
+  _resetWipeWarnCooldown: () => {
+    lastWipeWarnAt = 0;
+  },
 };
