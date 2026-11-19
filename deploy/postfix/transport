@@ -1,0 +1,4 @@
+# Outbound Send bounce mail-back (avoid Docker hairpin to public :25).
+# See docs/superpowers/specs/2026-11-19-postfix-bounce-transport-design.md
+/^b-[^@]+@hm-bounce\./i          bounce_internal:[backend]:2525
+/^b-[^@]+@rp\.hide-mail\.org$/i  bounce_internal:[backend]:2525
