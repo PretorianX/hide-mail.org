@@ -63,4 +63,20 @@ describe('createPostfixApiClient', () => {
       status: 401,
     });
   });
+
+  it('defaults after=0 and limit=100 when getEvents is called with no args', async () => {
+    const fetchImpl = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ events: [] }),
+    });
+
+    const client = createPostfixApiClient({
+      baseUrl: 'http://postfix:8025',
+      token: 't',
+      fetchImpl,
+    });
+
+    await client.getEvents();
+    expect(fetchImpl.mock.calls[0][0]).toBe('http://postfix:8025/v1/events?after=0&limit=100');
+  });
 });

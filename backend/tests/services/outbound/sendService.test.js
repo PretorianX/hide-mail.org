@@ -7,6 +7,7 @@ const sendService = require('../../../services/outbound/sendService');
 const capService = require('../../../services/outbound/capService');
 const messageStore = require('../../../services/outbound/messageStore');
 const keyCrypto = require('../../../services/outbound/keyCrypto');
+const logger = require('../../../utils/logger');
 
 const basePayload = () => ({
   accountId: 'acct-1',
@@ -317,6 +318,38 @@ describe('outbound sendService.sendMessage', () => {
       keySelector: 'hmtest',
       privateKey: testPrivateKeyPem,
     });
+  });
+
+  it('stays queued and warns when Postfix accept has no parseable queue id', async () => {
+    const warnSpy = jest.spyOn(logger, 'warn').mockImplementation(() => {});
+    const domainService = { getDomainMeta: jest.fn().mockResolvedValue(verifiedMeta) };
+    const accountRateLimiter = {
+      checkAndIncrement: jest.fn().mockResolvedValue({ allowed: true, limit: 600, retryAfterSeconds: 60 }),
+    };
+    const deps = {
+      domainService,
+      accountRateLimiter,
+      capService: {
+        checkAndIncrement: jest.fn().mockResolvedValue({ allowed: true, remaining: 9, resetAt: 1 }),
+        releaseIncrement: jest.fn(),
+      },
+      messageStore,
+      suppressionService: { isSuppressed: jest.fn().mockResolvedValue(false) },
+      mimeTransport: {
+        sendMail: jest.fn().mockResolvedValue({ messageId: 'smtp-1', response: '250 OK' }),
+      },
+    };
+
+    try {
+      const result = await sendService.sendMessage(basePayload(), deps);
+      const stored = await messageStore.getMessage(result.id);
+      expect(stored).toMatchObject({ status: 'queued', postfixQueueId: null });
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringMatching(/accepted without parseable queue id/)
+      );
+    } finally {
+      warnSpy.mockRestore();
+    }
   });
 
   it('concurrent same-key requests send exactly once', async () => {
