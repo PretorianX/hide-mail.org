@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import styled from 'styled-components';
 import { Badge, IconButton } from '@/design-system';
 import type { ActivityMessage } from '@/api/types';
@@ -81,10 +82,15 @@ function formatTime(value: number | null | undefined): string {
   return new Date(value).toISOString().replace('T', ' ').slice(0, 19) + 'Z';
 }
 
+const SuppressionLink = styled(Link)`
+  color: ${({ theme }) => theme.colors.primaryDark};
+  text-decoration: underline;
+`;
+
 function statusBadge(status: string) {
   if (status === 'delivered') return <Badge variant="success">{status}</Badge>;
   if (status === 'bounced' || status === 'held') return <Badge variant="error">{status}</Badge>;
-  if (status === 'deferred') return <Badge variant="accent">{status}</Badge>;
+  if (status === 'deferred' || status === 'suppressed') return <Badge variant="accent">{status}</Badge>;
   return <Badge variant="default">{status}</Badge>;
 }
 
@@ -117,6 +123,19 @@ export function ActivityDetailDrawer({ message, onClose }: Props) {
             <Label>Status</Label>
             <Value>{statusBadge(message.status)}</Value>
           </Field>
+          {message.status === 'suppressed' || message.status === 'bounced' ? (
+            <Field>
+              <Label>Suppression</Label>
+              <Value>
+                <SuppressionLink
+                  to={`/suppressions?email=${encodeURIComponent(message.recipient.toLowerCase())}`}
+                  onClick={onClose}
+                >
+                  View suppression entry
+                </SuppressionLink>
+              </Value>
+            </Field>
+          ) : null}
           <Field>
             <Label>Subject</Label>
             <Value>{dash(message.subject)}</Value>

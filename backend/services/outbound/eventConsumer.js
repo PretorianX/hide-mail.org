@@ -108,6 +108,7 @@ const createHandler = ({
         accountId: message.accountId,
         email: message.recipient,
         reason: 'hard_bounce',
+        errorMessage: response || null,
       });
     }
   } catch (error) {
