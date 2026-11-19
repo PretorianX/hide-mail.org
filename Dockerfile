@@ -17,7 +17,7 @@ COPY . .
 RUN npm run build
 
 # Stage 2: Production stage
-FROM nginx:alpine AS production
+FROM nginx:1.30.7-alpine AS production
 
 # Install bash for env-config.sh script
 RUN apk add --no-cache bash
