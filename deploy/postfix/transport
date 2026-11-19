@@ -1,4 +1,5 @@
 # Outbound Send bounce mail-back (avoid Docker hairpin to public :25).
+# Use built-in smtp (TLS may → cleartext to backend:2525). No custom master.cf transport.
 # See docs/superpowers/specs/2026-11-19-postfix-bounce-transport-design.md
-/^b-[^@]+@hm-bounce\./i          bounce_internal:[backend]:2525
-/^b-[^@]+@rp\.hide-mail\.org$/i  bounce_internal:[backend]:2525
+/^b-[^@]+@hm-bounce\./i          smtp:[backend]:2525
+/^b-[^@]+@rp\.hide-mail\.org$/i  smtp:[backend]:2525
