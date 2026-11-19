@@ -7,6 +7,7 @@ const redisService = require('./services/redisService');
 const forwardingService = require('./services/forwardingService');
 const dnsRecheckJob = require('./services/outbound/dnsRecheckJob');
 const eventConsumer = require('./services/outbound/eventConsumer');
+const postfixApiEventBridge = require('./services/outbound/postfixApiEventBridge');
 const metrics = require('./services/metricsService');
 const billingMetricsCollector = require('./services/billingMetricsCollector');
 const httpMetricsMiddleware = require('./middleware/httpMetrics');
@@ -41,6 +42,7 @@ const SMTP_PORT = process.env.SMTP_PORT || 2525;
     forwardingService.initialize();
     dnsRecheckJob.start();
     eventConsumer.start();
+    postfixApiEventBridge.start();
   } catch (error) {
     logger.error('Failed to initialize services:', error);
   }

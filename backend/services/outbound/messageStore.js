@@ -12,8 +12,10 @@ const redisService = require('../redisService');
 const config = require('../../config/config');
 
 const MESSAGE_PREFIX = 'outbound:message:';
+const POSTFIX_QID_PREFIX = 'outbound:postfix-qid:';
 const idempotencyKey = (accountId, key) => `outbound:idempotency:${accountId}:${key}`;
 const accountMessagesKey = (accountId) => `outbound:account:${accountId}:messages`;
+const postfixQidKey = (queueId) => `${POSTFIX_QID_PREFIX}${queueId}`;
 
 const messageTtlSeconds = () => Math.max(1, Math.ceil(config.outbound.messageRetentionDays * 86400));
 
@@ -28,6 +30,10 @@ const createMessage = async ({
   envelopeFrom = null,
   clientIp = null,
   sendKeyName = null,
+  postfixQueueId = null,
+  status = 'queued',
+  lastResponse = null,
+  lastEventAt = null,
 }) => {
   const createdAt = Date.now();
   const record = {
@@ -41,15 +47,34 @@ const createMessage = async ({
     envelopeFrom: envelopeFrom ?? null,
     clientIp: clientIp ?? null,
     sendKeyName: sendKeyName ?? null,
-    status: 'queued',
+    postfixQueueId: postfixQueueId ?? null,
+    status,
     createdAt,
-    lastEventAt: null,
-    lastResponse: null,
+    lastEventAt: lastEventAt ?? null,
+    lastResponse: lastResponse ?? null,
   };
   const ttlSeconds = messageTtlSeconds();
   await redisService.client.setex(`${MESSAGE_PREFIX}${id}`, ttlSeconds, JSON.stringify(record));
   await redisService.client.zadd(accountMessagesKey(accountId), createdAt, id);
   await redisService.client.expire(accountMessagesKey(accountId), ttlSeconds);
+  if (postfixQueueId) {
+    await indexPostfixQueueId({ queueId: postfixQueueId, messageId: id, ttlSeconds });
+  }
+};
+
+const indexPostfixQueueId = async ({ queueId, messageId, ttlSeconds }) => {
+  if (!queueId || !messageId) {
+    return;
+  }
+  const ttl = ttlSeconds ?? messageTtlSeconds();
+  await redisService.client.setex(postfixQidKey(queueId), ttl, messageId);
+};
+
+const getMessageIdByPostfixQueueId = async (queueId) => {
+  if (!queueId) {
+    return null;
+  }
+  return redisService.client.get(postfixQidKey(queueId));
 };
 
 const getMessage = async (id) => {
@@ -148,5 +173,7 @@ module.exports = {
   reserveReplay,
   releaseReplay,
   storeReplay,
+  indexPostfixQueueId,
+  getMessageIdByPostfixQueueId,
   accountMessagesKey,
 };

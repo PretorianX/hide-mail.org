@@ -93,4 +93,12 @@ ZoneMTA/Mongo from compose, stop and remove those containers once on the host
   not need a custom `master.cf` transport). After changing that map, recreate postfix
   (`docker compose up -d postfix`) and flush stuck deferred mail if needed
   (`docker compose exec postfix postsuper -r ALL`).
+- Delivery tracing: compose uses `ghcr.io/pretorianx/postfix-http-api:boky-v4.4.0` (boky drop-in
+  with HTTP API). Set `POSTFIX_API_TOKEN` in host `.env` (same value for backend Bearer and
+  postfix `POSTFIXAPI_TOKEN`). API is compose-network only (`POSTFIXAPI_LISTEN=0.0.0.0:8025`,
+  plaintext allowed); **do not** publish host `:8025`. Autodeploy does not recreate postfix —
+  after compose/image change run `docker compose pull postfix && docker compose up -d postfix`
+  **before** (or with) the backend that leaves Activity at `queued` until `/v1/events` sync.
+  If postfix-api SQLite is wiped while Redis cursor stays high, clear
+  `outbound:postfix-api:events-cursor` in Redis (or Activity stays stuck at queued).
 
