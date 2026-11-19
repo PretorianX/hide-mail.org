@@ -10,32 +10,57 @@ const { sanitizeEmail } = require('../utils/sanitize');
 const { isOutboundBounceRecipient } = require('./outbound/bounceEnvelope');
 const bounceMailbackService = require('./outbound/bounceMailbackService');
 
-const serializeAttachments = (attachments = []) =>
-  attachments.map((att) => ({
-    filename: att.filename || 'attachment',
-    contentType: att.contentType || 'application/octet-stream',
-    contentDisposition: att.contentDisposition || 'attachment',
-    cid: att.cid || null,
-    size: att.size || 0,
-    content: att.content ? att.content.toString('base64') : null,
-    encoding: 'base64',
-  }));
+const serializeAttachments = (
+  attachments = [],
+  maxTotalBytes = config.smtpInbound.maxAttachmentBytes
+) => {
+  const result = [];
+  let totalBytes = 0;
 
-const buildStoredEmail = ({ parsedMail, rawBody, deliveredTo, siteLabel }) => ({
-  id: uuidv4(),
-  from: parsedMail.from?.text || 'unknown',
-  subject: parsedMail.subject || '(No Subject)',
-  preview: parsedMail.text ? parsedMail.text.substring(0, 100) : '(No content)',
-  text: parsedMail.text || '',
-  html: parsedMail.html || '',
-  body: rawBody,
-  attachments: serializeAttachments(parsedMail.attachments),
-  deliveredTo,
-  siteLabel,
-  receivedAt: new Date().toISOString(),
-  date: parsedMail.date ? new Date(parsedMail.date).toISOString() : new Date().toISOString(),
-  read: false,
-});
+  for (const att of attachments) {
+    const size = att.size || (att.content ? att.content.length : 0);
+    if (totalBytes + size > maxTotalBytes) {
+      logger.warn(
+        `Inbound: Dropping attachment "${att.filename || 'attachment'}" (${size} bytes) — aggregate attachment cap (${maxTotalBytes} bytes) exceeded`
+      );
+      continue;
+    }
+    totalBytes += size;
+    result.push({
+      filename: att.filename || 'attachment',
+      contentType: att.contentType || 'application/octet-stream',
+      contentDisposition: att.contentDisposition || 'attachment',
+      cid: att.cid || null,
+      size,
+      content: att.content ? att.content.toString('base64') : null,
+      encoding: 'base64',
+    });
+  }
+
+  return result;
+};
+
+const buildStoredEmail = ({ parsedMail, rawBody, deliveredTo, siteLabel }) => {
+  const attachments = serializeAttachments(parsedMail.attachments);
+  const rawBytes = typeof rawBody === 'string' ? Buffer.byteLength(rawBody, 'utf8') : 0;
+  const keepRawBody = attachments.length === 0 || rawBytes <= config.smtpInbound.maxStoredRawBodyBytes;
+
+  return {
+    id: uuidv4(),
+    from: parsedMail.from?.text || 'unknown',
+    subject: parsedMail.subject || '(No Subject)',
+    preview: parsedMail.text ? parsedMail.text.substring(0, 100) : '(No content)',
+    text: parsedMail.text || '',
+    html: parsedMail.html || '',
+    ...(keepRawBody ? { body: rawBody } : {}),
+    attachments,
+    deliveredTo,
+    siteLabel,
+    receivedAt: new Date().toISOString(),
+    date: parsedMail.date ? new Date(parsedMail.date).toISOString() : new Date().toISOString(),
+    read: false,
+  };
+};
 
 /**
  * Route one received message into the mailbox that owns the recipient address and store it.
@@ -84,7 +109,10 @@ const deliverInboundMessage = async ({ recipient, rawBody }) => {
     metrics.emailsSiteAddressedTotal.inc();
   }
 
-  await qaWebhookService.notifyMailboxWebhook(route.mailbox, email);
+  // Fire-and-forget so a slow or stalling QA webhook never blocks inbound SMTP completion.
+  Promise.resolve(qaWebhookService.notifyMailboxWebhook(route.mailbox, email)).catch((err) => {
+    logger.warn(`Inbound: QA webhook dispatch error for ${sanitizeEmail(route.mailbox)}: ${err.message}`);
+  });
 
   logger.info(
     `Inbound: Stored message ${email.id} for ${sanitizeEmail(route.mailbox)}` +

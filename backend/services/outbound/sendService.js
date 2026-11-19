@@ -9,6 +9,7 @@ const nodemailer = require('nodemailer');
 
 const config = require('../../config/config');
 const keyCrypto = require('./keyCrypto');
+const { buildBounceEnvelopeFrom } = require('./bounceEnvelope');
 const defaultDomainService = require('./domainService');
 const defaultCapService = require('./capService');
 const defaultAccountRateLimiter = require('./accountRateLimiter');
@@ -296,7 +297,12 @@ const sendMessage = async (payload, overrides = {}) => {
       throw new SendError('MESSAGE_TOO_LARGE', 'Message exceeds OUTBOUND_MAX_MESSAGE_BYTES');
     }
 
-    const envelopeFrom = `b-${messageId}@hm-bounce.${domain}`;
+    const envelopeFrom = buildBounceEnvelopeFrom({
+      messageId,
+      accountId: meta.accountId,
+      domain,
+      recipient: to,
+    });
 
     let dkim;
     try {

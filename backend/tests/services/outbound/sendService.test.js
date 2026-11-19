@@ -296,7 +296,9 @@ describe('outbound sendService.sendMessage', () => {
     expect(relayTransportMock.sendMail).toHaveBeenCalledTimes(1);
 
     const mailArgs = relayTransportMock.sendMail.mock.calls[0][0];
-    expect(mailArgs.envelope.from).toBe(`b-${first.id}@hm-bounce.mail.example.com`);
+    expect(mailArgs.envelope.from).toMatch(
+      new RegExp(`^b-${first.id}\\.[A-Za-z0-9_-]{22}@hm-bounce\\.mail\\.example\\.com$`)
+    );
     expect(mailArgs.dkim).toMatchObject({
       domainName: 'mail.example.com',
       keySelector: 'hmtest',
@@ -489,7 +491,9 @@ describe('outbound sendService.sendMessage', () => {
     expect(stored).toMatchObject({
       subject: 'Invoice',
       from: { name: 'Example', email: 'billing@mail.example.com' },
-      envelopeFrom: `b-${result.id}@hm-bounce.mail.example.com`,
+      envelopeFrom: expect.stringMatching(
+        new RegExp(`^b-${result.id}\\.[A-Za-z0-9_-]{22}@hm-bounce\\.mail\\.example\\.com$`)
+      ),
       clientIp: '198.51.100.20',
       sendKeyName: 'ci',
       recipient: 'client@example.org',

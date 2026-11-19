@@ -68,7 +68,7 @@ const generateHash = (data) => {
     throw new Error('SRS secret not configured');
   }
   
-  const hmac = crypto.createHmac('sha1', config.srs.secret);
+  const hmac = crypto.createHmac('sha256', config.srs.secret);
   hmac.update(data);
   const hash = hmac.digest('base64');
   

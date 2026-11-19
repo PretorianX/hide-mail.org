@@ -2,14 +2,11 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
-const { SMTPServer } = require('smtp-server');
+const { createSmtpServer } = require('./services/smtpServer');
 const redisService = require('./services/redisService');
-const inboundMailService = require('./services/inboundMailService');
-const { resolveKnownRecipient } = require('./services/recipientResolver');
 const forwardingService = require('./services/forwardingService');
 const dnsRecheckJob = require('./services/outbound/dnsRecheckJob');
 const eventConsumer = require('./services/outbound/eventConsumer');
-const { shouldAcceptOutboundBounceRcpt } = require('./services/outbound/inboundBounceRcpt');
 const metrics = require('./services/metricsService');
 const billingMetricsCollector = require('./services/billingMetricsCollector');
 const httpMetricsMiddleware = require('./middleware/httpMetrics');
@@ -149,115 +146,7 @@ metrics.startMetricsServer();
 billingMetricsCollector.start();
 
 // Setup SMTP server to catch emails
-const smtpServer = new SMTPServer({
-  secure: false,
-  authOptional: true,
-  disabledCommands: ['AUTH'],
-  logger: true, // Enable built-in logging
-  
-  // Log all SMTP events
-  onConnect(session, callback) {
-    logger.info(`SMTP: New connection from ${session.remoteAddress}`);
-    metrics.smtpConnectionsTotal.inc();
-    callback();
-  },
-  
-  onMailFrom(address, session, callback) {
-    logger.info(`SMTP: MAIL FROM: ${address.address}`);
-    callback();
-  },
-  
-  onRcptTo(address, session, callback) {
-    (async () => {
-      try {
-        logger.info(`SMTP: RCPT TO: ${address.address}`);
-
-        // Late outbound DSN mail-back (b-<id>@hm-bounce.<domain> or return-path target)
-        if (shouldAcceptOutboundBounceRcpt(address.address)) {
-          logger.info(`SMTP: Accepted outbound bounce recipient: ${address.address}`);
-          metrics.smtpRecipientsAcceptedTotal.inc();
-          return callback();
-        }
-        
-        // Extract domain from email
-        const domain = address.address.split('@')[1];
-        
-        // Check if domain is valid
-        const isDomainValid = await redisService.isDomainValid(domain);
-        
-        if (!isDomainValid) {
-          logger.warn(`SMTP: Rejected email to ${address.address}: invalid domain`);
-          metrics.smtpRecipientsRejectedTotal.inc({ reason: 'invalid_domain' });
-          return callback(new Error(`Invalid domain: ${domain}`));
-        }
-        
-        // If SMTP_UNKNOWN_MAILBOX_CODE=250, accept ALL emails for valid domains
-        // This is the safest mode for domain reputation (catch-all with silent drop)
-        const responseCode = config.smtpUnknownMailboxCode;
-        if (responseCode === 250) {
-          logger.info(`SMTP: Catch-all mode - accepting all emails for valid domain: ${address.address}`);
-          metrics.smtpRecipientsAcceptedTotal.inc();
-          return callback();
-        }
-        
-        // Accept anything routing to a mailbox we created and that is still inside the grace
-        // period — including its site addresses — to avoid 550 errors, which can lead to
-        // domain blocklisting.
-        const knownRoute = await resolveKnownRecipient(address.address);
-        
-        if (!knownRoute) {
-          logger.warn(`SMTP: Rejecting unknown mailbox ${address.address} with code ${responseCode}`);
-          metrics.smtpRecipientsRejectedTotal.inc({ reason: 'unknown_mailbox' });
-          const err = new Error(`Unknown recipient: ${address.address}`);
-          err.responseCode = responseCode;
-          return callback(err);
-        }
-        
-        logger.info(`SMTP: Accepted recipient: ${address.address}`);
-        metrics.smtpRecipientsAcceptedTotal.inc();
-        return callback();
-      } catch (error) {
-        logger.error(`SMTP: Error in onRcptTo: ${error.message}`, error);
-        metrics.smtpErrorsTotal.inc();
-        return callback(new Error(`Error processing recipient: ${error.message}`));
-      }
-    })();
-  },
-  
-  onData(stream, session, callback) {
-    logger.info(`SMTP: Starting to receive message data`);
-    
-    let mailData = '';
-    
-    stream.on('data', (chunk) => {
-      mailData += chunk;
-    });
-
-    stream.on('end', async () => {
-      try {
-        logger.info(`SMTP: Finished receiving message data (${mailData.length} bytes)`);
-        metrics.emailsReceivedTotal.inc();
-        metrics.emailSizeBytes.observe(mailData.length);
-        
-        // Extract recipient from session
-        const recipient = session.envelope.rcptTo[0].address;
-        logger.info(`SMTP: Processing email for recipient: ${recipient}`);
-        
-        await inboundMailService.deliverInboundMessage({ recipient, rawBody: mailData });
-        
-        callback();
-      } catch (error) {
-        logger.error(`SMTP: Error processing email: ${error.message}`, error);
-        metrics.smtpErrorsTotal.inc();
-        callback(new Error(`Error processing email: ${error.message}`));
-      }
-    });
-    
-    stream.on('error', (error) => {
-      logger.error(`SMTP: Stream error: ${error.message}`, error);
-    });
-  }
-});
+const smtpServer = createSmtpServer();
 
 smtpServer.on('error', (err) => {
   logger.error(`SMTP server error: ${err.message}`, err);

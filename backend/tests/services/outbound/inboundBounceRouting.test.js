@@ -21,30 +21,43 @@ jest.mock('../../../services/qaWebhookService', () => ({
 
 const redisService = require('../../../services/redisService');
 const bounceMailbackService = require('../../../services/outbound/bounceMailbackService');
+const { buildBounceEnvelopeFrom } = require('../../../services/outbound/bounceEnvelope');
 const { shouldAcceptOutboundBounceRcpt } = require('../../../services/outbound/inboundBounceRcpt');
 const { deliverInboundMessage } = require('../../../services/inboundMailService');
 
 describe('inbound bounce routing', () => {
+  const signedBounce = buildBounceEnvelopeFrom(
+    {
+      messageId: 'm1',
+      accountId: 'a1',
+      domain: 'mail.example.com',
+      recipient: 'gone@example.org',
+    },
+    'test-secret'
+  );
+  const signedReturnPath = `${signedBounce.split('@')[0]}@rp.hide-mail.org`;
+
   beforeEach(() => {
     redisService.storeEmail.mockClear();
     bounceMailbackService.processBounceMailback.mockClear();
   });
 
-  it('shouldAcceptOutboundBounceRcpt accepts VERP bounce addresses only', () => {
-    expect(shouldAcceptOutboundBounceRcpt('b-x@hm-bounce.a.com')).toBe(true);
-    expect(shouldAcceptOutboundBounceRcpt('b-x@rp.hide-mail.org')).toBe(true);
+  it('shouldAcceptOutboundBounceRcpt accepts signed VERP bounce addresses only', () => {
+    expect(shouldAcceptOutboundBounceRcpt(signedBounce)).toBe(true);
+    expect(shouldAcceptOutboundBounceRcpt(signedReturnPath)).toBe(true);
+    expect(shouldAcceptOutboundBounceRcpt('b-x@hm-bounce.a.com')).toBe(false);
     expect(shouldAcceptOutboundBounceRcpt('a@hide-mail.org')).toBe(false);
   });
 
   it('routes bounce recipients through mailback and never stores inbox mail', async () => {
     const rawBody = 'From: mdn@example.com\r\n\r\nignored';
     const result = await deliverInboundMessage({
-      recipient: 'b-m1@hm-bounce.mail.example.com',
+      recipient: signedBounce,
       rawBody,
     });
 
     expect(bounceMailbackService.processBounceMailback).toHaveBeenCalledWith({
-      recipient: 'b-m1@hm-bounce.mail.example.com',
+      recipient: signedBounce,
       rawBody,
     });
     expect(result).toMatchObject({
