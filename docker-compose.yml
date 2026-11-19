@@ -152,12 +152,16 @@ services:
       # TLS for outgoing connections
       - POSTFIX_smtp_tls_security_level=may
       - POSTFIX_smtp_tls_loglevel=1
+      # Local NDRs for b-*@hm-bounce.* → backend over Docker (avoid public :25 hairpin)
+      - POSTFIX_transport_maps=regexp:/etc/postfix/transport
       # DKIM signing - mount keys to /etc/opendkim/keys or set DKIM_AUTOGENERATE=1
       - DKIM_SELECTOR=${DKIM_SELECTOR:-mail}
     volumes:
       - postfix-spool:/var/spool/postfix
       # Mount DKIM keys for signing (generate with: opendkim-genkey -s mail -d yourdomain.com)
       - ${DKIM_KEYS_PATH:-./dkim-keys}:/etc/opendkim/keys:ro
+      - ./deploy/postfix/transport:/etc/postfix/transport:ro
+      - ./deploy/postfix/docker-init.d:/docker-init.d:ro
     restart: unless-stopped
     networks:
       mail:
