@@ -3,9 +3,11 @@ process.env.OUTBOUND_KEY_ENCRYPTION_SECRET = 'test-secret-for-outbound-domain-ke
 
 const redisService = require('../../../services/redisService');
 const messageStore = require('../../../services/outbound/messageStore');
+const logger = require('../../../utils/logger');
 const {
   mapPostfixApiEventType,
   processEventBatch,
+  pollOnce,
   CURSOR_KEY,
   STREAM,
 } = require('../../../services/outbound/postfixApiEventBridge');
@@ -143,6 +145,99 @@ describe('postfixApiEventBridge', () => {
       expect(result.cursor).toBe(5);
       expect(await redis.get(CURSOR_KEY)).toBe('5');
       expect(redis.events).toHaveLength(0);
+    });
+  });
+
+  describe('pollOnce (API integration)', () => {
+    it('reads cursor, calls getEvents(after), XADDs mapped events, advances cursor', async () => {
+      await messageStore.createMessage({
+        id: 'm-poll',
+        accountId: 'a1',
+        domain: 'mail.example.com',
+        recipient: 'to@example.org',
+        reference: null,
+        postfixQueueId: 'QPOLL',
+      });
+
+      const redis = createCapturingRedis();
+      await redis.set(CURSOR_KEY, '50');
+
+      const apiClient = {
+        getEvents: jest.fn().mockResolvedValue({
+          events: [
+            {
+              id: 51,
+              time: '2026-11-19T13:00:00Z',
+              queue_id: 'QPOLL',
+              event: 'deferred',
+              response: '450 try later',
+              dsn: '4.4.1',
+            },
+            {
+              id: 52,
+              time: '2026-11-19T13:00:05Z',
+              queue_id: 'QPOLL',
+              event: 'delivered',
+              response: '250 2.0.0 Ok',
+            },
+          ],
+        }),
+      };
+
+      const result = await pollOnce({
+        apiClient,
+        redisClient: redis,
+        messageStore,
+      });
+
+      expect(apiClient.getEvents).toHaveBeenCalledWith({ after: 50, limit: 100 });
+      expect(result).toMatchObject({ written: 2, cursor: 52 });
+      expect(await redis.get(CURSOR_KEY)).toBe('52');
+      expect(redis.events.map((e) => e.fields.type)).toEqual(['deferred', 'delivered']);
+      expect(redis.events[0].fields).toMatchObject({
+        messageId: 'm-poll',
+        streamId: 'postfix-api:51',
+        response: '450 try later',
+      });
+    });
+
+    it('does not advance cursor when getEvents throws', async () => {
+      const redis = createCapturingRedis();
+      await redis.set(CURSOR_KEY, '7');
+      const apiClient = {
+        getEvents: jest.fn().mockRejectedValue(Object.assign(new Error('postfix-api 503'), { status: 503 })),
+      };
+
+      await expect(
+        pollOnce({ apiClient, redisClient: redis, messageStore })
+      ).rejects.toMatchObject({ status: 503 });
+
+      expect(await redis.get(CURSOR_KEY)).toBe('7');
+      expect(redis.events).toHaveLength(0);
+    });
+
+    it('warns when empty page and cursor is ahead (possible SQLite wipe)', async () => {
+      const redis = createCapturingRedis();
+      await redis.set(CURSOR_KEY, '99');
+      const warnSpy = jest.spyOn(logger, 'warn').mockImplementation(() => {});
+      const apiClient = {
+        getEvents: jest.fn().mockResolvedValue({ events: [] }),
+      };
+
+      try {
+        const result = await pollOnce({
+          apiClient,
+          redisClient: redis,
+          messageStore,
+        });
+        expect(result.cursor).toBe(99);
+        expect(await redis.get(CURSOR_KEY)).toBe('99');
+        expect(warnSpy).toHaveBeenCalledWith(
+          expect.stringContaining('empty page with cursor=99')
+        );
+      } finally {
+        warnSpy.mockRestore();
+      }
     });
   });
 });
