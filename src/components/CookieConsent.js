@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { analytics } from '../services/analytics';
+import { updateCookiePreferences } from '../utils/cookieConsentUtils';
 
 const CookieConsentContainer = styled.div`
   position: fixed;
@@ -303,9 +304,7 @@ const CookieConsent = () => {
       functional: true
     };
     
-    // Save preferences to localStorage
-    localStorage.setItem('cookieConsentGiven', 'true');
-    localStorage.setItem('cookiePreferences', JSON.stringify(allAccepted));
+    updateCookiePreferences(allAccepted);
     
     // Update state
     setCookiePreferences(allAccepted);
@@ -321,14 +320,11 @@ const CookieConsent = () => {
       functional: false
     };
     
-    // Save preferences to localStorage
-    localStorage.setItem('cookieConsentGiven', 'true');
-    localStorage.setItem('cookiePreferences', JSON.stringify(onlyNecessary));
+    updateCookiePreferences(onlyNecessary);
     
     // Update state
     setCookiePreferences(onlyNecessary);
     setShowBanner(false);
-    analytics.cookieConsent(false);
   };
 
   const handleCustomize = () => {
@@ -349,9 +345,7 @@ const CookieConsent = () => {
   };
 
   const handleSavePreferences = () => {
-    // Save preferences to localStorage
-    localStorage.setItem('cookieConsentGiven', 'true');
-    localStorage.setItem('cookiePreferences', JSON.stringify(cookiePreferences));
+    updateCookiePreferences(cookiePreferences);
     
     // Close modal and banner
     setShowModal(false);

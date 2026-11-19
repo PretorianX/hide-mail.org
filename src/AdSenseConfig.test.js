@@ -23,13 +23,71 @@ describe('AdSense loader', () => {
   const injectedTags = () =>
     document.head.querySelectorAll('script[src*="adsbygoogle.js"]');
 
-  test('loads the ad tag for a visitor without a license', () => {
+  const injectedGaTags = () =>
+    document.head.querySelectorAll('script[src*="googletagmanager.com/gtag/js"]');
+
+  const extractProdHeadInlineGaScript = () => {
+    const html = fs.readFileSync(
+      path.join(__dirname, '..', 'public', 'index.html'),
+      'utf8'
+    );
+    const match = html.match(
+      /<!-- Google Analytics - Consent-gated[\s\S]*?<script>([\s\S]*?)<\/script>/
+    );
+    if (!match) {
+      throw new Error('Could not find consent-gated GA inline script in public/index.html');
+    }
+    return match[1];
+  };
+
+  test('does not load AdSense or GA before consent is given', () => {
+    // eslint-disable-next-line no-eval
+    eval(extractProdHeadInlineGaScript());
     runLoader();
 
-    expect(injectedTags()).toHaveLength(1);
+    expect(injectedGaTags()).toHaveLength(0);
+    expect(injectedTags()).toHaveLength(0);
+    expect(window['ga-disable-G-46KBN1JF5T']).toBe(true);
   });
 
-  test('never fetches the ad tag once a license key is stored', () => {
+  test('does not load AdSense or GA after user rejects consent', () => {
+    localStorage.setItem('cookieConsentGiven', 'true');
+    localStorage.setItem(
+      'cookiePreferences',
+      JSON.stringify({ necessary: true, analytics: false, advertising: false, functional: false })
+    );
+
+    // eslint-disable-next-line no-eval
+    eval(extractProdHeadInlineGaScript());
+    runLoader();
+
+    expect(injectedGaTags()).toHaveLength(0);
+    expect(injectedTags()).toHaveLength(0);
+    expect(window['ga-disable-G-46KBN1JF5T']).toBe(true);
+  });
+
+  test('loads AdSense and GA when affirmative consent is persisted and no license is stored', () => {
+    localStorage.setItem('cookieConsentGiven', 'true');
+    localStorage.setItem(
+      'cookiePreferences',
+      JSON.stringify({ necessary: true, analytics: true, advertising: true, functional: true })
+    );
+
+    // eslint-disable-next-line no-eval
+    eval(extractProdHeadInlineGaScript());
+    runLoader();
+
+    expect(injectedGaTags()).toHaveLength(1);
+    expect(injectedTags()).toHaveLength(1);
+    expect(window['ga-disable-G-46KBN1JF5T']).toBe(false);
+  });
+
+  test('never fetches the ad tag once a license key is stored even with consent', () => {
+    localStorage.setItem('cookieConsentGiven', 'true');
+    localStorage.setItem(
+      'cookiePreferences',
+      JSON.stringify({ necessary: true, analytics: true, advertising: true, functional: true })
+    );
     localStorage.setItem('hidemail_license_key', 'HM-AAAA-BBBB-CCCC-DDDD');
 
     runLoader();

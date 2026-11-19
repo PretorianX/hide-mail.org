@@ -3,16 +3,19 @@
  * Only tracks in production environment
  */
 
+import { isCookieCategoryAllowed } from '../utils/cookieConsentUtils';
+
 const GA_MEASUREMENT_ID = 'G-46KBN1JF5T';
 
 /**
- * Check if gtag is available and we're in production
+ * Check if gtag is available, analytics consent is granted, and we're in production
  */
 const isTrackingEnabled = () => {
   return (
     typeof window !== 'undefined' &&
     typeof window.gtag === 'function' &&
-    process.env.NODE_ENV === 'production'
+    process.env.NODE_ENV === 'production' &&
+    isCookieCategoryAllowed('analytics')
   );
 };
 

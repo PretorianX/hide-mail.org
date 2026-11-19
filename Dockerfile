@@ -13,8 +13,9 @@ RUN npm install
 # Copy source code
 COPY . .
 
-# Build the application
-RUN npm run build
+# Build the application without source maps and strip any generated .map files
+ENV GENERATE_SOURCEMAP=false
+RUN npm run build && find /app/build -name '*.map' -delete
 
 # Stage 2: Production stage
 FROM nginx:1.30.7-alpine AS production

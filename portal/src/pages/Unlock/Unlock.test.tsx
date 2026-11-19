@@ -22,6 +22,7 @@ function renderUnlock() {
 describe('Unlock', () => {
   beforeEach(() => {
     localStorage.clear();
+    sessionStorage.clear();
     jest.restoreAllMocks();
   });
 
@@ -48,7 +49,8 @@ describe('Unlock', () => {
     await waitFor(() => {
       expect(screen.getByText('Overview page')).toBeInTheDocument();
     });
-    expect(localStorage.getItem(STORAGE_KEY)).toBe('HM-AAAA-BBBB-CCCC-DDDD');
+    expect(sessionStorage.getItem(STORAGE_KEY)).toBe('HM-AAAA-BBBB-CCCC-DDDD');
+    expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
   });
 
   it('does not keep a key rejected by the API', async () => {

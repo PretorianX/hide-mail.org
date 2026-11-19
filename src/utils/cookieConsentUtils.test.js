@@ -177,7 +177,15 @@ describe('Cookie Consent Utilities', () => {
   });
 
   describe('initializeAnalyticsWithConsent', () => {
+    afterEach(() => {
+      delete window.__enableAnalyticsConsent;
+      delete window.__disableAnalyticsConsent;
+    });
+
     test('initializes analytics when analytics cookies are allowed', () => {
+      window.__enableAnalyticsConsent = jest.fn();
+      window.__disableAnalyticsConsent = jest.fn();
+
       // Mock consent given with analytics allowed
       localStorage.getItem.mockImplementation(key => {
         if (key === 'cookieConsentGiven') return 'true';
@@ -192,10 +200,14 @@ describe('Cookie Consent Utilities', () => {
       
       initializeAnalyticsWithConsent();
       
-      expect(console.log).toHaveBeenCalledWith('Analytics initialized with consent');
+      expect(window.__enableAnalyticsConsent).toHaveBeenCalledTimes(1);
+      expect(window.__disableAnalyticsConsent).not.toHaveBeenCalled();
     });
 
     test('does not initialize analytics when analytics cookies are not allowed', () => {
+      window.__enableAnalyticsConsent = jest.fn();
+      window.__disableAnalyticsConsent = jest.fn();
+
       // Mock consent given with analytics disallowed
       localStorage.getItem.mockImplementation(key => {
         if (key === 'cookieConsentGiven') return 'true';
@@ -210,7 +222,8 @@ describe('Cookie Consent Utilities', () => {
       
       initializeAnalyticsWithConsent();
       
-      expect(console.log).not.toHaveBeenCalled();
+      expect(window.__enableAnalyticsConsent).not.toHaveBeenCalled();
+      expect(window.__disableAnalyticsConsent).toHaveBeenCalledTimes(1);
     });
   });
 

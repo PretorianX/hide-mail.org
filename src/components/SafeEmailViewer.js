@@ -54,6 +54,78 @@ const EmailContainer = styled.div`
   }
 `;
 
+const RemoteBanner = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  background: #fff8e1;
+  border-bottom: 1px solid #ffe082;
+  color: #5d4037;
+  font-size: 13px;
+`;
+
+const RemoteButton = styled.button`
+  background: #f7941d;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+
+  &:hover {
+    background: #e08210;
+  }
+`;
+
+const SAFE_INLINE_URI = /^(data:|cid:|#)/i;
+const CSS_REMOTE_PATTERN = /url\s*\(|@import/i;
+
+function blockRemoteHtmlContent(html) {
+  if (!html) return { html: '', blocked: false };
+  let blocked = false;
+  if (typeof DOMParser === 'undefined') {
+    return { html, blocked: false };
+  }
+  const doc = new DOMParser().parseFromString(
+    `<!DOCTYPE html><html><body>${html}</body></html>`,
+    'text/html'
+  );
+
+  doc.querySelectorAll('style, link').forEach((el) => {
+    blocked = true;
+    el.remove();
+  });
+
+  doc.querySelectorAll('[src], [srcset], [poster], [background]').forEach((el) => {
+    ['src', 'srcset', 'poster', 'background'].forEach((attr) => {
+      if (!el.hasAttribute(attr)) return;
+      const val = (el.getAttribute(attr) || '').trim();
+      if (attr === 'srcset' || attr === 'background' || (val && !SAFE_INLINE_URI.test(val))) {
+        el.removeAttribute(attr);
+        blocked = true;
+      }
+    });
+  });
+
+  doc.querySelectorAll('[style]').forEach((el) => {
+    const styleVal = el.getAttribute('style') || '';
+    if (CSS_REMOTE_PATTERN.test(styleVal)) {
+      const cleaned = styleVal
+        .replace(/@import[^;]*;?/gi, '')
+        .replace(/url\s*\([^)]*\)/gi, 'none');
+      el.setAttribute('style', cleaned);
+      blocked = true;
+    }
+  });
+
+  return { html: doc.body ? doc.body.innerHTML : html, blocked };
+}
+
 /**
  * SafeEmailViewer component for displaying HTML emails safely
  * 
@@ -66,16 +138,23 @@ const EmailContainer = styled.div`
 const SafeEmailViewer = ({ htmlContent, textContent, className }) => {
   // Create a ref for the iframe
   const iframeRef = React.useRef(null);
-  
-  // Log the content received by the component
+  const [remoteOptInHtml, setRemoteOptInHtml] = React.useState(null);
+  const allowRemoteContent = Boolean(htmlContent) && remoteOptInHtml === htmlContent;
+  const [hasBlockedRemote, setHasBlockedRemote] = React.useState(false);
+
+  // Reset blocked-content indicator and clear stale opt-in whenever a different email is rendered
   React.useEffect(() => {
-    console.log('SafeEmailViewer received:');
-    console.log('- HTML content length:', (htmlContent || '').length);
-    console.log('- Text content length:', (textContent || '').length);
-    console.log('- HTML content preview:', (htmlContent || '').substring(0, 100));
-    console.log('- Text content preview:', (textContent || '').substring(0, 100));
-    
-    // Check for common issues
+    setHasBlockedRemote(false);
+    setRemoteOptInHtml((prev) => (prev === htmlContent ? prev : null));
+  }, [htmlContent]);
+  
+  // Log content metadata only in development (never log message previews in production)
+  React.useEffect(() => {
+    if (process.env.NODE_ENV !== 'development') return;
+    console.log('SafeEmailViewer received:', {
+      htmlLength: (htmlContent || '').length,
+      textLength: (textContent || '').length,
+    });
     if (!htmlContent && !textContent) {
       console.warn('SafeEmailViewer: No content received (both HTML and text are empty)');
     } else if (htmlContent && htmlContent.includes('Content-Type:')) {
@@ -91,15 +170,31 @@ const SafeEmailViewer = ({ htmlContent, textContent, className }) => {
     const iframeDocument = iframe.contentDocument || iframe.contentWindow.document;
     
     // Create a sanitized version of the HTML content
-    const sanitizedHtml = DOMPurify.sanitize(htmlContent, {
-      ADD_TAGS: ['style'],
+    const rawSanitized = DOMPurify.sanitize(htmlContent, {
+      ADD_TAGS: allowRemoteContent ? ['style'] : [],
       ADD_ATTR: ['target'],
-      FORBID_TAGS: ['script', 'iframe', 'object', 'embed'],
+      FORBID_TAGS: allowRemoteContent
+        ? ['script', 'iframe', 'object', 'embed']
+        : ['script', 'iframe', 'object', 'embed', 'style', 'link'],
       FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover'],
       ALLOW_DATA_ATTR: false
-    }) || ''; // Ensure we have a string even if DOMPurify returns undefined
-    
-    console.log('Writing sanitized HTML to iframe, length:', sanitizedHtml.length);
+    }) || '';
+
+    let sanitizedHtml = rawSanitized;
+    if (!allowRemoteContent) {
+      const result = blockRemoteHtmlContent(rawSanitized);
+      sanitizedHtml = result.html;
+      const hadStyleOrLink = /<(style|link)\b/i.test(htmlContent || '');
+      setHasBlockedRemote(result.blocked || hadStyleOrLink);
+    }
+
+    const iframeCsp = allowRemoteContent
+      ? ''
+      : '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'; img-src data:;">';
+
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Writing sanitized HTML to iframe, length:', sanitizedHtml.length);
+    }
     
     // Write the HTML to the iframe
     iframeDocument.open();
@@ -109,6 +204,7 @@ const SafeEmailViewer = ({ htmlContent, textContent, className }) => {
         <head>
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          ${iframeCsp}
           <base target="_blank">
           <style>
             body {
@@ -134,7 +230,9 @@ const SafeEmailViewer = ({ htmlContent, textContent, className }) => {
     
     // Add click event listeners to make links open in a new tab
     const links = iframeDocument.getElementsByTagName('a');
-    console.log('Found links in email:', links.length);
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Found links in email:', links.length);
+    }
     for (let i = 0; i < links.length; i++) {
       links[i].setAttribute('target', '_blank');
       links[i].setAttribute('rel', 'noopener noreferrer');
@@ -153,8 +251,10 @@ const SafeEmailViewer = ({ htmlContent, textContent, className }) => {
     );
     
     iframe.style.height = `${height}px`;
-    console.log('Adjusted iframe height to:', height);
-  }, [htmlContent]);
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Adjusted iframe height to:', height);
+    }
+  }, [htmlContent, allowRemoteContent]);
   
   // Set up the iframe when the component mounts or htmlContent changes
   React.useEffect(() => {
@@ -204,6 +304,14 @@ const SafeEmailViewer = ({ htmlContent, textContent, className }) => {
   
   return (
     <EmailContainer className={className}>
+      {htmlContent && hasBlockedRemote && !allowRemoteContent && (
+        <RemoteBanner role="status">
+          <span>Remote images and external styles are blocked to protect your privacy.</span>
+          <RemoteButton type="button" onClick={() => setRemoteOptInHtml(htmlContent)}>
+            Load remote content
+          </RemoteButton>
+        </RemoteBanner>
+      )}
       {renderContent()}
     </EmailContainer>
   );

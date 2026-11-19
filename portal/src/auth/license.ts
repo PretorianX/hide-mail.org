@@ -8,15 +8,34 @@ export function isLicenseFormatValid(key: string): boolean {
 }
 
 export function getStoredLicense(): string | null {
-  const value = localStorage.getItem(STORAGE_KEY);
-  return value && value.trim() ? value.trim() : null;
+  const sessionValue = sessionStorage.getItem(STORAGE_KEY);
+  if (sessionValue && sessionValue.trim()) {
+    // Ensure any legacy persistent localStorage value is removed
+    localStorage.removeItem(STORAGE_KEY);
+    return sessionValue.trim();
+  }
+
+  // One-time migration from legacy localStorage to sessionStorage
+  const legacyValue = localStorage.getItem(STORAGE_KEY);
+  if (legacyValue) {
+    localStorage.removeItem(STORAGE_KEY);
+    const trimmed = legacyValue.trim();
+    if (trimmed) {
+      sessionStorage.setItem(STORAGE_KEY, trimmed);
+      return trimmed;
+    }
+  }
+
+  return null;
 }
 
 export function setStoredLicense(key: string): void {
-  localStorage.setItem(STORAGE_KEY, key.trim());
+  sessionStorage.setItem(STORAGE_KEY, key.trim());
+  localStorage.removeItem(STORAGE_KEY);
 }
 
 export function clearStoredLicense(): void {
+  sessionStorage.removeItem(STORAGE_KEY);
   localStorage.removeItem(STORAGE_KEY);
 }
 
