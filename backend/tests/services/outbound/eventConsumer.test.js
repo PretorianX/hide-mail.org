@@ -112,7 +112,7 @@ describe('outbound eventConsumer', () => {
     ).resolves.toBe(true);
   });
 
-  it('does not suppress 550 5.7.1 policy bounces', async () => {
+  it('adds suppression with errorMessage for 5xx bounced events (including 5.7.1 and 5.0.0)', async () => {
     await messageStore.createMessage({
       id: 'm3',
       accountId: 'a1',
@@ -131,7 +131,7 @@ describe('outbound eventConsumer', () => {
       'domain',
       'mail.example.com',
       'response',
-      '550 5.7.1 Delivery not authorized',
+      '550 5.0.0 550 Unrouteable address',
       'at',
       new Date().toISOString()
     );
@@ -139,7 +139,41 @@ describe('outbound eventConsumer', () => {
     await eventConsumer.consumeOnce(redis, { messageStore, bounceClassifier, suppressionService });
     await expect(messageStore.getMessage('m3')).resolves.toMatchObject({ status: 'bounced' });
     await expect(
-      suppressionService.isSuppressed({ accountId: 'a1', email: 'policy@example.org' })
+      suppressionService.getSuppression({ accountId: 'a1', email: 'policy@example.org' })
+    ).resolves.toMatchObject({
+      email: 'policy@example.org',
+      reason: 'hard_bounce',
+      errorMessage: '550 5.0.0 550 Unrouteable address',
+    });
+  });
+
+  it('does not suppress 4xx soft bounces', async () => {
+    await messageStore.createMessage({
+      id: 'm3-soft',
+      accountId: 'a1',
+      domain: 'mail.example.com',
+      recipient: 'soft@example.org',
+      reference: null,
+    });
+    const redis = createFakeRedis();
+    await redis.xadd(
+      STREAM,
+      '*',
+      'type',
+      'bounced',
+      'messageId',
+      'm3-soft',
+      'domain',
+      'mail.example.com',
+      'response',
+      '450 4.2.1 Mailbox busy',
+      'at',
+      new Date().toISOString()
+    );
+
+    await eventConsumer.consumeOnce(redis, { messageStore, bounceClassifier, suppressionService });
+    await expect(
+      suppressionService.isSuppressed({ accountId: 'a1', email: 'soft@example.org' })
     ).resolves.toBe(false);
   });
 

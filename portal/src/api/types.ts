@@ -74,6 +74,7 @@ export type ActivityMessage = {
 export type Suppression = {
   email: string;
   reason: string;
+  errorMessage?: string | null;
   addedAt?: number;
   added_at?: number;
 };

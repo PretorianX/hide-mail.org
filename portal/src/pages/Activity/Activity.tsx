@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import styled from 'styled-components';
 import { Alert, Badge, EmptyState, Input, LoadingState } from '@/design-system';
 import { listActivity } from '@/api/outbound';
@@ -38,10 +39,23 @@ const Table = styled.table`
     background: rgba(0, 0, 0, 0.03);
   }
 `;
+const StatusCell = styled.div`
+  display: inline-flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing.xs};
+  flex-wrap: wrap;
+`;
+
+const SuppressionLink = styled(Link)`
+  font-size: ${({ theme }) => theme.typography.fontSize.xs};
+  color: ${({ theme }) => theme.colors.primaryDark};
+  text-decoration: underline;
+`;
+
 function statusBadge(status: string) {
   if (status === 'delivered') return <Badge variant="success">{status}</Badge>;
   if (status === 'bounced' || status === 'held') return <Badge variant="error">{status}</Badge>;
-  if (status === 'deferred') return <Badge variant="accent">{status}</Badge>;
+  if (status === 'deferred' || status === 'suppressed') return <Badge variant="accent">{status}</Badge>;
   return <Badge variant="default">{status}</Badge>;
 }
 
@@ -115,7 +129,19 @@ export function Activity() {
                   }
                 }}
               >
-                <td>{statusBadge(message.status)}</td>
+                <td>
+                  <StatusCell>
+                    {statusBadge(message.status)}
+                    {message.status === 'suppressed' ? (
+                      <SuppressionLink
+                        to={`/suppressions?email=${encodeURIComponent(message.recipient.toLowerCase())}`}
+                        onClick={(event) => event.stopPropagation()}
+                      >
+                        View suppression
+                      </SuppressionLink>
+                    ) : null}
+                  </StatusCell>
+                </td>
                 <td>{message.recipient}</td>
                 <td>{truncateSubject(message.subject)}</td>
                 <td>{message.domain}</td>

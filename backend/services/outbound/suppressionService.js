@@ -11,16 +11,32 @@ const suppressionKey = (accountId) => `outbound:suppression:${accountId}`;
 
 const normalizeEmail = (email) => String(email || '').trim().toLowerCase();
 
-const isSuppressed = async ({ accountId, email }) => {
+const getSuppression = async ({ accountId, email }) => {
   const field = normalizeEmail(email);
-  if (!field) return false;
+  if (!field) return null;
   const raw = await redisService.client.hget(suppressionKey(accountId), field);
-  return Boolean(raw);
+  if (!raw) return null;
+  const parsed = JSON.parse(raw);
+  return {
+    email: field,
+    reason: parsed.reason,
+    errorMessage: parsed.errorMessage ?? null,
+    addedAt: parsed.addedAt,
+  };
 };
 
-const addSuppression = async ({ accountId, email, reason }) => {
+const isSuppressed = async ({ accountId, email }) => {
+  const entry = await getSuppression({ accountId, email });
+  return Boolean(entry);
+};
+
+const addSuppression = async ({ accountId, email, reason, errorMessage = null }) => {
   const field = normalizeEmail(email);
-  const record = JSON.stringify({ reason, addedAt: Date.now() });
+  const record = JSON.stringify({
+    reason,
+    errorMessage: errorMessage || null,
+    addedAt: Date.now(),
+  });
   await redisService.client.hset(suppressionKey(accountId), field, record);
 };
 
@@ -34,7 +50,12 @@ const listSuppressions = async ({ accountId }) => {
   const all = await redisService.client.hgetall(suppressionKey(accountId));
   return Object.entries(all || {}).map(([email, raw]) => {
     const parsed = JSON.parse(raw);
-    return { email, reason: parsed.reason, addedAt: parsed.addedAt };
+    return {
+      email,
+      reason: parsed.reason,
+      errorMessage: parsed.errorMessage ?? null,
+      addedAt: parsed.addedAt,
+    };
   });
 };
 
@@ -47,6 +68,7 @@ const exportSuppressionsCsv = async ({ accountId }) => {
 };
 
 module.exports = {
+  getSuppression,
   isSuppressed,
   addSuppression,
   removeSuppression,

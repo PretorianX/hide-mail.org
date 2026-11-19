@@ -27,20 +27,31 @@ describe('outbound suppressionService', () => {
     ).resolves.toBe(false);
   });
 
-  it('listSuppressions round-trips reason and addedAt', async () => {
+  it('listSuppressions and getSuppression round-trip reason, errorMessage, and addedAt', async () => {
     await suppressionService.addSuppression({
       accountId: 'a1',
       email: 'to@example.org',
-      reason: 'manual',
+      reason: 'hard_bounce',
+      errorMessage: '550 5.0.0 550 Unrouteable address',
     });
     const list = await suppressionService.listSuppressions({ accountId: 'a1' });
     expect(list).toEqual([
       expect.objectContaining({
         email: 'to@example.org',
-        reason: 'manual',
+        reason: 'hard_bounce',
+        errorMessage: '550 5.0.0 550 Unrouteable address',
         addedAt: expect.any(Number),
       }),
     ]);
+    await expect(
+      suppressionService.getSuppression({ accountId: 'a1', email: 'TO@example.org' })
+    ).resolves.toEqual(
+      expect.objectContaining({
+        email: 'to@example.org',
+        reason: 'hard_bounce',
+        errorMessage: '550 5.0.0 550 Unrouteable address',
+      })
+    );
   });
 
   it('CSV export header and one data row match exactly', async () => {

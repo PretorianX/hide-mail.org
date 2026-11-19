@@ -14,21 +14,30 @@ describe('outbound bounceClassifier', () => {
     expect(shouldSuppress(result)).toBe(true);
   });
 
-  it('does not suppress 5.7.1 policy failures', () => {
+  it('suppresses 5.7.1 policy hard bounces (5xx)', () => {
     const result = classifyDeliveryResponse('550 5.7.1 Delivery not authorized');
     expect(result).toMatchObject({
       class: 'hard',
       category: 'policy',
-      shouldSuppress: false,
+      shouldSuppress: true,
     });
   });
 
-  it('does not suppress 5.2.2 mailbox full', () => {
+  it('suppresses 5.2.2 mailbox full hard bounces (5xx)', () => {
     const result = classifyDeliveryResponse('550 5.2.2 Mailbox full');
     expect(result).toMatchObject({
       class: 'hard',
       category: 'mailbox',
-      shouldSuppress: false,
+      shouldSuppress: true,
+    });
+  });
+
+  it('suppresses 550 5.0.0 unrouteable address hard bounces (5xx)', () => {
+    const result = classifyDeliveryResponse('550 5.0.0 550 Unrouteable address');
+    expect(result).toMatchObject({
+      class: 'hard',
+      category: 'other',
+      shouldSuppress: true,
     });
   });
 
@@ -41,7 +50,7 @@ describe('outbound bounceClassifier', () => {
     expect(classifyDeliveryResponse('550 No such user')).toMatchObject({
       class: 'hard',
       category: 'other',
-      shouldSuppress: false,
+      shouldSuppress: true,
     });
     expect(classifyDeliveryResponse('450 Try later')).toMatchObject({
       class: 'soft',

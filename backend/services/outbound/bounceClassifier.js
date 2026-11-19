@@ -18,9 +18,8 @@ const CATEGORY_BY_CODE = {
 const ENHANCED_RE = /\b([245]\.\d{1,3}\.\d{1,3})\b/;
 const SMTP_RE = /\b([245]\d{2})\b/;
 
-/** Review Focus pin — only hard unknown_recipient may suppress. */
-const shouldSuppress = ({ class: klass, category }) =>
-  klass === 'hard' && category === 'unknown_recipient';
+/** Suppress any 5xx (hard) bounce. */
+const shouldSuppress = ({ class: klass }) => klass === 'hard';
 
 const classifyDeliveryResponse = (responseText) => {
   const text = String(responseText || '');

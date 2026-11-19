@@ -154,7 +154,7 @@ describe('outbound sendService.sendMessage', () => {
     expect(suppressionService.isSuppressed).not.toHaveBeenCalled();
   });
 
-  it('422 RECIPIENT_SUPPRESSED', async () => {
+  it('422 RECIPIENT_SUPPRESSED records a suppressed activity entry with errorMessage', async () => {
     const domainService = { getDomainMeta: jest.fn().mockResolvedValue(verifiedMeta) };
     const accountRateLimiter = {
       checkAndIncrement: jest.fn().mockResolvedValue({ allowed: true, limit: 600, retryAfterSeconds: 60 }),
@@ -166,12 +166,26 @@ describe('outbound sendService.sendMessage', () => {
         domainService,
         accountRateLimiter,
         capService: cap,
-        suppressionService: { isSuppressed: jest.fn().mockResolvedValue(true) },
+        suppressionService: {
+          getSuppression: jest.fn().mockResolvedValue({
+            email: 'client@example.org',
+            reason: 'hard_bounce',
+            errorMessage: '550 5.0.0 550 Unrouteable address',
+          }),
+        },
         mimeTransport: { sendMail: jest.fn() },
       })
     ).rejects.toMatchObject({ code: 'RECIPIENT_SUPPRESSED' });
 
     expect(cap.checkAndIncrement).not.toHaveBeenCalled();
+    const recent = await messageStore.listRecentMessages({ accountId: 'acct-1', limit: 10 });
+    expect(recent).toHaveLength(1);
+    expect(recent[0]).toMatchObject({
+      recipient: 'client@example.org',
+      status: 'suppressed',
+      lastResponse: '550 5.0.0 550 Unrouteable address',
+      subject: 'Invoice',
+    });
   });
 
   it('429 DAILY_LIMIT_REACHED with a resetAt', async () => {

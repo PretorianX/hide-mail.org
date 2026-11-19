@@ -29,6 +29,7 @@ const addSuppression = async (req, res, next) => {
       accountId: req.accountId,
       email,
       reason: req.body?.reason || 'manual',
+      errorMessage: req.body?.errorMessage || null,
     });
     return res.status(201).json({ success: true });
   } catch (error) {

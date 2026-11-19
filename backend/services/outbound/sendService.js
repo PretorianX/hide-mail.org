@@ -163,7 +163,7 @@ const handleExistingReplay = async ({
     // Reconcile if relay + createMessage succeeded before storeReplay failed.
     if (existing.messageId && typeof deps.messageStore.getMessage === 'function') {
       const persisted = await deps.messageStore.getMessage(existing.messageId);
-      if (persisted) {
+      if (persisted && persisted.status !== 'suppressed') {
         const reconciledBody = { id: existing.messageId, status: 'queued' };
         await deps.messageStore
           .storeReplay({
@@ -273,7 +273,33 @@ const sendMessage = async (payload, overrides = {}) => {
       );
     }
 
-    if (await deps.suppressionService.isSuppressed({ accountId, email: to })) {
+    const suppression =
+      typeof deps.suppressionService.getSuppression === 'function'
+        ? await deps.suppressionService.getSuppression({ accountId, email: to })
+        : (await deps.suppressionService.isSuppressed({ accountId, email: to }))
+          ? { email: to, reason: null, errorMessage: null }
+          : null;
+    if (suppression) {
+      await deps.messageStore.createMessage({
+        id: messageId,
+        accountId,
+        domain,
+        recipient: to,
+        reference: reference ?? null,
+        subject: subject || null,
+        from: from?.email
+          ? { name: from.name || null, email: from.email }
+          : null,
+        envelopeFrom: null,
+        clientIp: clientIp || null,
+        sendKeyName: sendKeyName || null,
+        status: 'suppressed',
+        lastResponse:
+          suppression.errorMessage ||
+          (suppression.reason
+            ? `Suppressed (${suppression.reason})`
+            : 'Recipient is on the suppression list'),
+      });
       await rejectAndThrow(
         deps.metricsStore,
         domain,

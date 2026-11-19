@@ -1,5 +1,6 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router-dom';
 import { MailDuckThemeProvider } from '@/design-system';
 import { Activity } from '@/pages/Activity/Activity';
 import { mockJsonFetch } from '@/test/mockFetch';
@@ -53,9 +54,11 @@ describe('Activity', () => {
     }));
 
     render(
-      <MailDuckThemeProvider>
-        <Activity />
-      </MailDuckThemeProvider>,
+      <MemoryRouter>
+        <MailDuckThemeProvider>
+          <Activity />
+        </MailDuckThemeProvider>
+      </MemoryRouter>,
     );
 
     await waitFor(() => {
@@ -81,9 +84,11 @@ describe('Activity', () => {
     }));
 
     render(
-      <MailDuckThemeProvider>
-        <Activity />
-      </MailDuckThemeProvider>,
+      <MemoryRouter>
+        <MailDuckThemeProvider>
+          <Activity />
+        </MailDuckThemeProvider>
+      </MemoryRouter>,
     );
 
     await waitFor(() => {
@@ -104,9 +109,11 @@ describe('Activity', () => {
     }));
 
     render(
-      <MailDuckThemeProvider>
-        <Activity />
-      </MailDuckThemeProvider>,
+      <MemoryRouter>
+        <MailDuckThemeProvider>
+          <Activity />
+        </MailDuckThemeProvider>
+      </MemoryRouter>,
     );
 
     await waitFor(() => {
@@ -120,5 +127,56 @@ describe('Activity', () => {
     await waitFor(() => {
       expect(screen.queryByRole('dialog', { name: /message detail/i })).not.toBeInTheDocument();
     });
+  });
+
+  it('renders suppressed status with a link to the suppression entry in table and drawer', async () => {
+    const user = userEvent.setup();
+    mockJsonFetch(() => ({
+      status: 200,
+      body: {
+        success: true,
+        messages: [
+          {
+            id: 'm3',
+            accountId: 'a1',
+            domain: 'mail.example.com',
+            recipient: 'info+122212@armtek.org',
+            reference: null,
+            subject: 'Blocked attempt',
+            from: { name: 'App', email: 'noreply@mail.example.com' },
+            envelopeFrom: null,
+            clientIp: '203.0.113.10',
+            sendKeyName: 'prod',
+            status: 'suppressed',
+            createdAt: 5,
+            lastEventAt: null,
+            lastResponse: '550 5.0.0 550 Unrouteable address',
+          },
+        ],
+      },
+    }));
+
+    render(
+      <MemoryRouter>
+        <MailDuckThemeProvider>
+          <Activity />
+        </MailDuckThemeProvider>
+      </MemoryRouter>,
+    );
+
+    const link = await screen.findByRole('link', { name: /view suppression/i });
+    expect(link).toHaveAttribute(
+      'href',
+      '/suppressions?email=info%2B122212%40armtek.org',
+    );
+    expect(screen.getByText('suppressed')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('row', { name: /Blocked attempt/i }));
+    const drawer = await screen.findByRole('dialog', { name: /message detail/i });
+    const drawerLink = within(drawer).getByRole('link', { name: /view suppression entry/i });
+    expect(drawerLink).toHaveAttribute(
+      'href',
+      '/suppressions?email=info%2B122212%40armtek.org',
+    );
   });
 });
