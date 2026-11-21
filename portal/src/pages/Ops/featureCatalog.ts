@@ -58,6 +58,13 @@ export const FEATURE_CATALOG: FeatureDef[] = [
     issuesSendKey: false,
   },
   {
+    type: 'access',
+    label: 'Access Check',
+    description: 'Email HTML access barriers',
+    issuesApiKey: true,
+    issuesSendKey: false,
+  },
+  {
     type: 'suite',
     label: 'Deliverability Suite',
     description: 'All deliverability APIs + QA',

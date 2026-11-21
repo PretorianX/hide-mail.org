@@ -16,6 +16,7 @@ const dmarcReportService = require('./dmarcReportService');
 const bounceReadService = require('./bounceReadService');
 const complaintReadService = require('./complaintReadService');
 const tlsReportService = require('./tlsReportService');
+const accessCheckService = require('./accessCheckService');
 const { resolveActiveRecipient } = require('./recipientResolver');
 const { assertMailboxOwner } = require('./mailboxAuth');
 
@@ -240,6 +241,23 @@ const TOOL_DEFINITIONS = [
         raw: {
           type: 'string',
           description: 'RFC 8460 SMTP TLS reporting JSON document. Unzip a .json.gz file first.',
+        },
+      },
+      required: ['raw'],
+    },
+  },
+  {
+    name: 'hide_mail_access_check',
+    description:
+      'Name the access barriers in an email\'s HTML: missing alternatives, unnamed links, language, contrast, type size, heading order, and image-only mail.',
+    requiredEntitlement: 'accessApi',
+    requiredPlan: 'access',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        raw: {
+          type: 'string',
+          description: 'Email HTML, or a raw message that contains a text/html part.',
         },
       },
       required: ['raw'],
@@ -606,6 +624,11 @@ const executeTool = async (name, args = {}, license) => {
       return tlsReportService.readTlsReport(raw);
     }
 
+    case 'hide_mail_access_check': {
+      const raw = args.raw ?? args.source;
+      return accessCheckService.readAccess(raw);
+    }
+
     case 'hide_mail_qa_create_mailbox': {
       const domains = allowedDomainsForLicense(license);
       const requestedDomain = args.domain;
@@ -802,6 +825,9 @@ const readResource = (uri) => {
       },
       tls: {
         monthly: pricingService.usdPrice('tls', 'monthly'),
+      },
+      access: {
+        monthly: pricingService.usdPrice('access', 'monthly'),
       },
     };
     return {

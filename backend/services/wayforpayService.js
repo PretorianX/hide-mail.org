@@ -83,6 +83,12 @@ const PRODUCTS = {
       regularMode: 'monthly',
     },
   },
+  access: {
+    monthly: {
+      productName: 'Access Check API Monthly',
+      regularMode: 'monthly',
+    },
+  },
 };
 
 const resolveProduct = (type, plan) => {

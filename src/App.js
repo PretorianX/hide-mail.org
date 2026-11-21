@@ -33,6 +33,7 @@ import Reports from './pages/Reports.js';
 import Bounces from './pages/Bounces.js';
 import Complaints from './pages/Complaints.js';
 import Tls from './pages/Tls.js';
+import Access from './pages/Access.js';
 import Developers from './pages/Developers.js';
 import { LicenseProvider, useLicense } from './context/LicenseContext.js';
 import { trackPageView, analytics } from './services/analytics.js';
@@ -57,6 +58,7 @@ function PageViewTracker() {
       '/bounces': 'Bounce Read',
       '/complaints': 'Complaint Read',
       '/tls': 'TLS Reports',
+      '/access': 'Access Check',
       '/developers': 'API Explorer & MCP Hub',
       '/api-docs': 'API Explorer & MCP Hub',
       '/mcp': 'MCP Server & Agent Hub',
@@ -864,6 +866,7 @@ function AppContent() {
               <Route path="/bounces" element={<Bounces />} />
               <Route path="/complaints" element={<Complaints />} />
               <Route path="/tls" element={<Tls />} />
+              <Route path="/access" element={<Access />} />
               <Route path="/developers" element={<Developers />} />
               <Route path="/api-docs" element={<Developers />} />
               <Route path="/mcp" element={<Developers />} />

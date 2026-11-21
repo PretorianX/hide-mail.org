@@ -92,7 +92,7 @@ describe('adminLicenseService', () => {
   });
 
   it('issues an hm_api_ key for each tool/suite type that can use the API', async () => {
-    for (const type of ['grade', 'sender', 'reports', 'bounce', 'complaint', 'tls', 'suite']) {
+    for (const type of ['grade', 'sender', 'reports', 'bounce', 'complaint', 'tls', 'access', 'suite']) {
       const created = await adminLicenseService.createLicense({ type, days: 7 });
       expect(created.apiKey).toMatch(/^hm_api_/);
       const resolved = await licenseService.validateApiKey(created.apiKey);

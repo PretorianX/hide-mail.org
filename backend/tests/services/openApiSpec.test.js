@@ -43,6 +43,7 @@ describe('OpenAPI 3.1.0 Specification & Swagger UI', () => {
     expect(spec.paths['/api/bounce-read'].post.operationId).toBe('readBounce');
     expect(spec.paths['/api/complaint-read'].post.operationId).toBe('readComplaint');
     expect(spec.paths['/api/tls-reports'].post.operationId).toBe('readTlsReport');
+    expect(spec.paths['/api/access-read'].post.operationId).toBe('readAccess');
 
     // QA Mailbox paths
     expect(spec.paths['/api/qa/mailboxes'].post.operationId).toBe('createQaMailbox');
