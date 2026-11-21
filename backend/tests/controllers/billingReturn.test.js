@@ -219,6 +219,31 @@ describe('WayForPay customer return', () => {
       expect(new URLSearchParams(tlsTarget.hash.slice(1)).get('handoffToken')).toMatch(/^[0-9a-f-]{36}$/i);
     });
 
+    it('sends an Access Check payer to /access rather than the Pro page', async () => {
+      const orderService = require('../../services/orderService');
+      await orderService.createOrder({
+        id: 'access-monthly-abc',
+        plan: 'monthly',
+        type: 'access',
+        amount: 1240,
+        currency: 'UAH',
+      });
+
+      const billingController = require('../../controllers/billingController');
+      const res = mockRes();
+
+      await billingController.customerReturn(
+        { query: { orderReference: 'access-monthly-abc' }, body: {} },
+        res
+      );
+
+      const [, accessUrl] = res.redirect.mock.calls[0];
+      const accessTarget = new URL(accessUrl);
+      expect(accessTarget.origin + accessTarget.pathname).toBe('https://hide-mail.org/access');
+      expect(accessTarget.searchParams.get('handoffToken')).toBeNull();
+      expect(new URLSearchParams(accessTarget.hash.slice(1)).get('handoffToken')).toMatch(/^[0-9a-f-]{36}$/i);
+    });
+
     it('redirects to the Pro page even without an order reference', async () => {
       const billingController = require('../../controllers/billingController');
       const res = mockRes();

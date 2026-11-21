@@ -32,6 +32,7 @@ const TRACKED_PLANS = [
   { type: 'bounce', plan: 'monthly' },
   { type: 'complaint', plan: 'monthly' },
   { type: 'tls', plan: 'monthly' },
+  { type: 'access', plan: 'monthly' },
 ];
 
 const TRACKED_ORDER_STATUSES = ['pending', 'paid'];

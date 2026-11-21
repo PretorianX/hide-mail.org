@@ -15,6 +15,7 @@ const USD_KEYS = {
   bounce: { monthly: 'bounceUsd' },
   complaint: { monthly: 'complaintUsd' },
   tls: { monthly: 'tlsUsd' },
+  access: { monthly: 'accessUsd' },
 };
 
 const usdPrice = (type, plan) => {

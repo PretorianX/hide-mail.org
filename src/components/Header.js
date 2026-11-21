@@ -124,6 +124,7 @@ const Header = () => {
             <NavLink to="/bounces">Bounces</NavLink>
             <NavLink to="/complaints">Complaints</NavLink>
             <NavLink to="/tls">TLS</NavLink>
+            <NavLink to="/access">Access</NavLink>
             <NavLink to="/developers">API &amp; MCP</NavLink>
             <NavProCta isPro={isPro} daysLeft={daysLeft} />
           </Nav>

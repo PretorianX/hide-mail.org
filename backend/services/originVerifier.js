@@ -133,6 +133,9 @@ const createOriginVerifier = (options = {}) => {
       // TLS Reports API is a paid machine client. The free report stays on /tls/report.
       || req.path === '/tls-reports'
       || req.path.startsWith('/tls-reports/')
+      // Access Check API is a paid machine client. The free report stays on /access/report.
+      || req.path === '/access-read'
+      || req.path.startsWith('/access-read/')
       || req.path === '/mcp'
       || req.path.startsWith('/mcp/')
       || req.path === '/billing/webhook'

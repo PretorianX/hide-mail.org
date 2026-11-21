@@ -510,6 +510,50 @@ export const REST_ENDPOINTS = [
     },
   },
   {
+    id: 'access',
+    title: 'Access Check API',
+    shortTitle: 'Access Check',
+    category: 'Deliverability Suite',
+    method: 'POST',
+    path: '/api/access-read',
+    browserPath: '/api/access/report',
+    toolPagePath: '/access',
+    mcpToolName: 'hide_mail_access_check',
+    authPlans: ['suite', 'access'],
+    rateLimit: '120 req / min',
+    browserRateLimit: '20 req / 10 min',
+    maxPayload: '64 KB JSON',
+    summary:
+      'Name the barriers that keep an email\'s HTML from being read: missing alternatives, unnamed links, language, contrast, type size, heading order, and image-only mail.',
+    requestFields: [
+      {
+        name: 'source',
+        type: 'string',
+        required: true,
+        description: 'Email HTML, or a raw message that contains a text/html part (alias: "raw").',
+      },
+    ],
+    responseFields: [
+      { name: 'report.stamp', type: 'string', description: 'CLEAR, FIX, or BLOCKED.' },
+      { name: 'report.summary', type: 'string', description: 'One sentence naming the barriers, when any exist.' },
+      { name: 'report.barrierCount', type: 'number', description: 'How many barrier instances were found.' },
+      { name: 'report.barriers[]', type: 'array', description: 'Each barrier id, title, detail, and count.' },
+    ],
+    sampleRequest: {
+      source: '<html><body style="color:#999999;background-color:#ffffff;font-size:12px"><h1>Update</h1><img src="logo.png"></body></html>',
+    },
+    sampleResponse: {
+      success: true,
+      report: {
+        stored: false,
+        stamp: 'FIX',
+        verdict: 'fix',
+        summary: '4 barriers: image without a text alternative, no language, low contrast, type under 14px.',
+        barrierCount: 4,
+      },
+    },
+  },
+  {
     id: 'qa',
     title: 'QA Mailbox & Webhook API',
     shortTitle: 'QA Mailboxes',
@@ -708,7 +752,7 @@ export const REST_ENDPOINTS = [
     browserPath: null,
     toolPagePath: '/pro',
     mcpToolName: null,
-    authPlans: ['api', 'grade', 'sender', 'reports', 'bounce', 'complaint', 'tls', 'suite'],
+    authPlans: ['api', 'grade', 'sender', 'reports', 'bounce', 'complaint', 'tls', 'access', 'suite'],
     authScheme: 'none',
     rateLimit: 'public (license in body)',
     browserRateLimit: null,
@@ -1157,6 +1201,35 @@ export const MCP_TOOLS = [
         name: 'hide_mail_tls_report',
         arguments: {
           raw: '{"organization-name":"Northwind Post","date-range":{"start-datetime":"2026-11-01T00:00:00Z","end-datetime":"2026-11-01T23:59:59Z"},"contact-info":"tls-reports@northwind.example","report-id":"nov-01","policies":[{"policy":{"policy-type":"sts","policy-string":["mode: enforce"],"policy-domain":"northwind.example","mx-host":["mx1.northwind.example"]},"summary":{"total-successful-session-count":1,"total-failure-session-count":0}}]}',
+        },
+      },
+    },
+  },
+  {
+    name: 'hide_mail_access_check',
+    category: 'Deliverability Suite',
+    requiredPlans: ['suite', 'access'],
+    restEndpointId: 'access',
+    description:
+      'Name the access barriers in an email\'s HTML: missing alternatives, unnamed links, language, contrast, type size, heading order, and image-only mail.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        raw: {
+          type: 'string',
+          description: 'Email HTML, or a raw message that contains a text/html part.',
+        },
+      },
+      required: ['raw'],
+    },
+    sampleCall: {
+      jsonrpc: '2.0',
+      id: 7,
+      method: 'tools/call',
+      params: {
+        name: 'hide_mail_access_check',
+        arguments: {
+          raw: '<html lang="en"><body><p>Your order shipped.</p></body></html>',
         },
       },
     },
