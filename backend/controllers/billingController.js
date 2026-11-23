@@ -55,7 +55,7 @@ const checkout = async (req, res, next) => {
 
     const plan = req.body?.plan;
     const requested = req.body?.type;
-    const type = ['api', 'suite', 'grade', 'sender', 'reports', 'bounce', 'complaint', 'tls'].includes(requested)
+    const type = ['api', 'suite', 'grade', 'sender', 'reports', 'bounce', 'complaint', 'tls', 'access'].includes(requested)
       ? requested
       : 'pro';
 
@@ -71,6 +71,7 @@ const checkout = async (req, res, next) => {
         bounce: 'Bounce Read is a monthly plan',
         complaint: 'Complaint Read is a monthly plan',
         tls: 'TLS Reports is a monthly plan',
+        access: 'Access Check is a monthly plan',
         pro: 'plan must be monthly or yearly',
       };
       return res.status(400).json({
@@ -403,6 +404,7 @@ const customerReturn = async (req, res, next) => {
         bounce: '/bounces',
         complaint: '/complaints',
         tls: '/tls',
+        access: '/access',
       }[order?.type];
       if (returnPath) {
         target.pathname = returnPath;
@@ -464,7 +466,7 @@ const issueApiKey = async (req, res, next) => {
     if (!licenseService.canIssueApiKey(license.type)) {
       return res.status(403).json({
         success: false,
-        error: 'API keys are only issued for the QA API, Mail Grade, Sender Check, DMARC Reports, Bounce Read, or Complaint Read plan',
+        error: 'API keys are only issued for a QA, tool, or Deliverability Suite plan',
         code: 'API_PLAN_REQUIRED',
       });
     }

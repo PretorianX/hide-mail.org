@@ -31,6 +31,7 @@ jest.mock('../../config/config', () => {
       bounceUsd: 18,
       complaintUsd: 21,
       tlsUsd: 24,
+      accessUsd: 30,
       checkoutPaused: false,
     },
   };
@@ -49,7 +50,7 @@ jest.mock('../../services/licenseService', () => ({
   findByRecToken: jest.fn(),
   createApiKey: jest.fn(),
   validateApiKey: jest.fn(),
-  canIssueApiKey: (type) => ['api', 'grade', 'sender', 'reports', 'bounce', 'complaint', 'tls'].includes(type),
+  canIssueApiKey: (type) => ['api', 'grade', 'sender', 'reports', 'bounce', 'complaint', 'tls', 'access'].includes(type),
   getLicense: jest.fn(),
   isActive: jest.fn(),
   maskKey: jest.fn(() => 'HM-****-DDDD'),
@@ -89,6 +90,7 @@ const REPORTS_UAH = 620;
 const BOUNCE_UAH = 740;
 const COMPLAINT_UAH = 870;
 const TLS_UAH = 990;
+const ACCESS_UAH = 1240;
 
 const mockRes = () => {
   const res = {};
@@ -353,6 +355,32 @@ describe('billingController', () => {
       expect(orderService.createOrder).toHaveBeenCalledWith(
         expect.objectContaining({ type: 'tls', amount: TLS_UAH })
       );
+    });
+
+    it('charges the Access Check price for an Access Check order', async () => {
+      const req = { body: { plan: 'monthly', type: 'access' } };
+      const res = mockRes();
+
+      await billingController.checkout(req, res);
+
+      const payload = res.json.mock.calls[0][0];
+      expect(payload.data.orderReference).toMatch(/^access-monthly-/);
+      expect(payload.data.productName).toEqual(['Access Check API Monthly']);
+      expect(payload.data.amount).toBe(ACCESS_UAH);
+      expect(orderService.createOrder).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'access', amount: ACCESS_UAH })
+      );
+    });
+
+    it('rejects a yearly Access Check order because that tariff is monthly only', async () => {
+      const req = { body: { plan: 'yearly', type: 'access' } };
+      const res = mockRes();
+
+      await billingController.checkout(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json.mock.calls[0][0].error).toMatch(/Access Check is a monthly plan/);
+      expect(orderService.createOrder).not.toHaveBeenCalled();
     });
 
     it('rejects a yearly TLS Reports order because that tariff is monthly only', async () => {
@@ -1096,6 +1124,22 @@ describe('billingController', () => {
 
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json.mock.calls[0][0].apiKey).toBe('hm_api_tls');
+    });
+
+    it('hands an Access Check subscriber a fresh key without treating it as the QA API', async () => {
+      licenseService.getLicense.mockResolvedValue({ ...activeApiLicense, type: 'access' });
+      licenseService.isActive.mockReturnValue(true);
+      licenseService.createApiKey.mockResolvedValue('hm_api_access');
+      licenseService.validateApiKey.mockResolvedValue({
+        expiresAt: Date.now() + 20 * 24 * 60 * 60 * 1000,
+        remainingDays: 20,
+      });
+
+      const res = mockRes();
+      await billingController.issueApiKey({ body: { key: activeApiLicense.key } }, res);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json.mock.calls[0][0].apiKey).toBe('hm_api_access');
     });
 
     it('hands a Mail Grade subscriber a fresh key without treating it as the QA API', async () => {

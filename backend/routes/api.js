@@ -10,6 +10,7 @@ const dmarcReportRoutes = require('./dmarcReport');
 const bounceReadRoutes = require('./bounceRead');
 const complaintReadRoutes = require('./complaintRead');
 const tlsReportRoutes = require('./tlsReport');
+const accessCheckRoutes = require('./accessCheck');
 const mcpRoutes = require('./mcp');
 const openApiRoutes = require('./openApi');
 const redisService = require('../services/redisService');
@@ -340,6 +341,8 @@ router.use('/complaints', complaintReadRoutes.browser);
 router.use('/complaint-read', complaintReadRoutes.api);
 router.use('/tls', tlsReportRoutes.browser);
 router.use('/tls-reports', tlsReportRoutes.api);
+router.use('/access', accessCheckRoutes.browser);
+router.use('/access-read', accessCheckRoutes.api);
 router.use('/mcp', mcpRoutes);
 router.use('/', openApiRoutes);
 

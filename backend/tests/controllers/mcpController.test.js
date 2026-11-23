@@ -309,8 +309,8 @@ describe('Official Hide Mail MCP Server (mcpController & mcpService)', () => {
     });
   });
 
-  describe('tools/list & tools/call across all 10 tools', () => {
-    it('lists all 10 strongly-typed tools', async () => {
+  describe('tools/list & tools/call across all 11 tools', () => {
+    it('lists all 11 strongly-typed tools', async () => {
       const res = createRes();
       await mcpController.handlePost(
         {
@@ -330,6 +330,7 @@ describe('Official Hide Mail MCP Server (mcpController & mcpService)', () => {
         'hide_mail_bounce_read',
         'hide_mail_complaint_read',
         'hide_mail_tls_report',
+        'hide_mail_access_check',
         'hide_mail_qa_create_mailbox',
         'hide_mail_qa_list_messages',
         'hide_mail_qa_get_message',
@@ -341,7 +342,7 @@ describe('Official Hide Mail MCP Server (mcpController & mcpService)', () => {
       });
     });
 
-    it('allows a suite key to call all 6 deliverability tools including gzipped DMARC reports', async () => {
+    it('allows a suite key to call all 7 deliverability tools including gzipped DMARC reports', async () => {
       // 1. hide_mail_grade_email
       const gradeRes = createRes();
       await mcpController.handlePost(
@@ -526,6 +527,27 @@ describe('Official Hide Mail MCP Server (mcpController & mcpService)', () => {
         (err) => { throw err; }
       );
       expect(tlsRes.body.result.structuredContent.stamp).toBe('FAILURES');
+
+      const accessRes = createRes();
+      await mcpController.handlePost(
+        {
+          headers: { 'x-api-key': keys.suite },
+          body: {
+            jsonrpc: '2.0',
+            id: 17,
+            method: 'tools/call',
+            params: {
+              name: 'hide_mail_access_check',
+              arguments: {
+                raw: '<html lang="en"><body><p>Your order shipped.</p></body></html>',
+              },
+            },
+          },
+        },
+        accessRes,
+        (err) => { throw err; }
+      );
+      expect(accessRes.body.result.structuredContent.stamp).toBe('CLEAR');
     });
 
     it('rejects a zip that claims a huge uncompressed size without decompressing (zip bomb)', () => {

@@ -11,6 +11,7 @@ const toolFlags = (active) => ({
   bounceApi: active === 'bounce',
   complaintApi: active === 'complaint',
   tlsApi: active === 'tls',
+  accessApi: active === 'access',
 });
 
 const inboxFree = (active) => ({
@@ -43,6 +44,7 @@ const paidEntitlements = (planType) => ({
   bounceApi: planType === 'suite',
   complaintApi: planType === 'suite',
   tlsApi: planType === 'suite',
+  accessApi: planType === 'suite',
   forwardingLimit: config.forwarding.proLimit,
   mailboxTtlSeconds: config.pro.defaultMailboxTtlSeconds,
   mailboxTtlOptions: mailboxTtlOptions(),
@@ -90,6 +92,11 @@ const tlsEntitlements = () => ({
   planType: 'tls',
 });
 
+const accessEntitlements = () => ({
+  ...inboxFree('access'),
+  planType: 'access',
+});
+
 const getEntitlements = (license) => {
   if (!licenseService.isActive(license)) {
     return freeEntitlements();
@@ -115,6 +122,8 @@ const getEntitlements = (license) => {
       return complaintEntitlements();
     case 'tls':
       return tlsEntitlements();
+    case 'access':
+      return accessEntitlements();
     default:
       return freeEntitlements();
   }
@@ -137,6 +146,7 @@ const describeTiers = () => ({
   bounce: bounceEntitlements(),
   complaint: complaintEntitlements(),
   tls: tlsEntitlements(),
+  access: accessEntitlements(),
   freeExtensionSeconds: config.emailExtensionSeconds,
   premiumDomainCount: config.premiumDomains.length,
   apiKeyTtlSeconds: config.billing.apiKeyTtlSeconds,

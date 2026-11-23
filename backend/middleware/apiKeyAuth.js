@@ -67,6 +67,10 @@ const PLAN_REQUIRED = {
     error: 'This key is not a TLS Reports API key',
     code: 'TLS_PLAN_REQUIRED',
   },
+  access: {
+    error: 'This key is not an Access Check API key',
+    code: 'ACCESS_PLAN_REQUIRED',
+  },
 };
 
 const requireLicenseType = (type) => (req, res, next) => {

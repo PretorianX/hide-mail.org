@@ -276,7 +276,7 @@ const Pro = () => {
               <code data-testid="pro-api-key">{apiKey}</code>
             </p>
           ) : null}
-          {['api', 'suite', 'grade', 'sender', 'reports', 'bounce', 'complaint', 'tls'].includes(license.type) ? (
+          {['api', 'suite', 'grade', 'sender', 'reports', 'bounce', 'complaint', 'tls', 'access'].includes(license.type) ? (
             <button type="button" disabled={busy} onClick={handleIssueApiKey}>
               {apiKey ? 'Replace API key' : 'Get a new API key'}
             </button>
@@ -343,7 +343,7 @@ const Pro = () => {
           Deliverability Suite, QA API, or standalone tool API key.{' '}
           <Link to="/developers">Open Interactive API Explorer</Link>
           {' · '}
-          <Link to="/developers?tab=mcp">Explore all 10 MCP Tools &amp; Live RPC Tester</Link>.
+          <Link to="/developers?tab=mcp">Explore all 11 MCP Tools &amp; Live RPC Tester</Link>.
         </p>
         <pre className="tool-mcp-preview" data-testid="mcp-config-snippet">
           <code>{MCP_SNIPPET}</code>

@@ -13,6 +13,7 @@ process.env.REPORTS_PRICE_MONTHLY_USD = '15';
 process.env.BOUNCE_PRICE_MONTHLY_USD = '18';
 process.env.COMPLAINT_PRICE_MONTHLY_USD = '21';
 process.env.TLS_PRICE_MONTHLY_USD = '24';
+process.env.ACCESS_PRICE_MONTHLY_USD = '30';
 
 const pricingService = require('../../services/pricingService');
 
@@ -118,6 +119,15 @@ describe('pricingService', () => {
         currency: 'UAH',
       });
       expect(() => pricingService.quotePlan('tls', 'yearly', rates)).toThrow(/unsupported tls plan/i);
+    });
+
+    it('prices Access Check from its own monthly USD list price', () => {
+      expect(pricingService.quotePlan('access', 'monthly', rates)).toEqual({
+        usd: 30,
+        amountUah: 1240,
+        currency: 'UAH',
+      });
+      expect(() => pricingService.quotePlan('access', 'yearly', rates)).toThrow(/unsupported access plan/i);
     });
   });
 

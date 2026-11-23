@@ -27,6 +27,7 @@ const LICENSE_TYPES = [
   'bounce',
   'complaint',
   'tls',
+  'access',
   'suite',
   'outbound',
 ];

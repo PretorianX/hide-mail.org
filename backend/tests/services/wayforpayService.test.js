@@ -265,6 +265,21 @@ describe('wayforpayService', () => {
       expect(payload.productPrice).toEqual([990]);
       expect(() => wayforpayService.resolveProduct('tls', 'yearly')).toThrow(/unsupported tls plan/i);
     });
+
+    it('names the Access Check product on its own monthly tariff', () => {
+      const payload = wayforpayService.buildCheckoutPayload({
+        type: 'access',
+        plan: 'monthly',
+        orderReference: 'access-monthly-test',
+        orderDate: 1700000000,
+        dateNext: '18.09.2026',
+        amount: 1240,
+      });
+
+      expect(payload.productName).toEqual(['Access Check API Monthly']);
+      expect(payload.productPrice).toEqual([1240]);
+      expect(() => wayforpayService.resolveProduct('access', 'yearly')).toThrow(/unsupported access plan/i);
+    });
   });
 
   describe('classifyTransactionStatus', () => {
